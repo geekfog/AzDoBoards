@@ -1,38 +1,77 @@
 using AzDoBoards.Ui.Components;
+using AzDoBoards.Utility;
+using Azure.Identity;
+using Serilog;
 
-namespace AzDoBoards.Ui
+namespace AzDoBoards.Ui;
+
+public class Program
 {
-    public class Program
+    public static void Main(string[] args)
     {
-        public static void Main(string[] args)
+        // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        // Build Services
+        // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        var builder = WebApplication.CreateBuilder(args);
+
+        // Add support for secrets.json for development
+        if (builder.Environment.IsDevelopment()) builder.Configuration.AddUserSecrets(nameof(AzDoBoards));
+
+        // Add Serilog Support
+        builder.Services.AddSerilog();
+        SerilogHelper.Configure(builder.Environment);
+
+        // Add Azure KeyVault configuration
+        var keyVaultEndpoint = Environment.GetEnvironmentVariable("KeyVaultEndpoint");
+        if (!string.IsNullOrEmpty(keyVaultEndpoint))
         {
-            var builder = WebApplication.CreateBuilder(args);
-
-            // Add services to the container.
-            builder.Services.AddRazorComponents()
-                .AddInteractiveServerComponents();
-
-            var app = builder.Build();
-
-            // Configure the HTTP request pipeline.
-            if (!app.Environment.IsDevelopment())
+            var keyVaultEndpointUrl = new Uri(keyVaultEndpoint);
+            try
             {
-                app.UseExceptionHandler("/Error");
-                // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
-                app.UseHsts();
+                builder.Configuration.AddAzureKeyVault(keyVaultEndpointUrl, new DefaultAzureCredential());
             }
-
-            app.UseStatusCodePagesWithReExecute("/not-found", createScopeForErrors: true);
-
-            app.UseHttpsRedirection();
-
-            app.UseAntiforgery();
-
-            app.MapStaticAssets();
-            app.MapRazorComponents<App>()
-                .AddInteractiveServerRenderMode();
-
-            app.Run();
+            catch (Exception ex)
+            {
+                Log.Error($"Error adding KeyVault configuration: {ex.Message}");
+            }
         }
+
+        if (builder.Environment.IsProduction())
+        {
+            builder.Services.AddHsts(options => // https://aka.ms/aspnetcore-hsts.
+            {
+                options.Preload = true;
+                options.IncludeSubDomains = true;
+                options.MaxAge = TimeSpan.FromDays(365);
+            });
+        }
+
+        // Add services to the container
+        builder.Services.AddRazorComponents()
+            .AddInteractiveServerComponents();
+
+        // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        // Build Application
+        // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        var app = builder.Build();
+
+        // Configure the HTTP request pipeline.
+        if (!app.Environment.IsDevelopment())
+        {
+            app.UseExceptionHandler("/Error");
+            app.UseHsts();
+        }
+
+        app.UseStatusCodePagesWithReExecute("/not-found", createScopeForErrors: true);
+
+        app.UseHttpsRedirection();
+
+        app.UseAntiforgery();
+
+        app.MapStaticAssets();
+        app.MapRazorComponents<App>()
+            .AddInteractiveServerRenderMode();
+
+        app.Run();
     }
 }
