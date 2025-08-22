@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36414.22 d17.14
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AzDoBoards.Ui", "AzDoBoards.Ui\AzDoBoards.Ui.csproj", "{CC5B938F-0740-4564-88EB-6F14762F2A10}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{CC5B938F-0740-4564-88EB-6F14762F2A10}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CC5B938F-0740-4564-88EB-6F14762F2A10}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CC5B938F-0740-4564-88EB-6F14762F2A10}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CC5B938F-0740-4564-88EB-6F14762F2A10}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {6D4E7413-E21F-4128-B057-43ACE41BBC12}
+	EndGlobalSection
+EndGlobal
