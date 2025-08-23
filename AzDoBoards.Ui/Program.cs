@@ -4,8 +4,8 @@ using AzDoBoards.Utility;
 using Azure.Identity;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.Identity.Web;
-using Microsoft.Identity.Web.TokenCacheProviders.InMemory;
 using Serilog;
+using StackExchange.Redis;
 
 namespace AzDoBoards.Ui;
 
@@ -50,6 +50,14 @@ public class Program
             });
         }
 
+        // Add Redis Cache
+        var redisConnectionString = builder.Configuration["Redis:ConnectionString"] ?? "localhost:6379";
+        builder.Services.AddStackExchangeRedisCache(options =>
+        {
+            options.Configuration = redisConnectionString; // Use your Redis connection string
+            options.InstanceName = "AzDoBoardsTokenCache";
+        });
+
         // Add Dependency Injection
         builder.Services.AddHttpContextAccessor();
         var organizationUrl = builder.Configuration["AzureDevOps:OrganizationUrl"] ?? string.Empty;
@@ -60,12 +68,14 @@ public class Program
             return new ConnectionFactory(tokenAcquisition, httpContextAccessor, organizationUrl);
         });
         builder.Services.AddScoped<Projects>(); // Register Projects (which depends on ConnectionFactory)
+        builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
+            ConnectionMultiplexer.Connect(redisConnectionString));
 
         // Add Entra ID (Azure AD) Authentication
         builder.Services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
             .AddMicrosoftIdentityWebApp(builder.Configuration.GetSection("AzureAd"))
             .EnableTokenAcquisitionToCallDownstreamApi(["499b84ac-1321-427f-aa17-267ca6975798/.default"]) // Acquire tokens for downstream APIs
-            .AddInMemoryTokenCaches();
+            .AddDistributedTokenCaches();
 
         builder.Services.AddAuthorization(options => {
             options.FallbackPolicy = options.DefaultPolicy;

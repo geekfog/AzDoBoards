@@ -5,12 +5,19 @@
 @inject Client.Projects projectClient
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager Navigation
+@inject StackExchange.Redis.IConnectionMultiplexer Redis
 
 <PageTitle>Home</PageTitle>
 
 <h1>Hello, world!</h1>
 
 <p>
+    @if (!string.IsNullOrEmpty(StatusMessage))
+    {
+        <h3>Status</h3>
+        <div>@StatusMessage</div>
+    }
+
     @if (User != null)
     {
         <h3>Authenticated User Information</h3>
@@ -38,18 +45,34 @@
         }
     }
 
-    @if (!string.IsNullOrEmpty(StatusMessage))
+    <h3>Redis Cache</h3>
+    @if (RedisKeys != null && RedisKeys.Any())
     {
-        <h3>Status</h3>
-        <div>@StatusMessage</div>
+        <ul>
+            @foreach (var key in RedisKeys)
+            {
+                <li>
+                    <strong>@key:</strong> @RedisValues[key]
+                </li>
+            }
+        </ul>
+    }
+    else
+    {
+        <div>No Redis keys found.</div>
     }
 </p>
 
 @code {
-    private List<string>? Projects;
-    private string? StatusMessage;
+    private string StatusMessage = string.Empty;
+
     private ClaimsPrincipal? User;
     private IEnumerable<string>? UserClaims;
+
+    private List<string>? Projects;
+
+    private List<string> RedisKeys = new();
+    private Dictionary<string, string> RedisValues = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -59,7 +82,7 @@
 
         if (User == null || !(User.Identity?.IsAuthenticated ?? false))
         {
-            StatusMessage = "User is NOT authenticated.";
+            AppendStatus("User is NOT authenticated.");
             return;
         }
 
@@ -70,7 +93,37 @@
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Error loading projects: {ex.Message} (Type: {ex.GetType().FullName})";
+            AppendStatus($"Error loading projects: {ex.Message} (Type: {ex.GetType().FullName})");
         }
+
+        try
+        {
+            var db = Redis.GetDatabase();
+            var server = Redis.GetServer(Redis.GetEndPoints().First());
+            RedisKeys = server.Keys().Select(k => k.ToString()).ToList();
+            foreach (var key in RedisKeys)
+            {
+                try
+                {
+                    var value = await db.StringGetAsync(key);
+                    RedisValues[key] = value.HasValue ? value.ToString() : "(not a string value)";
+                }
+                catch (Exception redisEx)
+                {
+                    RedisValues[key] = $"Error: {redisEx.Message}";
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            AppendStatus($" Redis error: {ex.Message}");
+        }
+    }
+
+    private void AppendStatus(string message)
+    {
+        if (!string.IsNullOrEmpty(StatusMessage))
+            StatusMessage += " | ";
+        StatusMessage += message;
     }
 }

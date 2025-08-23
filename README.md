@@ -13,6 +13,11 @@ This is an idea that has been noodled for a while. Now this is being attempted f
 - Visual Studio 2022 Preview
 - .NET 10 Preview
 - Microsoft TFS Client (to abstract Azure DevOps API calls)
+- Redis Cache - one of the following:
+  - Azure Cache for Redis (free tier for Development, higher tiers for non-Development environments)
+  - Redis for Windows ([tporadowski/redis](https://github.com/tporadowski/redis/releases)) - last update February 17, 2022
+  - [Memurai](https://www.memurai.com/get-memurai) (Free version of Redis Cache on Developer Machine - can also purchase Enterprise Edition)
+
 
 # Configuration
 
@@ -36,11 +41,13 @@ The settings supported are as follows:
     "TenantId": "<TENANT_ID>",
     "ClientId": "<CLIENT_ID>",
     "ClientSecret": "<CLIENT SECRET>"
+  },
+  "Redis": {
+    "ConnectionString": "localhost:6379",
+    "InstanceName": "AzDoBoardsTokenCache"
   }
 }
 ```
-
-
 
 ## Azure Portal App Registration
 
