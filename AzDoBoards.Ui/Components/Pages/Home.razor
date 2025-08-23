@@ -1,7 +1,76 @@
 ﻿@page "/"
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.Identity.Client
+@using System.Security.Claims
+@inject Client.Projects projectClient
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager Navigation
 
 <PageTitle>Home</PageTitle>
 
 <h1>Hello, world!</h1>
 
-Welcome to your new app.
+<p>
+    @if (User != null)
+    {
+        <h3>Authenticated User Information</h3>
+        <div>
+            <strong>User Identity:</strong> @User.Identity?.Name
+            <br />
+            <strong>Authenticated:</strong> @(User.Identity?.IsAuthenticated ?? false)
+            <br />
+            <strong>Claims:</strong>
+            <ul>
+                @foreach (var claim in User.Claims)
+                {
+                    <li>@claim.Type: @claim.Value</li>
+                }
+            </ul>
+        </div>
+    }
+
+    @if (Projects != null)
+    {
+        <h3>Projects</h3>
+        @foreach (var project in Projects)
+        {
+            <div>@project</div>
+        }
+    }
+
+    @if (!string.IsNullOrEmpty(StatusMessage))
+    {
+        <h3>Status</h3>
+        <div>@StatusMessage</div>
+    }
+</p>
+
+@code {
+    private List<string>? Projects;
+    private string? StatusMessage;
+    private ClaimsPrincipal? User;
+    private IEnumerable<string>? UserClaims;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        User = authState.User;
+        UserClaims = User?.Claims.Select(c => $"{c.Type}: {c.Value}");
+
+        if (User == null || !(User.Identity?.IsAuthenticated ?? false))
+        {
+            StatusMessage = "User is NOT authenticated.";
+            return;
+        }
+
+        try
+        {
+            Projects = await projectClient.GetProjectsAsync();
+            StatusMessage = $"{Projects.Count} project(s) loaded successfully.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error loading projects: {ex.Message} (Type: {ex.GetType().FullName})";
+        }
+    }
+}

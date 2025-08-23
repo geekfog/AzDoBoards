@@ -1,6 +1,10 @@
+using AzDoBoards.Client;
 using AzDoBoards.Ui.Components;
 using AzDoBoards.Utility;
 using Azure.Identity;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+using Microsoft.Identity.Web;
+using Microsoft.Identity.Web.TokenCacheProviders.InMemory;
 using Serilog;
 
 namespace AzDoBoards.Ui;
@@ -46,9 +50,33 @@ public class Program
             });
         }
 
+        // Add Dependency Injection
+        builder.Services.AddHttpContextAccessor();
+        var organizationUrl = builder.Configuration["AzureDevOps:OrganizationUrl"] ?? string.Empty;
+        builder.Services.AddScoped(sp =>
+        {
+            var tokenAcquisition = sp.GetRequiredService<ITokenAcquisition>();
+            var httpContextAccessor = sp.GetRequiredService<IHttpContextAccessor>();
+            return new ConnectionFactory(tokenAcquisition, httpContextAccessor, organizationUrl);
+        });
+        builder.Services.AddScoped<Projects>(); // Register Projects (which depends on ConnectionFactory)
+
+        // Add Entra ID (Azure AD) Authentication
+        builder.Services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
+            .AddMicrosoftIdentityWebApp(builder.Configuration.GetSection("AzureAd"))
+            .EnableTokenAcquisitionToCallDownstreamApi(["499b84ac-1321-427f-aa17-267ca6975798/.default"]) // Acquire tokens for downstream APIs
+            .AddInMemoryTokenCaches();
+
+        builder.Services.AddAuthorization(options => {
+            options.FallbackPolicy = options.DefaultPolicy;
+        });
+
+        
         // Add services to the container
         builder.Services.AddRazorComponents()
             .AddInteractiveServerComponents();
+
+        builder.Services.AddControllers(); // Add support for controllers and views (starting with sign out)
 
         // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         // Build Application
@@ -66,11 +94,18 @@ public class Program
 
         app.UseHttpsRedirection();
 
+        app.UseAuthentication();
+        app.UseAuthorization();
+
         app.UseAntiforgery();
+
+        app.UseStaticFiles();
 
         app.MapStaticAssets();
         app.MapRazorComponents<App>()
             .AddInteractiveServerRenderMode();
+
+        app.MapControllers(); // Map controller routes
 
         app.Run();
     }
