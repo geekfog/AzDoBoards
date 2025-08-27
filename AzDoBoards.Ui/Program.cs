@@ -4,6 +4,7 @@ using AzDoBoards.Utility;
 using Azure.Identity;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.Identity.Web;
+using MudBlazor.Services;
 using Serilog;
 using StackExchange.Redis;
 
@@ -50,6 +51,9 @@ public class Program
             });
         }
 
+        // Add Mudblazor
+        builder.Services.AddMudServices();
+
         // Add Redis Cache
         var redisConnectionString = builder.Configuration["Redis:ConnectionString"] ?? "localhost:6379";
         builder.Services.AddStackExchangeRedisCache(options =>
@@ -59,6 +63,7 @@ public class Program
         });
 
         // Add Dependency Injection
+        builder.Services.AddSingleton<CacheBuster>();
         builder.Services.AddHttpContextAccessor();
         var organizationUrl = builder.Configuration["AzureDevOps:OrganizationUrl"] ?? string.Empty;
         builder.Services.AddScoped(sp =>
