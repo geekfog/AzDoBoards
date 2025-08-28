@@ -1,15 +1,51 @@
 body {
-/*    background: #f5f5f5;
-    color: #212121;*/
     font-family: 'Roboto', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+
+    /* Smooth transition for theme changes */
+    transition: background-color 0.2s ease, color 0.2s ease;
+
+    /* Default to light theme */
+    background-color: #fafafa;
+    color: rgba(0, 0, 0, 0.87);
 }
 
-/*@media (prefers-color-scheme: dark) {
-    body {
-        background: #212121;
-        color: #fff;
-    }
-}*/
+/* Dark mode defaults - applied immediately by the script in App.razor */
+html.mud-theme-dark body {
+    background-color: #121212;
+    color: rgba(255, 255, 255, 0.87);
+}
+
+/* Light mode explicit styling */
+html.mud-theme-light body {
+    background-color: #fafafa;
+    color: rgba(0, 0, 0, 0.87);
+}
+
+/* MudBlazor theme variables override for immediate application */
+html.mud-theme-dark {
+    --mud-palette-background: #121212;
+    --mud-palette-background-grey: #1e1e1e;
+    --mud-palette-surface: #1e1e1e;
+    --mud-palette-text-primary: rgba(255, 255, 255, 0.87);
+    --mud-palette-text-secondary: rgba(255, 255, 255, 0.6);
+}
+
+html.mud-theme-light {
+    --mud-palette-background: #fafafa;
+    --mud-palette-background-grey: #f5f5f5;
+    --mud-palette-surface: #ffffff;
+    --mud-palette-text-primary: rgba(0, 0, 0, 0.87);
+    --mud-palette-text-secondary: rgba(0, 0, 0, 0.6);
+}
+
+/* Apply theme variables to common elements immediately */
+.mud-main-content,
+.mud-drawer,
+.mud-appbar,
+.mud-paper {
+    background-color: var(--mud-palette-surface, #ffffff);
+    color: var(--mud-palette-text-primary, rgba(0, 0, 0, 0.87));
+}
 
 /* Optional: Ensure your main content area also adapts */
 main, .content, .top-row, article {
