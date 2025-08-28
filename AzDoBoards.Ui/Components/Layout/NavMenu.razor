@@ -1,6 +1,79 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="">AzDoBoards.Ui</a>
+﻿@using MudBlazor
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+@code {
+    private string? UserEmail;
+    private string? GravatarUrl;
+    private string? Initials;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        UserEmail = user?.Claims.FirstOrDefault(c => c.Type == "preferred_username")?.Value;
+        GravatarUrl = !string.IsNullOrEmpty(UserEmail) ? GetGravatarUrl(UserEmail) : null;
+
+        if (string.IsNullOrEmpty(GravatarUrl))
+        {
+            var givenName = user?.Claims.FirstOrDefault(c => c.Type == "given_name")?.Value;
+            var surname = user?.Claims.FirstOrDefault(c => c.Type == "family_name")?.Value;
+
+            if (!string.IsNullOrEmpty(givenName) && !string.IsNullOrEmpty(surname))
+            {
+                Initials = $"{givenName[0]}{surname[0]}".ToUpper();
+            }
+            else
+            {
+                Initials = "?";
+            }
+        }
+    }
+
+    private string GetGravatarUrl(string email)
+    {
+        var emailLower = email.Trim().ToLowerInvariant();
+        var hash = GetMd5Hash(emailLower);
+        return $"https://www.gravatar.com/avatar/{hash}?s=40&d=identicon";
+    }
+
+    private static string GetMd5Hash(string input)
+    {
+        using var md5 = System.Security.Cryptography.MD5.Create();
+        var inputBytes = System.Text.Encoding.UTF8.GetBytes(input);
+        var hashBytes = md5.ComputeHash(inputBytes);
+        return string.Concat(hashBytes.Select(b => b.ToString("x2")));
+    }
+}
+
+<div class="top-row ps-3 navbar navbar-dark">
+    <div class="container-fluid no-wrap-header" style="display: flex; align-items: center; gap: 1rem; white-space: nowrap;">
+        <MudMenu>
+            <ActivatorContent>
+                <MudAvatar Size="Size.Medium" Class="mud-avatar-cursor nav-avatar">
+                    @if (!string.IsNullOrEmpty(GravatarUrl))
+                    {
+                        <img src="@GravatarUrl" style="width:100%;height:100%;border-radius:50%;" alt="@UserEmail" />
+                    }
+                    else
+                    {
+                        <span>@Initials</span>
+                    }
+                </MudAvatar>
+            </ActivatorContent>
+            <ChildContent>
+                <MudMenuItem OnClick="@(() => Navigation.NavigateTo("/about"))">
+                    About
+                </MudMenuItem>
+                <MudDivider />
+                <MudMenuItem OnClick="@(() => Navigation.NavigateTo("/signout"))">
+                    Logout
+                </MudMenuItem>
+            </ChildContent>
+        </MudMenu>
+        <a class="navbar-brand nav-brand" href="">AzDoBoards</a>
     </div>
 </div>
 
@@ -27,4 +100,3 @@
         </div>
     </nav>
 </div>
-

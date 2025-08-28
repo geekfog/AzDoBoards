@@ -21,6 +21,13 @@
 <body>
     <Routes @rendermode="InteractiveServer" />
     <ReconnectModal />
+    <script>
+        // Ensure the script runs after the DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            document.body.classList.add(prefersDark ? 'mud-theme-dark' : 'mud-theme-light');
+        });
+    </script>
     <script src="_content/MudBlazor/MudBlazor.min.js?v=@CacheBuster.Value"></script>
     <script src="_framework/blazor.web.js?v=@CacheBuster.Value"></script>
 </body>

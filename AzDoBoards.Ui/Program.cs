@@ -73,8 +73,7 @@ public class Program
             return new ConnectionFactory(tokenAcquisition, httpContextAccessor, organizationUrl);
         });
         builder.Services.AddScoped<Projects>(); // Register Projects (which depends on ConnectionFactory)
-        builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
-            ConnectionMultiplexer.Connect(redisConnectionString));
+        builder.Services.AddSingleton<IConnectionMultiplexer>(sp => ConnectionMultiplexer.Connect(redisConnectionString));
 
         // Add Entra ID (Azure AD) Authentication
         builder.Services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
