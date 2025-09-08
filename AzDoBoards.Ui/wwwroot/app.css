@@ -9,6 +9,10 @@ body {
     color: rgba(0, 0, 0, 0.87);
 }
 
+.mud-table-custom:hover {
+    cursor: pointer;
+}
+
 /* Dark mode defaults - applied immediately by the script in App.razor */
 html.mud-theme-dark body {
     background-color: #121212;

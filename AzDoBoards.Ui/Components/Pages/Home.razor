@@ -8,9 +8,9 @@
 @inject NavigationManager Navigation
 @inject StackExchange.Redis.IConnectionMultiplexer Redis
 
-<PageTitle>Home</PageTitle>
+<PageTitle>Dashboard</PageTitle>
 
-<h1>Hello, world!</h1>
+<h1>Dashboard</h1>
 
 <p>
     @if (!string.IsNullOrEmpty(StatusMessage))
@@ -49,7 +49,7 @@
     <h3>Redis Cache</h3>
     @if (RedisEntries != null && RedisEntries.Any())
     {
-        <MudDataGrid Items="RedisEntries">
+        <MudDataGrid Items="RedisEntries" Class="mud-table-custom">
             <Columns>
                 <PropertyColumn Property="x => x.Key" Title="Key" Sortable="true" />
                 <PropertyColumn Property="x => x.Value" Title="Value" Sortable="true" />

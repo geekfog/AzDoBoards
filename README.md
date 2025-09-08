@@ -2,7 +2,7 @@
 
 AzDoBoards is to be a tool to assist with project management within Azure DevOps Boards. The UI within Azure DevOps Boards is clunky for doing project management and quickly update information. The intent is to support the hierarchy of Initiative > Epic > Feature > User Story / Bug / Research > Tasks.
 
-This is an idea that has been noodled for a while. Now this is being attempted for future efficiency of project work. We will see where this goes, if anywhere.
+*This is an idea that has been noodled for a while. Now this is being attempted for future efficiency of project work. We will see where this goes, if anywhere.*
 
 ## Future Action Items
 
@@ -10,13 +10,13 @@ This is an idea that has been noodled for a while. Now this is being attempted f
 
 # Development Technologies
 
-- Visual Studio 2022 Preview
+- Visual Studio 2022 17.14.13 Preview 1.0+
 - .NET 10 Preview
 - Microsoft TFS Client (to abstract Azure DevOps API calls)
 - Redis Cache - one of the following:
+  - [Memurai](https://www.memurai.com/get-memurai) (Free version of Redis Cache on Developer Machine - can also purchase Enterprise Edition)
   - Azure Cache for Redis (Microsoft-based free tier for Development, higher tiers for non-Development environments)
   - Redis for Windows ([tporadowski/redis](https://github.com/tporadowski/redis/releases)) - last update February 17, 2022
-  - [Memurai](https://www.memurai.com/get-memurai) (Free version of Redis Cache on Developer Machine - can also purchase Enterprise Edition)
 
 
 # Configuration

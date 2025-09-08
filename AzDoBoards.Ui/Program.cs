@@ -20,7 +20,7 @@ public class Program
         var builder = WebApplication.CreateBuilder(args);
 
         // Add support for secrets.json for development
-        if (builder.Environment.IsDevelopment()) builder.Configuration.AddUserSecrets(nameof(AzDoBoards));
+        if (Server.IsDevelopment) builder.Configuration.AddUserSecrets(nameof(AzDoBoards));
 
         // Add Serilog Support
         builder.Services.AddSerilog();
@@ -41,7 +41,7 @@ public class Program
             }
         }
 
-        if (builder.Environment.IsProduction())
+        if (Server.IsProduction)
         {
             builder.Services.AddHsts(options => // https://aka.ms/aspnetcore-hsts.
             {
@@ -98,7 +98,7 @@ public class Program
         var app = builder.Build();
 
         // Configure the HTTP request pipeline.
-        if (!app.Environment.IsDevelopment())
+        if (Server.IsProduction)
         {
             app.UseExceptionHandler("/Error");
             app.UseHsts();

@@ -3,6 +3,7 @@
 @using System.Security.Claims
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@inject Utility.CacheBuster CacheBuster
 
 @code {
     private string? UserEmail;
@@ -16,20 +17,11 @@
         UserEmail = user?.Claims.FirstOrDefault(c => c.Type == "preferred_username")?.Value;
         GravatarUrl = !string.IsNullOrEmpty(UserEmail) ? GetGravatarUrl(UserEmail) : null;
 
-        if (string.IsNullOrEmpty(GravatarUrl))
-        {
-            var givenName = user?.Claims.FirstOrDefault(c => c.Type == "given_name")?.Value;
-            var surname = user?.Claims.FirstOrDefault(c => c.Type == "family_name")?.Value;
+        if (!string.IsNullOrEmpty(GravatarUrl)) return;
 
-            if (!string.IsNullOrEmpty(givenName) && !string.IsNullOrEmpty(surname))
-            {
-                Initials = $"{givenName[0]}{surname[0]}".ToUpper();
-            }
-            else
-            {
-                Initials = "?";
-            }
-        }
+        var givenName = user?.Claims.FirstOrDefault(c => c.Type == "given_name")?.Value;
+        var surname = user?.Claims.FirstOrDefault(c => c.Type == "family_name")?.Value;
+        Initials = !string.IsNullOrEmpty(givenName) && !string.IsNullOrEmpty(surname) ? $"{givenName[0]}{surname[0]}".ToUpper() : "?";
     }
 
     private string GetGravatarUrl(string email)
@@ -46,6 +38,8 @@
         var hashBytes = md5.ComputeHash(inputBytes);
         return string.Concat(hashBytes.Select(b => b.ToString("x2")));
     }
+
+    private string Icon(string file) => $"img/{file}.svg?v={CacheBuster.Value}";
 }
 
 <div class="top-row ps-3 navbar navbar-dark">
@@ -83,19 +77,15 @@
     <nav class="nav flex-column">
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
+                <img src="@Icon("NavDashboard")" class="nav-icon" alt="" role="presentation" />
+                Dashboard
             </NavLink>
         </div>
 
         <div class="nav-item px-3">
-            <NavLink class="nav-link" href="counter">
-                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Counter
-            </NavLink>
-        </div>
-
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="weather">
-                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Weather
+            <NavLink class="nav-link" href="settings">
+                <img src="@Icon("NavSettings")" class="nav-icon" alt="" role="presentation" />
+                Settings
             </NavLink>
         </div>
     </nav>
