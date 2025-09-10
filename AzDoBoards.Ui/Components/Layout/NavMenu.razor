@@ -5,32 +5,36 @@
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject Utility.CacheBuster CacheBuster
 
-<div class="top-row ps-3 navbar navbar-dark">
-    <div class="container-fluid no-wrap-header" style="display: flex; align-items: center; gap: 1rem; white-space: nowrap;">
-        <MudMenu>
-            <ActivatorContent>
-                <MudAvatar Size="Size.Medium" Class="mud-avatar-cursor nav-avatar">
-                    @if (!string.IsNullOrEmpty(GravatarUrl))
-                    {
-                        <img src="@GravatarUrl" style="width:100%;height:100%;border-radius:50%;" alt="@UserEmail" />
-                    }
-                    else
-                    {
-                        <span>@Initials</span>
-                    }
-                </MudAvatar>
-            </ActivatorContent>
-            <ChildContent>
-                <MudMenuItem OnClick="@(() => Navigation.NavigateTo("/about"))">
-                    About
-                </MudMenuItem>
-                <MudDivider />
-                <MudMenuItem OnClick="@(() => Navigation.NavigateTo("/signout"))">
-                    Logout
-                </MudMenuItem>
-            </ChildContent>
-        </MudMenu>
-        <a class="navbar-brand nav-brand" href="">AzDo Boards</a>
+<div id="navbarMain" class="top-row ps-3 navbar navbar-dark">
+    <div id="navbarContainer" style="display: flex; align-items: center;">
+        <div id="navbarGravatar">
+            <MudMenu>
+                <ActivatorContent>
+                    <MudAvatar Size="Size.Medium" Class="mud-avatar-cursor nav-avatar">
+                        @if (!string.IsNullOrEmpty(GravatarUrl))
+                        {
+                            <img src="@GravatarUrl" style="width:100%;height:100%;border-radius:50%;" alt="@UserEmail" />
+                        }
+                        else
+                        {
+                            <span>@Initials</span>
+                        }
+                    </MudAvatar>
+                </ActivatorContent>
+                <ChildContent>
+                    <MudMenuItem OnClick="@(() => Navigation.NavigateTo("/about"))">
+                        About
+                    </MudMenuItem>
+                    <MudDivider />
+                    <MudMenuItem OnClick="@(() => Navigation.NavigateTo("/signout"))">
+                        Logout
+                    </MudMenuItem>
+                </ChildContent>
+            </MudMenu>
+        </div>
+        <div id="navbarLogo">
+            <a class="navbar-brand nav-brand" href=""><img alt="Application Logo" src="img/AzDoBoards.png?v=@CacheBuster.Value" srcset="img/AzDoBoards.svg?v=@CacheBuster.Value" /></a>
+        </div>
     </div>
 </div>
 

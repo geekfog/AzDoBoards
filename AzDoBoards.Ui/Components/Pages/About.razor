@@ -3,10 +3,7 @@
 @using Microsoft.Identity.Client
 @using System.Security.Claims
 @using MudBlazor
-@inject Client.Projects projectClient
-@inject AuthenticationStateProvider AuthenticationStateProvider
-@inject NavigationManager Navigation
-@inject StackExchange.Redis.IConnectionMultiplexer Redis
+@inject IServiceProvider ServiceProvider
 
 <PageTitle>About</PageTitle>
 
@@ -19,9 +16,9 @@
         <div>@StatusMessage</div>
     }
 
+    <h3>Authenticated User Information</h3>
     @if (User != null)
     {
-        <h3>Authenticated User Information</h3>
         <div>
             <strong>User Identity:</strong> @User.Identity?.Name
             <br />
@@ -36,14 +33,22 @@
             </MudDataGrid>
         </div>
     }
+    else
+    {
+        <div>@(isLoading ? "Loading User data..." : "No user information found.")</div>
+    }
 
+    <h3>Projects</h3>
     @if (Projects != null)
     {
-        <h3>Projects</h3>
         @foreach (var project in Projects)
         {
             <div>@project</div>
         }
+    }
+    else
+    {
+        <div>@(isLoading? "Loading Project data..." : "No project data found.")</div>
     }
 
     <h3>Redis Cache</h3>
@@ -58,84 +63,116 @@
     }
     else
     {
-        <div>No Redis keys found.</div>
+        <div>@(isLoading ? "Loading Redis data..." : "No Redis keys found.")</div>
     }
 </p>
 
 @code {
+    private bool isLoading = true;
     private string StatusMessage = string.Empty;
-
     private ClaimsPrincipal? User;
     private IEnumerable<string>? UserClaims;
-
     private List<string>? Projects;
-
     private List<string> RedisKeys = new();
     private Dictionary<string, string> RedisValues = new();
-
     private List<Claim> UserClaimsList = new();
     private List<RedisEntry> RedisEntries = new();
 
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
-        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-        User = authState.User;
-        UserClaims = User?.Claims.Select(c => $"{c.Type}: {c.Value}");
-        UserClaimsList = User?.Claims.ToList() ?? new List<Claim>();
-
-        if (User == null || !(User.Identity?.IsAuthenticated ?? false))
+        // Fire and forget - don't await
+        _ = Task.Run(async () =>
         {
-            AppendStatus("User is NOT authenticated.");
-            return;
-        }
-
-        try
-        {
-            Projects = await projectClient.GetProjectsAsync();
-            StatusMessage = $"{Projects.Count} project(s) loaded successfully.";
-        }
-        catch (Exception ex)
-        {
-            AppendStatus($"Error loading projects: {ex.Message} (Type: {ex.GetType().FullName})");
-        }
-
-        try
-        {
-            var db = Redis.GetDatabase();
-            var server = Redis.GetServer(Redis.GetEndPoints().First());
-            RedisKeys = server.Keys().Select(k => k.ToString()).ToList();
-            RedisEntries = new List<RedisEntry>();
-            foreach (var key in RedisKeys)
+            try
             {
-                try
+                await LoadAllDataAsync();
+            }
+            finally
+            {
+                isLoading = false;
+                await InvokeAsync(StateHasChanged);
+            }
+        });
+    }
+
+    private async Task LoadAllDataAsync()
+    {
+        try
+        {
+            // Lazy load services to avoid blocking component creation
+            var authProvider = ServiceProvider.GetRequiredService<AuthenticationStateProvider>();
+            var projectClient = ServiceProvider.GetRequiredService<Client.Projects>();
+            var redis = ServiceProvider.GetRequiredService<StackExchange.Redis.IConnectionMultiplexer>();
+
+            var authState = await authProvider.GetAuthenticationStateAsync();
+            User = authState.User;
+            UserClaims = User?.Claims.Select(c => $"{c.Type}: {c.Value}");
+            UserClaimsList = User?.Claims.ToList() ?? new List<Claim>();
+
+            await InvokeAsync(StateHasChanged); // Update UI with user info
+
+            if (User == null || !(User.Identity?.IsAuthenticated ?? false))
+            {
+                AppendStatus("User is NOT authenticated.");
+                return;
+            }
+
+            try
+            {
+                Projects = await projectClient.GetProjectsAsync();
+                AppendStatus($"{Projects.Count} project(s) loaded successfully.");
+                await InvokeAsync(StateHasChanged); // Update UI with projects
+            }
+            catch (Exception ex)
+            {
+                AppendStatus($"Error loading projects: {ex.Message} (Type: {ex.GetType().FullName})");
+                await InvokeAsync(StateHasChanged);
+            }
+
+            try
+            {
+                var db = redis.GetDatabase();
+                var server = redis.GetServer(redis.GetEndPoints().First());
+                RedisKeys = server.Keys().Select(k => k.ToString()).ToList();
+                RedisEntries = new List<RedisEntry>();
+                foreach (var key in RedisKeys)
                 {
-                    var value = await db.StringGetAsync(key);
-                    RedisEntries.Add(new RedisEntry
+                    try
                     {
-                        Key = key,
-                        Value = value.ToString()
-                    });
-                }
-                catch (Exception)
-                {
-                    RedisEntries.Add(new RedisEntry
+                        var value = await db.StringGetAsync(key);
+                        RedisEntries.Add(new RedisEntry
+                        {
+                            Key = key,
+                            Value = value.ToString()
+                        });
+                    }
+                    catch (Exception)
                     {
-                        Key = key,
-                        Value = "(Unknown Object)"
-                    });
+                        RedisEntries.Add(new RedisEntry
+                        {
+                            Key = key,
+                            Value = "(Unknown Object)"
+                        });
+                    }
                 }
+                await InvokeAsync(StateHasChanged); // Update UI with Redis data
+            }
+            catch (Exception ex)
+            {
+                AppendStatus($"Redis error: {ex.Message}");
+                await InvokeAsync(StateHasChanged);
             }
         }
         catch (Exception ex)
         {
-            AppendStatus($"Redis error: {ex.Message}");
+            AppendStatus($"Initialization error: {ex.Message}");
+            await InvokeAsync(StateHasChanged);
         }
     }
 
     private void AppendStatus(string message)
     {
-        if (!string.IsNullOrEmpty(StatusMessage))
-            StatusMessage += " | ";
+        if (!string.IsNullOrEmpty(StatusMessage)) StatusMessage += " | ";
         StatusMessage += message;
     }
 
