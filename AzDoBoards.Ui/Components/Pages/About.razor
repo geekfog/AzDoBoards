@@ -1,8 +1,147 @@
 ﻿@page "/about"
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.Identity.Client
+@using System.Security.Claims
+@using MudBlazor
+@inject Client.Projects projectClient
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager Navigation
+@inject StackExchange.Redis.IConnectionMultiplexer Redis
+
 <PageTitle>About</PageTitle>
 
 <h1>About</h1>
 
-@code {
+<p>
+    @if (!string.IsNullOrEmpty(StatusMessage))
+    {
+        <h3>Status</h3>
+        <div>@StatusMessage</div>
+    }
 
+    @if (User != null)
+    {
+        <h3>Authenticated User Information</h3>
+        <div>
+            <strong>User Identity:</strong> @User.Identity?.Name
+            <br />
+            <strong>Authenticated:</strong> @(User.Identity?.IsAuthenticated ?? false)
+            <br />
+            <strong>Claims:</strong>
+            <MudDataGrid Items="UserClaimsList">
+                <Columns>
+                    <PropertyColumn Property="x => x.Type" Title="Claim" Sortable="true" />
+                    <PropertyColumn Property="x => x.Value" Title="Value" Sortable="true" />
+                </Columns>
+            </MudDataGrid>
+        </div>
+    }
+
+    @if (Projects != null)
+    {
+        <h3>Projects</h3>
+        @foreach (var project in Projects)
+        {
+            <div>@project</div>
+        }
+    }
+
+    <h3>Redis Cache</h3>
+    @if (RedisEntries != null && RedisEntries.Any())
+    {
+        <MudDataGrid Items="RedisEntries" Class="mud-table-custom">
+            <Columns>
+                <PropertyColumn Property="x => x.Key" Title="Key" Sortable="true" />
+                <PropertyColumn Property="x => x.Value" Title="Value" Sortable="true" />
+            </Columns>
+        </MudDataGrid>
+    }
+    else
+    {
+        <div>No Redis keys found.</div>
+    }
+</p>
+
+@code {
+    private string StatusMessage = string.Empty;
+
+    private ClaimsPrincipal? User;
+    private IEnumerable<string>? UserClaims;
+
+    private List<string>? Projects;
+
+    private List<string> RedisKeys = new();
+    private Dictionary<string, string> RedisValues = new();
+
+    private List<Claim> UserClaimsList = new();
+    private List<RedisEntry> RedisEntries = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        User = authState.User;
+        UserClaims = User?.Claims.Select(c => $"{c.Type}: {c.Value}");
+        UserClaimsList = User?.Claims.ToList() ?? new List<Claim>();
+
+        if (User == null || !(User.Identity?.IsAuthenticated ?? false))
+        {
+            AppendStatus("User is NOT authenticated.");
+            return;
+        }
+
+        try
+        {
+            Projects = await projectClient.GetProjectsAsync();
+            StatusMessage = $"{Projects.Count} project(s) loaded successfully.";
+        }
+        catch (Exception ex)
+        {
+            AppendStatus($"Error loading projects: {ex.Message} (Type: {ex.GetType().FullName})");
+        }
+
+        try
+        {
+            var db = Redis.GetDatabase();
+            var server = Redis.GetServer(Redis.GetEndPoints().First());
+            RedisKeys = server.Keys().Select(k => k.ToString()).ToList();
+            RedisEntries = new List<RedisEntry>();
+            foreach (var key in RedisKeys)
+            {
+                try
+                {
+                    var value = await db.StringGetAsync(key);
+                    RedisEntries.Add(new RedisEntry
+                    {
+                        Key = key,
+                        Value = value.ToString()
+                    });
+                }
+                catch (Exception)
+                {
+                    RedisEntries.Add(new RedisEntry
+                    {
+                        Key = key,
+                        Value = "(Unknown Object)"
+                    });
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            AppendStatus($"Redis error: {ex.Message}");
+        }
+    }
+
+    private void AppendStatus(string message)
+    {
+        if (!string.IsNullOrEmpty(StatusMessage))
+            StatusMessage += " | ";
+        StatusMessage += message;
+    }
+
+    public class RedisEntry
+    {
+        public string Key { get; set; } = string.Empty;
+        public string Value { get; set; } = string.Empty;
+    }
 }

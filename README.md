@@ -1,12 +1,14 @@
-# Azure DevOps Boards Project Management Tool
+# AzDo Boards Project Management Tool
 
-AzDoBoards is to be a tool to assist with project management within Azure DevOps Boards. The UI within Azure DevOps Boards is clunky for doing project management and quickly update information. The intent is to support the hierarchy of Initiative > Epic > Feature > User Story / Bug / Research > Tasks.
+AzDo Boards ("As-Do") is to be a tool to assist with project management within Azure DevOps Boards. The UI within Azure DevOps Boards is clunky for doing project management and quickly adding or updating information. 
 
-*This is an idea that has been noodled for a while. Now this is being attempted for future efficiency of project work. We will see where this goes, if anywhere.*
+The intent is to support a custom-defined hierarchy (e.g., Initiative > Epic > Feature > User Story / Bug / Research > Tasks).
+
+*This is an idea that has been noodled for a while. Now this is being attempted for future efficiency of project work, to give back, and to see if there is interest within the open source community. We will see where this goes, if anywhere.*
 
 ## Future Action Items
 
-1. Use certificates instead of Client Secret for the App Registration and Azure DevOps downstream API support.
+1. Add support for certificates in place of Client Secret for the App Registration and Azure DevOps downstream API support.
 
 # Development Technologies
 
@@ -50,6 +52,8 @@ The settings supported are as follows:
 ```
 
 ## Azure Portal App Registration
+
+An App Registration is required to allow this application to integrate with Azure DevOps using Azure Entra ID authentication (presuming Azure DevOps is integrated into Azure Entra ID via Organization Settings > Microsoft Entra).
 
 1. View the Overview option and capture the *Application (client) ID* for the **ClientId** and the *Directory (tenant) ID* for the **TenantId**.
 
