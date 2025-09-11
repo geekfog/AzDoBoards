@@ -1,8 +1,210 @@
 ﻿@page "/settings"
+@using Microsoft.AspNetCore.Components.Authorization
+@using AzDoBoards.Client
+@using MudBlazor
+@inject IServiceProvider ServiceProvider
+
 <PageTitle>Settings</PageTitle>
 
 <h1>Settings</h1>
 
-@code {
+<div>
+    @if (!string.IsNullOrEmpty(StatusMessage))
+    {
+        <h3>Status</h3>
+        <div>@StatusMessage</div>
+        <br />
+    }
 
+    <h3>Azure DevOps Processes</h3>
+    @if (ProcessesWithCounts != null && ProcessesWithCounts.Any())
+    {
+        <MudDataGrid Items="ProcessesWithCounts" Sortable="true" Filterable="true" QuickFilter="@_quickFilter">
+            <ToolBarContent>
+                <MudText Typo="Typo.h6">Process Templates</MudText>
+                <MudSpacer />
+                <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Size="Size.Small"
+                           OnClick="RefreshProcessData" Disabled="isLoading">
+                    <MudIcon Icon="Icons.Material.Filled.Refresh" Size="Size.Small" />
+                    Refresh
+                </MudButton>
+                <MudTextField @bind-Value="_searchString" Placeholder="Search" Adornment="Adornment.Start"
+                              AdornmentIcon="Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0 ml-3" />
+            </ToolBarContent>
+            <Columns>
+                <PropertyColumn Property="x => x.Process.Name" Title="Process Name" Sortable="true" />
+                <PropertyColumn Property="x => x.Process.Description" Title="Description" Sortable="true" />
+                <PropertyColumn Property="x => x.ProjectCount" Title="Project Count" Sortable="true" />
+                <PropertyColumn Property="x => x.Process.ReferenceName" Title="Reference Name" Sortable="true" />
+                <TemplateColumn Title="Actions">
+                    <CellTemplate>
+                        <MudStack Row>
+                            <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small"
+                                       OnClick="@(() => ViewWorkItemTypes(context.Item.Process.Id, context.Item.Process.Name))"
+                                       Disabled="isLoading">
+                                View Work Items
+                            </MudButton>
+                        </MudStack>
+                    </CellTemplate>
+                </TemplateColumn>
+            </Columns>
+        </MudDataGrid>
+    }
+    else
+    {
+        <div>@(isLoading ? "Loading process data..." : "No process data found.")</div>
+    }
+
+    @if (SelectedProcessWorkItems != null && SelectedProcessWorkItems.Any())
+    {
+        <br />
+        <h4>Work Item Types for @SelectedProcessName</h4>
+        <MudDataGrid Items="SelectedProcessWorkItems" Sortable="true" Filterable="true">
+            <Columns>
+                <PropertyColumn Property="x => x.Name" Title="Work Item Type" Sortable="true" />
+                <PropertyColumn Property="x => x.ReferenceName" Title="Reference Name" Sortable="true" />
+                <PropertyColumn Property="x => x.Description" Title="Description" Sortable="true" />
+                <TemplateColumn Title="Color">
+                    <CellTemplate>
+                        <div style="background-color: @context.Item.Color; width: 20px; height: 20px; border-radius: 3px;"></div>
+                    </CellTemplate>
+                </TemplateColumn>
+                <PropertyColumn Property="x => x.IsDisabled" Title="Disabled" Sortable="true" />
+            </Columns>
+        </MudDataGrid>
+    }
+</div>
+
+@code {
+    private bool isLoading = true;
+    private string StatusMessage = string.Empty;
+    private List<ProcessWithProjectCount>? ProcessesWithCounts;
+    private List<WorkItemTypeInfo>? SelectedProcessWorkItems;
+    private string SelectedProcessName = string.Empty;
+    private string _searchString = string.Empty;
+
+    private Func<ProcessWithProjectCount, bool> _quickFilter => x =>
+    {
+        if (string.IsNullOrWhiteSpace(_searchString))
+            return true;
+
+        if (x.Process.Name.Contains(_searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        if (x.Process.Description.Contains(_searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        if (x.Process.ReferenceName.Contains(_searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        return false;
+    };
+
+    protected override void OnInitialized()
+    {
+        // Fire and forget - don't await
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await LoadProcessDataAsync();
+            }
+            finally
+            {
+                isLoading = false;
+                await InvokeAsync(StateHasChanged);
+            }
+        });
+    }
+
+    private async Task LoadProcessDataAsync()
+    {
+        try
+        {
+            // Lazy load services to avoid blocking component creation
+            var authProvider = ServiceProvider.GetRequiredService<AuthenticationStateProvider>();
+            var processClient = ServiceProvider.GetRequiredService<Process>();
+
+            var authState = await authProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+
+            if (user == null || !(user.Identity?.IsAuthenticated ?? false))
+            {
+                AppendStatus("User is NOT authenticated.");
+                return;
+            }
+
+            try
+            {
+                ProcessesWithCounts = await processClient.GetProcessesWithProjectCountsAsync();
+                AppendStatus($"{ProcessesWithCounts.Count} process(es) loaded successfully (cached for efficiency).");
+                await InvokeAsync(StateHasChanged); // Update UI with process data
+            }
+            catch (Exception ex)
+            {
+                AppendStatus($"Error loading processes: {ex.Message} (Type: {ex.GetType().FullName})");
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (Exception ex)
+        {
+            AppendStatus($"Initialization error: {ex.Message}");
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task RefreshProcessData()
+    {
+        try
+        {
+            isLoading = true;
+            StatusMessage = string.Empty;
+            StateHasChanged();
+
+            var processClient = ServiceProvider.GetRequiredService<Process>();
+            processClient.ClearCache(); // Clear the cache to force refresh
+            
+            ProcessesWithCounts = await processClient.GetProcessesWithProjectCountsAsync();
+            AppendStatus($"Refreshed: {ProcessesWithCounts.Count} process(es) reloaded from Azure DevOps.");
+        }
+        catch (Exception ex)
+        {
+            AppendStatus($"Error refreshing processes: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ViewWorkItemTypes(Guid processId, string processName)
+    {
+        try
+        {
+            isLoading = true;
+            SelectedProcessName = processName;
+            StateHasChanged();
+
+            var processClient = ServiceProvider.GetRequiredService<Process>();
+            SelectedProcessWorkItems = await processClient.GetWorkItemTypesForProcessAsync(processId);
+
+            AppendStatus($"Loaded {SelectedProcessWorkItems.Count} unique work item types for process: {processName} (optimized single-project query).");
+        }
+        catch (Exception ex)
+        {
+            AppendStatus($"Error loading work item types: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void AppendStatus(string message)
+    {
+        if (!string.IsNullOrEmpty(StatusMessage)) StatusMessage += " | ";
+        StatusMessage += message;
+    }
 }
