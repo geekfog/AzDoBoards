@@ -2,6 +2,7 @@
 using Microsoft.Identity.Web;
 using Microsoft.VisualStudio.Services.OAuth;
 using Microsoft.VisualStudio.Services.WebApi;
+using AzDoBoards.Utility;
 
 namespace AzDoBoards.Client;
 
@@ -12,8 +13,6 @@ public class ConnectionFactory
     private readonly IHttpContextAccessor _httpContextAccessor;
     private VssConnection? _connection;
 
-    // Azure DevOps resource ID for user_impersonation
-    private const string AzureDevOpsScope = "499b84ac-1321-427f-aa17-267ca6975798/.default";
     private readonly string _organizationUrl;
 
     // Constructor injects token acquisition, HTTP context accessor, and organization URL
@@ -45,7 +44,7 @@ public class ConnectionFactory
         // Acquire the access token for Azure DevOps using the current user
         try
         {
-            var token = await _tokenAcquisition.GetAccessTokenForUserAsync(new[] { AzureDevOpsScope }, user: user);
+            var token = await _tokenAcquisition.GetAccessTokenForUserAsync(new[] { Utility.Constants.AzureDevOps_OAuthScope }, user: user);
             var creds = new VssOAuthAccessTokenCredential(token);
             _connection = new VssConnection(new Uri(_organizationUrl), creds);
         }

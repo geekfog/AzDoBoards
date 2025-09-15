@@ -27,7 +27,7 @@ public class Program
         SerilogHelper.Configure(builder.Environment);
 
         // Add Azure KeyVault configuration
-        var keyVaultEndpoint = Environment.GetEnvironmentVariable("KeyVaultEndpoint");
+        var keyVaultEndpoint = Environment.GetEnvironmentVariable(Utility.Constants.Azure_EnvcfgKeyVaultEndpoint);
         if (!string.IsNullOrEmpty(keyVaultEndpoint))
         {
             var keyVaultEndpointUrl = new Uri(keyVaultEndpoint);
@@ -43,11 +43,11 @@ public class Program
 
         if (Server.IsProduction)
         {
-            builder.Services.AddHsts(options => // https://aka.ms/aspnetcore-hsts.
+            builder.Services.AddHsts(options => // https://aka.ms/aspnetcore-hsts
             {
                 options.Preload = true;
                 options.IncludeSubDomains = true;
-                options.MaxAge = TimeSpan.FromDays(365);
+                options.MaxAge = TimeSpan.FromDays(Utility.Constants.Security_HstsMaxAgeDays);
             });
         }
 
@@ -55,17 +55,17 @@ public class Program
         builder.Services.AddMudServices();
 
         // Add Redis Cache
-        var redisConnectionString = builder.Configuration["Redis:ConnectionString"] ?? "localhost:6379";
+        var redisConnectionString = builder.Configuration[Utility.Constants.Redis_ConfigConnectionString] ?? Utility.Constants.Redis_DefaultConnectionString;
         builder.Services.AddStackExchangeRedisCache(options =>
         {
             options.Configuration = redisConnectionString; // Use your Redis connection string
-            options.InstanceName = "AzDoBoardsTokenCache";
+            options.InstanceName = Utility.Constants.Redis_TokenCacheInstanceName;
         });
 
         // Add Dependency Injection
         builder.Services.AddSingleton<CacheBuster>();
         builder.Services.AddHttpContextAccessor();
-        var organizationUrl = builder.Configuration["AzureDevOps:OrganizationUrl"] ?? string.Empty;
+        var organizationUrl = builder.Configuration[Utility.Constants.AzureDevOps_ConfigOrganizationUrl] ?? string.Empty;
         builder.Services.AddScoped(sp =>
         {
             var tokenAcquisition = sp.GetRequiredService<ITokenAcquisition>();
@@ -78,15 +78,15 @@ public class Program
 
         // Add Entra ID (Azure AD) Authentication
         builder.Services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
-            .AddMicrosoftIdentityWebApp(builder.Configuration.GetSection("AzureAd"))
-            .EnableTokenAcquisitionToCallDownstreamApi(["499b84ac-1321-427f-aa17-267ca6975798/.default"]) // Acquire tokens for downstream APIs
+            .AddMicrosoftIdentityWebApp(builder.Configuration.GetSection(Utility.Constants.Azure_ConfigSection))
+            .EnableTokenAcquisitionToCallDownstreamApi([Utility.Constants.AzureDevOps_OAuthScope]) // Acquire tokens for downstream APIs
             .AddDistributedTokenCaches();
 
         builder.Services.AddAuthorization(options => {
             options.FallbackPolicy = options.DefaultPolicy;
         });
 
-        
+
         // Add services to the container
         builder.Services.AddRazorComponents()
             .AddInteractiveServerComponents();
@@ -105,7 +105,7 @@ public class Program
             app.UseHsts();
         }
 
-        app.UseStatusCodePagesWithReExecute("/not-found", createScopeForErrors: true);
+        app.UseStatusCodePagesWithReExecute(Utility.Constants.Page_FoundFoundPath, createScopeForErrors: true);
 
         app.UseHttpsRedirection();
 
