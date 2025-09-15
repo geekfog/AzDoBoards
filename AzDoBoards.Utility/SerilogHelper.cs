@@ -19,14 +19,14 @@ public static class SerilogHelper
 
     private static void Header()
     {
-        Log.Information("                                                                                ");
-        Log.Information("░█████╗░███████╗██████╗░░█████╗░██████╗░░█████╗░░█████╗░██████╗░██████╗░░██████╗");
-        Log.Information("██╔══██╗╚════██║██╔══██╗██╔══██╗██╔══██╗██╔══██╗██╔══██╗██╔══██╗██╔══██╗██╔════╝");
-        Log.Information("███████║░░███╔═╝██║░░██║██║░░██║██████╦╝██║░░██║███████║██████╔╝██║░░██║╚█████╗░");
-        Log.Information("██╔══██║██╔══╝░░██║░░██║██║░░██║██╔══██╗██║░░██║██╔══██║██╔══██╗██║░░██║░╚═══██╗");
-        Log.Information("██║░░██║███████╗██████╔╝╚█████╔╝██████╦╝╚█████╔╝██║░░██║██║░░██║██████╔╝██████╔╝");
-        Log.Information("╚═╝░░╚═╝╚══════╝╚═════╝░░╚════╝░╚═════╝░░╚════╝░╚═╝░░╚═╝╚═╝░░╚═╝╚═════╝░╚═════╝░");
-        Log.Information("                                                                                ");
+        Log.Information("                                                                                  ");
+        Log.Information("░█████╗░███████╗██████╗░░█████╗░░░██████╗░░█████╗░░█████╗░██████╗░██████╗░░██████╗");
+        Log.Information("██╔══██╗╚════██║██╔══██╗██╔══██╗░░██╔══██╗██╔══██╗██╔══██╗██╔══██╗██╔══██╗██╔════╝");
+        Log.Information("███████║░░███╔═╝██║░░██║██║░░██║░░██████╦╝██║░░██║███████║██████╔╝██║░░██║╚█████╗░");
+        Log.Information("██╔══██║██╔══╝░░██║░░██║██║░░██║░░██╔══██╗██║░░██║██╔══██║██╔══██╗██║░░██║░╚═══██╗");
+        Log.Information("██║░░██║███████╗██████╔╝╚█████╔╝░░██████╦╝╚█████╔╝██║░░██║██║░░██║██████╔╝██████╔╝");
+        Log.Information("╚═╝░░╚═╝╚══════╝╚═════╝░░╚════╝░░░╚═════╝░░╚════╝░╚═╝░░╚═╝╚═╝░░╚═╝╚═════╝░╚═════╝░");
+        Log.Information("                                                                                  ");
         // TODO: Parameterize the time zone - use the Windows time zone also specified for Windows in Pipelines (same parameter)?
         Log.Information($"Application started on {TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time")):yyyy-MM-dd HH:mm:ss} CST, {DateTime.Now:yyyy-MM-dd HH:mm:ss} NOW");
         Log.Information($"Current working folder: {Directory.GetCurrentDirectory()}");

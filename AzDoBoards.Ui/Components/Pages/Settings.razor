@@ -17,9 +17,9 @@
     }
 
     <h3>Azure DevOps Processes</h3>
-    @if (ProcessesWithCounts != null && ProcessesWithCounts.Any())
+    @if (Processes != null && Processes.Any())
     {
-        <MudDataGrid Items="ProcessesWithCounts" Sortable="true" Filterable="true" QuickFilter="@_quickFilter">
+        <MudDataGrid Items="Processes" Sortable="true" Filterable="true" QuickFilter="@_quickFilter">
             <ToolBarContent>
                 <MudText Typo="Typo.h6">Process Templates</MudText>
                 <MudSpacer />
@@ -32,15 +32,38 @@
                               AdornmentIcon="Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0 ml-3" />
             </ToolBarContent>
             <Columns>
-                <PropertyColumn Property="x => x.Process.Name" Title="Process Name" Sortable="true" />
-                <PropertyColumn Property="x => x.Process.Description" Title="Description" Sortable="true" />
+                <PropertyColumn Property="x => x.Name" Title="Process Name" Sortable="true" />
+                <PropertyColumn Property="x => x.Description" Title="Description" Sortable="true" />
                 <PropertyColumn Property="x => x.ProjectCount" Title="Project Count" Sortable="true" />
-                <PropertyColumn Property="x => x.Process.ReferenceName" Title="Reference Name" Sortable="true" />
+                <TemplateColumn Title="Type" Sortable="true" SortBy="@(x => x.IsSystemProcess ? "System" : "Custom")">
+                    <CellTemplate>
+                        <MudChip Variant="Variant.Text" Color="@(context.Item.IsSystemProcess? Color.Info: Color.Success)" Size="Size.Small">
+                            @(context.Item.IsSystemProcess ? "System" : "Custom")
+                        </MudChip>
+                    </CellTemplate>
+                </TemplateColumn>
+                <TemplateColumn Title="Status" Sortable="true" SortBy="@(x => x.IsDefault ? "Default" : (x.IsEnabled ? "Enabled" : "Disabled"))">
+                    <CellTemplate>
+                        @if (context.Item.IsDefault)
+                        {
+                            <MudChip Variant="Variant.Text" Color="Color.Warning" Size="Size.Small">Default</MudChip>
+                        }
+                        else if (context.Item.IsEnabled)
+                        {
+                            <MudChip Variant="Variant.Text" Color="Color.Success" Size="Size.Small">Enabled</MudChip>
+                        }
+                        else
+                        {
+                            <MudChip Variant="Variant.Text" Color="Color.Error" Size="Size.Small">Disabled</MudChip>
+                        }
+                    </CellTemplate>
+                </TemplateColumn>
+                <PropertyColumn Property="x => x.ReferenceName" Title="Reference Name" Sortable="true" />
                 <TemplateColumn Title="Actions">
                     <CellTemplate>
                         <MudStack Row>
                             <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small"
-                                       OnClick="@(() => ViewWorkItemTypes(context.Item.Process.Id, context.Item.Process.Name))"
+                                       OnClick="@(() => ViewWorkItemTypes(context.Item.Id, context.Item.Name))"
                                        Disabled="isLoading">
                                 View Work Items
                             </MudButton>
@@ -78,23 +101,23 @@
 @code {
     private bool isLoading = true;
     private string StatusMessage = string.Empty;
-    private List<ProcessWithProjectCount>? ProcessesWithCounts;
+    private List<ProcessInfo>? Processes;
     private List<WorkItemTypeInfo>? SelectedProcessWorkItems;
     private string SelectedProcessName = string.Empty;
     private string _searchString = string.Empty;
 
-    private Func<ProcessWithProjectCount, bool> _quickFilter => x =>
+    private Func<ProcessInfo, bool> _quickFilter => x =>
     {
         if (string.IsNullOrWhiteSpace(_searchString))
             return true;
 
-        if (x.Process.Name.Contains(_searchString, StringComparison.OrdinalIgnoreCase))
+        if (x.Name.Contains(_searchString, StringComparison.OrdinalIgnoreCase))
             return true;
 
-        if (x.Process.Description.Contains(_searchString, StringComparison.OrdinalIgnoreCase))
+        if (x.Description.Contains(_searchString, StringComparison.OrdinalIgnoreCase))
             return true;
 
-        if (x.Process.ReferenceName.Contains(_searchString, StringComparison.OrdinalIgnoreCase))
+        if (x.ReferenceName.Contains(_searchString, StringComparison.OrdinalIgnoreCase))
             return true;
 
         return false;
@@ -136,8 +159,10 @@
 
             try
             {
-                ProcessesWithCounts = await processClient.GetProcessesWithProjectCountsAsync();
-                AppendStatus($"{ProcessesWithCounts.Count} process(es) loaded successfully (cached for efficiency).");
+                Processes = await processClient.GetProcessesAsync();
+                var systemProcessCount = Processes.Count(p => p.IsSystemProcess);
+                var customProcessCount = Processes.Count(p => !p.IsSystemProcess);
+                AppendStatus($"{Processes.Count} process(es) loaded: {systemProcessCount} system, {customProcessCount} custom (cached for efficiency).");
                 await InvokeAsync(StateHasChanged); // Update UI with process data
             }
             catch (Exception ex)
@@ -163,9 +188,11 @@
 
             var processClient = ServiceProvider.GetRequiredService<Process>();
             processClient.ClearCache(); // Clear the cache to force refresh
-            
-            ProcessesWithCounts = await processClient.GetProcessesWithProjectCountsAsync();
-            AppendStatus($"Refreshed: {ProcessesWithCounts.Count} process(es) reloaded from Azure DevOps.");
+
+            Processes = await processClient.GetProcessesAsync();
+            var systemProcessCount = Processes.Count(p => p.IsSystemProcess);
+            var customProcessCount = Processes.Count(p => !p.IsSystemProcess);
+            AppendStatus($"Refreshed: {Processes.Count} process(es) reloaded from Azure DevOps ({systemProcessCount} system, {customProcessCount} custom).");
         }
         catch (Exception ex)
         {
@@ -189,7 +216,7 @@
             var processClient = ServiceProvider.GetRequiredService<Process>();
             SelectedProcessWorkItems = await processClient.GetWorkItemTypesForProcessAsync(processId);
 
-            AppendStatus($"Loaded {SelectedProcessWorkItems.Count} unique work item types for process: {processName} (optimized single-project query).");
+            AppendStatus($"Loaded {SelectedProcessWorkItems.Count} work item types for process: {processName} (using optimized Process API).");
         }
         catch (Exception ex)
         {

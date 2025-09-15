@@ -1,21 +1,17 @@
 ﻿using Microsoft.TeamFoundation.Core.WebApi;
-using Microsoft.TeamFoundation.WorkItemTracking.WebApi;
-using Microsoft.TeamFoundation.WorkItemTracking.WebApi.Models;
 using Microsoft.TeamFoundation.WorkItemTracking.Process.WebApi;
-using Microsoft.TeamFoundation.WorkItemTracking.Process.WebApi.Models;
 
 namespace AzDoBoards.Client;
 
 public class Process(ConnectionFactory connectionFactory) : Base(connectionFactory)
 {
     private Dictionary<Guid, ProcessInfo>? _processCache;
-    private Dictionary<Guid, int>? _processProjectCountCache;
     private Dictionary<Guid, string>? _processToSampleProjectCache;
 
     /// <summary>
     /// Gets all processes in the Azure DevOps organization using the Process API (cached)
     /// </summary>
-    /// <returns>List of processes with their details</returns>
+    /// <returns>List of processes with their details including project counts</returns>
     public async Task<List<ProcessInfo>> GetProcessesAsync()
     {
         if (_processCache != null)
@@ -31,11 +27,10 @@ public class Process(ConnectionFactory connectionFactory) : Base(connectionFacto
     /// <returns>Dictionary with process ID as key and project count as value</returns>
     public async Task<Dictionary<Guid, int>> GetProjectCountByProcessAsync()
     {
-        if (_processProjectCountCache != null)
-            return _processProjectCountCache;
+        if (_processCache == null)
+            await LoadProcessDataAsync();
 
-        await LoadProcessDataAsync();
-        return _processProjectCountCache!;
+        return _processCache!.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.ProjectCount);
     }
 
     /// <summary>
@@ -47,13 +42,10 @@ public class Process(ConnectionFactory connectionFactory) : Base(connectionFacto
     {
         var connection = await _connectionFactory.GetConnectionAsync();
 
-        try
-        {
-            // Try to get work item types directly from the process (for inherited/custom processes)
-            var processClient = connection.GetClient<WorkItemTrackingProcessHttpClient>();
-            var workItemTypes = await processClient.GetProcessWorkItemTypesAsync(processId);
+        var processClient = connection.GetClient<WorkItemTrackingProcessHttpClient>();
+        var workItemTypes = await processClient.GetProcessWorkItemTypesAsync(processId);
 
-            return [.. workItemTypes.Select(wit => new WorkItemTypeInfo
+        return [.. workItemTypes.Select(wit => new WorkItemTypeInfo
             {
                 ReferenceName = wit.ReferenceName,
                 Name = wit.Name,
@@ -62,46 +54,6 @@ public class Process(ConnectionFactory connectionFactory) : Base(connectionFacto
                 Icon = wit.Icon ?? string.Empty,
                 IsDisabled = wit.IsDisabled
             })];
-        }
-        catch
-        {
-            // Fallback: If direct process API fails (for system processes), use a project that uses this process
-            await LoadProcessDataAsync();
-
-            if (!_processToSampleProjectCache!.TryGetValue(processId, out var sampleProjectName))
-            {
-                return []; // No projects found for this process
-            }
-
-            var workItemClient = connection.GetClient<WorkItemTrackingHttpClient>();
-            var projectWorkItemTypes = await workItemClient.GetWorkItemTypesAsync(sampleProjectName);
-
-            return [.. projectWorkItemTypes.Select(wit => new WorkItemTypeInfo
-            {
-                ReferenceName = wit.ReferenceName,
-                Name = wit.Name,
-                Description = wit.Description,
-                Color = wit.Color,
-                Icon = wit.Icon?.Id ?? string.Empty,
-                IsDisabled = wit.IsDisabled
-            })];
-        }
-    }
-
-    /// <summary>
-    /// Gets processes with their associated project counts (cached)
-    /// </summary>
-    /// <returns>List of processes with project count information</returns>
-    public async Task<List<ProcessWithProjectCount>> GetProcessesWithProjectCountsAsync()
-    {
-        var processes = await GetProcessesAsync();
-        var projectCounts = await GetProjectCountByProcessAsync();
-
-        return [.. processes.Select(p => new ProcessWithProjectCount
-        {
-            Process = p,
-            ProjectCount = projectCounts.GetValueOrDefault(p.Id, 0)
-        })];
     }
 
     /// <summary>
@@ -128,7 +80,8 @@ public class Process(ConnectionFactory connectionFactory) : Base(connectionFacto
                 ReferenceName = process.ReferenceName,
                 IsDefault = process.IsDefault,
                 IsEnabled = process.IsEnabled,
-                IsSystemProcess = process.ParentProcessTypeId == null // System processes don't have a parent
+                IsSystemProcess = process.ParentProcessTypeId == Guid.Empty, // System processes don't have a parent
+                ProjectCount = 0 // Will be updated below
             };
             processes[process.TypeId] = processInfo;
         }
@@ -137,7 +90,6 @@ public class Process(ConnectionFactory connectionFactory) : Base(connectionFacto
         var projectClient = connection.GetClient<ProjectHttpClient>();
         var projects = await projectClient.GetProjects();
 
-        var processProjectCounts = new Dictionary<Guid, int>();
         var processToSampleProject = new Dictionary<Guid, string>();
 
         foreach (var project in projects)
@@ -149,7 +101,10 @@ public class Process(ConnectionFactory connectionFactory) : Base(connectionFacto
                 Guid.TryParse(templateTypeId, out var processId))
             {
                 // Update project count
-                processProjectCounts[processId] = processProjectCounts.GetValueOrDefault(processId, 0) + 1;
+                if (processes.TryGetValue(processId, out var processInfo))
+                {
+                    processInfo.ProjectCount++;
+                }
 
                 // Store first project name as sample (for getting work item types if needed)
                 if (!processToSampleProject.ContainsKey(processId))
@@ -161,7 +116,6 @@ public class Process(ConnectionFactory connectionFactory) : Base(connectionFacto
 
         // Cache the results
         _processCache = processes;
-        _processProjectCountCache = processProjectCounts;
         _processToSampleProjectCache = processToSampleProject;
     }
 
@@ -171,7 +125,6 @@ public class Process(ConnectionFactory connectionFactory) : Base(connectionFacto
     public void ClearCache()
     {
         _processCache = null;
-        _processProjectCountCache = null;
         _processToSampleProjectCache = null;
     }
 }
@@ -188,6 +141,7 @@ public class ProcessInfo
     public bool IsDefault { get; set; }
     public bool IsEnabled { get; set; }
     public bool IsSystemProcess { get; set; }
+    public int ProjectCount { get; set; }
 }
 
 /// <summary>
@@ -201,13 +155,4 @@ public class WorkItemTypeInfo
     public string Color { get; set; } = string.Empty;
     public string Icon { get; set; } = string.Empty;
     public bool IsDisabled { get; set; }
-}
-
-/// <summary>
-/// Process information combined with project count
-/// </summary>
-public class ProcessWithProjectCount
-{
-    public ProcessInfo Process { get; set; } = new();
-    public int ProjectCount { get; set; }
 }
