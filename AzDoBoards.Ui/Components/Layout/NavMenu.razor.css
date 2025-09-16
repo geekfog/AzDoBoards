@@ -107,17 +107,24 @@
     padding-right: 0 !important;
 }
 
-#navbarGravatar {
+#navbarLogo {
+    max-height: 34px;
     padding-left: 5px;
     padding-right: 0;
 }
 
-#navbarLogo {
+#navbarName {
     padding-left: 0;
     padding-right: 0;
 }
 
-#navbarLogo img {
+#navbarName img {
     height: 34px;
     width: unset;
+}
+
+#gravatar {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
 }

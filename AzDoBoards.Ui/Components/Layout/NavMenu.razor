@@ -7,19 +7,40 @@
 
 <div id="navbarMain" class="top-row ps-3 navbar navbar-dark">
     <div id="navbarContainer" style="display: flex; align-items: center;">
-        <div id="navbarGravatar">
+        <img id="navbarLogo" src="img/favicon-0128.png?v=@CacheBuster.Value" srcset="img/favicon.svg?v=@CacheBuster.Value" />
+        <div id="navbarName">
+            <a class="navbar-brand nav-brand" href=""><img alt="Application Name" src="img/AzDoBoards.png?v=@CacheBuster.Value" srcset="img/AzDoBoards.svg?v=@CacheBuster.Value" /></a>
+        </div>
+    </div>
+</div>
+
+<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+
+<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()" style="height: calc(100vh - var(--navbar-height, 60px)); display: flex; flex-direction: column;">
+    <nav class="nav flex-column" style="flex: 1; display: flex; flex-direction: column;">
+        <div style="flex: 1;">
+            <div class="nav-item px-3"><NavLink class="nav-link" href="" Match="NavLinkMatch.All"><img src="@Icon("NavDashboard")" class="nav-icon" alt="" role="presentation" /> Dashboard </NavLink></div>
+            <div class="nav-item px-3"><NavLink class="nav-link" href="items">                    <img src="@Icon("NavItems")"     class="nav-icon" alt="" role="presentation" /> Items     </NavLink></div>
+            <div class="nav-item px-3"><NavLink class="nav-link" href="settings">                 <img src="@Icon("NavSettings")"  class="nav-icon" alt="" role="presentation" /> Settings  </NavLink></div>
+            <div class="nav-item px-3"><NavLink class="nav-link" href="process">                  <img src="@Icon("NavProcess")"  class="nav-icon" alt="" role="presentation" /> Processes </NavLink></div>
+        </div>
+        
+        <div class="nav-item px-3" style="margin-top: auto; padding-bottom: 1rem;">
             <MudMenu>
                 <ActivatorContent>
-                    <MudAvatar Size="Size.Medium" Class="mud-avatar-cursor nav-avatar">
-                        @if (!string.IsNullOrEmpty(GravatarUrl))
-                        {
-                            <img src="@GravatarUrl" style="width:100%;height:100%;border-radius:50%;" alt="@UserEmail" />
-                        }
-                        else
-                        {
-                            <span>@Initials</span>
-                        }
-                    </MudAvatar>
+                    <div class="nav-link d-flex align-items-center" style="cursor: pointer;">
+                        <MudAvatar Size="Size.Medium" Class="nav-avatar me-2">
+                            @if (!string.IsNullOrEmpty(GravatarUrl))
+                            {
+                                <img id="gravatar" src="@GravatarUrl" alt="@PreferredUserName" />
+                            }
+                            else
+                            {
+                                <span>@Initials</span>
+                            }
+                        </MudAvatar>
+                        <span>@Name</span>
+                    </div>
                 </ActivatorContent>
                 <ChildContent>
                     <MudMenuItem OnClick="@(() => Navigation.NavigateTo("/about"))">
@@ -32,25 +53,13 @@
                 </ChildContent>
             </MudMenu>
         </div>
-        <div id="navbarLogo">
-            <a class="navbar-brand nav-brand" href=""><img alt="Application Logo" src="img/AzDoBoards.png?v=@CacheBuster.Value" srcset="img/AzDoBoards.svg?v=@CacheBuster.Value" /></a>
-        </div>
-    </div>
-</div>
-
-<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
-
-<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
-    <nav class="nav flex-column">
-        <div class="nav-item px-3"><NavLink class="nav-link" href="" Match="NavLinkMatch.All"><img src="@Icon("NavDashboard")" class="nav-icon" alt="" role="presentation" /> Dashboard </NavLink></div>
-        <div class="nav-item px-3"><NavLink class="nav-link" href="items">                    <img src="@Icon("NavItems")"     class="nav-icon" alt="" role="presentation" /> Items     </NavLink></div>
-        <div class="nav-item px-3"><NavLink class="nav-link" href="settings">                 <img src="@Icon("NavSettings")"  class="nav-icon" alt="" role="presentation" /> Settings  </NavLink></div>
-        <div class="nav-item px-3"><NavLink class="nav-link" href="process">                   <img src="@Icon("NavProcess")"  class="nav-icon" alt="" role="presentation" /> Processes </NavLink></div>
     </nav>
 </div>
 
 @code {
-    private string? UserEmail;
+    private string? PreferredUserName;
+    private string? Email;
+    private string? Name;
     private string? GravatarUrl;
     private string? Initials;
 
@@ -58,14 +67,17 @@
     {
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
-        UserEmail = user?.Claims.FirstOrDefault(c => c.Type == "preferred_username")?.Value;
-        GravatarUrl = !string.IsNullOrEmpty(UserEmail) ? GetGravatarUrl(UserEmail) : null;
+        PreferredUserName = user?.Claims.FirstOrDefault(c => c.Type == "preferred_username")?.Value;
+        Email = user?.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Email)?.Value;
+        GravatarUrl = !string.IsNullOrEmpty(PreferredUserName) ? GetGravatarUrl(PreferredUserName) : null;
 
+        Name = user?.Claims.FirstOrDefault(c => c.Type == "name")?.Value ?? "(Unknown)";
+        var givenName = user?.Claims.FirstOrDefault(c => c.Type == ClaimTypes.GivenName)?.Value;
+        var surname = user?.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Surname)?.Value;
+      
         if (!string.IsNullOrEmpty(GravatarUrl)) return;
 
-        var givenName = user?.Claims.FirstOrDefault(c => c.Type == "given_name")?.Value;
-        var surname = user?.Claims.FirstOrDefault(c => c.Type == "family_name")?.Value;
-        Initials = !string.IsNullOrEmpty(givenName) && !string.IsNullOrEmpty(surname) ? $"{givenName[0]}{surname[0]}".ToUpper() : "?";
+        Initials = !string.IsNullOrEmpty(givenName) || !string.IsNullOrEmpty(surname) ? $"{givenName[0]}{surname[0]}".Trim().ToUpper() : "?";
     }
 
     private string GetGravatarUrl(string email)
