@@ -37,20 +37,16 @@
                             @foreach (var process in availableProcesses)
                             {
                                 <MudSelectItem T="string" Value="@process.Id.ToString()">
-                                    @process.Name (@(process.IsSystemProcess ? "System" : "Custom"))
+                                    @process.Name (@(process.IsSystemProcess ? "System" : process.ParentProcessName))
                                 </MudSelectItem>
                             }
                         </MudSelect>
 
-                        <MudButton Variant="Variant.Filled" Color="Color.Primary"
-                                   OnClick="SaveProcessSettingAsync" Class="mr-2"
-                                   Disabled="string.IsNullOrEmpty(selectedProcessId)">
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveProcessSettingAsync" Class="mr-2" Disabled="string.IsNullOrEmpty(selectedProcessId)">
                             Save Process
                         </MudButton>
 
-                        <MudButton Variant="Variant.Outlined" Color="Color.Secondary"
-                                   OnClick="LoadWorkItemTypesAsync"
-                                   Disabled="string.IsNullOrEmpty(selectedProcessId) || isLoadingWorkItems">
+                        <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="LoadWorkItemTypesAsync" Disabled="string.IsNullOrEmpty(selectedProcessId) || isLoadingWorkItems">
                             @if (isLoadingWorkItems)
                             {
                                 <MudProgressCircular Indeterminate="true" Size="Size.Small" Class="mr-2" />
@@ -66,51 +62,7 @@
             </MudCard>
         </MudItem>
 
-        <!-- Instructions -->
-        <MudItem xs="12" md="6">
-            <MudCard>
-                <MudCardContent>
-                    <MudText Typo="Typo.h6" GutterBottom="true">
-                        <MudIcon Icon="Icons.Material.Filled.Help" Class="mr-2" />
-                        How to Use
-                    </MudText>
-                    <MudList T="string" Dense="true">
-                        <MudListItem T="string">
-                            <div class="d-flex align-center">
-                                <MudIcon Icon="Icons.Material.Filled.Mouse" Class="mr-2" />
-                                <MudText>Click work items to add to Level 1</MudText>
-                            </div>
-                        </MudListItem>
-                        <MudListItem T="string">
-                            <div class="d-flex align-center">
-                                <MudIcon Icon="Icons.Material.Filled.DragIndicator" Class="mr-2" />
-                                <MudText>Drag work items between levels</MudText>
-                            </div>
-                        </MudListItem>
-                        <MudListItem T="string">
-                            <div class="d-flex align-center">
-                                <MudIcon Icon="Icons.Material.Filled.Add" Class="mr-2" />
-                                <MudText>Use + button to create new levels</MudText>
-                            </div>
-                        </MudListItem>
-                        <MudListItem T="string">
-                            <div class="d-flex align-center">
-                                <MudIcon Icon="Icons.Material.Filled.Close" Class="mr-2" />
-                                <MudText>Click X on chips to remove from hierarchy</MudText>
-                            </div>
-                        </MudListItem>
-                        <MudListItem T="string">
-                            <div class="d-flex align-center">
-                                <MudIcon Icon="Icons.Material.Filled.ArrowUpward" Class="mr-2" />
-                                <MudText>Use arrow buttons to reorder levels</MudText>
-                            </div>
-                        </MudListItem>
-                    </MudList>
-                </MudCardContent>
-            </MudCard>
-        </MudItem>
-
-        <!-- Work Item Hierarchy Configuration -->
+        <!-- Work Item Hierarchy Configuration (Unassigned and Assigned) -->
         <MudItem xs="12">
             <MudCard>
                 <MudCardContent>
@@ -119,11 +71,7 @@
                     @if (availableWorkItemTypes?.Any() == true)
                     {
                         <!-- Single Drop Container for all items -->
-                        <MudDropContainer T="AzDoBoards.Client.WorkItemTypeInfo"
-                                          Items="@availableWorkItemTypes"
-                                          ItemsSelector="@GetItemsForDropzone"
-                                          ItemDropped="OnItemDropped"
-                                          Class="hierarchy-drop-container">
+                        <MudDropContainer T="AzDoBoards.Client.WorkItemTypeInfo" Items="@availableWorkItemTypes" ItemsSelector="@GetItemsForDropzone" ItemDropped="OnItemDropped" Class="hierarchy-drop-container">
                             <ChildContent>
                                 <MudGrid>
                                     <!-- Unassigned Work Item Types -->
@@ -134,28 +82,8 @@
                                                 Unassigned Work Items (@(unassignedWorkItems?.Count ?? 0))
                                             </MudText>
 
-                                            <MudDropZone T="AzDoBoards.Client.WorkItemTypeInfo"
-                                                         Identifier="unassigned"
-                                                         Class="pa-2 drop-zone-content drop-zone-unassigned">
-                                                @if (unassignedWorkItems?.Any() == true)
-                                                {
-                                                    <MudStack>
-                                                        @foreach (var workItem in unassignedWorkItems)
-                                                        {
-                                                            <div class="draggable-item-wrapper clickable-chip"
-                                                                 style="@GetWorkItemChipStyle(workItem, false)"
-                                                                 @onclick="@(() => AddToHierarchy(workItem))"
-                                                                 @onclick:stopPropagation="true">
-                                                                <div class="d-flex align-center pa-2">
-                                                                    <MudIcon Icon="@GetWorkItemIcon(workItem)" Size="Size.Small" Class="mr-2" />
-                                                                    <MudText Class="flex-grow-1">@workItem.Name</MudText>
-                                                                    <MudIcon Icon="Icons.Material.Filled.DragIndicator" Class="drag-handle" />
-                                                                </div>
-                                                            </div>
-                                                        }
-                                                    </MudStack>
-                                                }
-                                                else
+                                            <MudDropZone T="AzDoBoards.Client.WorkItemTypeInfo" Identifier="unassigned" Class="pa-2 drop-zone-content drop-zone-unassigned">
+                                                @if (unassignedWorkItems?.Any() == false)
                                                 {
                                                     <MudAlert Severity="Severity.Success">
                                                         <MudIcon Icon="Icons.Material.Filled.CheckCircle" Class="mr-2" />
@@ -175,17 +103,13 @@
                                                     Work Item Hierarchy (@workItemHierarchy.Count levels)
                                                 </MudText>
                                                 <MudStack Row>
-                                                    <MudButton Variant="Variant.Filled" Color="Color.Success" Size="Size.Small"
-                                                               OnClick="SaveHierarchyAsync" Disabled="!hasHierarchyChanges"
-                                                               StartIcon="Icons.Material.Filled.Save">
+                                                    <MudButton Variant="Variant.Filled" Color="Color.Success" Size="Size.Small" OnClick="SaveHierarchyAsync" Disabled="!hasHierarchyChanges" StartIcon="Icons.Material.Filled.Save">
                                                         Save Hierarchy
                                                     </MudButton>
-                                                    <MudButton Variant="Variant.Outlined" Color="Color.Warning" Size="Size.Small"
-                                                               OnClick="@(() => AddLevel())" StartIcon="Icons.Material.Filled.Add">
+                                                    <MudButton Variant="Variant.Outlined" Color="Color.Warning" Size="Size.Small" OnClick="@(() => AddLevel())" StartIcon="Icons.Material.Filled.Add">
                                                         Add Level
                                                     </MudButton>
-                                                    <MudButton Variant="Variant.Outlined" Color="Color.Error" Size="Size.Small"
-                                                               OnClick="ClearHierarchy" StartIcon="Icons.Material.Filled.Clear">
+                                                    <MudButton Variant="Variant.Outlined" Color="Color.Error" Size="Size.Small" OnClick="ClearHierarchy" StartIcon="Icons.Material.Filled.Clear">
                                                         Clear All
                                                     </MudButton>
                                                 </MudStack>
@@ -199,62 +123,30 @@
                                                         var level = i;
                                                         var levelItems = workItemHierarchy[level];
 
-                                                        <MudPaper Class="level-container"
-                                                                  Style="@($"border-left: 4px solid {GetLevelColor(level)}; margin-bottom: 8px;")">
+                                                        <MudPaper Class="level-container" Style="@($"border-left: 4px solid {GetLevelColor(level)}; margin-bottom: 8px;")">
                                                             <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="level-header">
                                                                 <MudText Typo="Typo.subtitle2" Class="level-title">
                                                                     <MudIcon Icon="@GetLevelIcon(level)" Size="Size.Small" Class="mr-2" />
                                                                     Level @(level + 1) (@levelItems.Count items)
                                                                 </MudText>
                                                                 <MudStack Row>
-                                                                    <MudIconButton Icon="Icons.Material.Filled.KeyboardArrowUp"
-                                                                                   Size="Size.Small"
-                                                                                   OnClick="@(() => MoveLevelUp(level))"
-                                                                                   Disabled="level == 0" />
-                                                                    <MudIconButton Icon="Icons.Material.Filled.KeyboardArrowDown"
-                                                                                   Size="Size.Small"
-                                                                                   OnClick="@(() => MoveLevelDown(level))"
-                                                                                   Disabled="level == workItemHierarchy.Count - 1" />
-                                                                    <MudIconButton Icon="Icons.Material.Filled.Add"
-                                                                                   Size="Size.Small"
-                                                                                   OnClick="@(() => AddLevel(level + 1))"
-                                                                                   Color="Color.Success" />
+                                                                    <MudIconButton Icon="Icons.Material.Filled.KeyboardArrowUp" Size="Size.Small" OnClick="@(() => MoveLevelUp(level))" Disabled="level == 0" />
+                                                                    <MudIconButton Icon="Icons.Material.Filled.KeyboardArrowDown" Size="Size.Small" OnClick="@(() => MoveLevelDown(level))" Disabled="level == workItemHierarchy.Count - 1" />
+                                                                    <MudIconButton Icon="Icons.Material.Filled.Add" Size="Size.Small" OnClick="@(() => AddLevel(level + 1))" Color="Color.Success" />
                                                                     @if (workItemHierarchy.Count > 1)
                                                                     {
-                                                                        <MudIconButton Icon="Icons.Material.Filled.Delete"
-                                                                                       Size="Size.Small"
-                                                                                       OnClick="@(() => RemoveLevel(level))"
-                                                                                       Color="Color.Error" />
+                                                                        <MudIconButton Icon="Icons.Material.Filled.Delete" Size="Size.Small" OnClick="@(() => RemoveLevel(level))" Color="Color.Error" />
                                                                     }
                                                                 </MudStack>
                                                             </MudStack>
 
-                                                            <MudDropZone T="AzDoBoards.Client.WorkItemTypeInfo"
-                                                                         Identifier="@($"level-{level}")"
-                                                                         Class="level-drop-zone">
-                                                                <MudStack Row Wrap="Wrap.Wrap" Class="level-content">
-                                                                    @foreach (var workItem in levelItems)
-                                                                    {
-                                                                        <div class="draggable-item-wrapper hierarchy-chip"
-                                                                             style="@GetWorkItemChipStyle(workItem, true)">
-                                                                            <div class="d-flex align-center pa-2">
-                                                                                <MudIcon Icon="@GetWorkItemIcon(workItem)" Size="Size.Small" Class="mr-2" />
-                                                                                <MudText Class="flex-grow-1">@workItem.Name</MudText>
-                                                                                <MudIconButton Icon="Icons.Material.Filled.Close"
-                                                                                               Size="Size.Small"
-                                                                                               OnClick="@(() => RemoveFromHierarchy(workItem, level))"
-                                                                                               Class="close-button" />
-                                                                                <MudIcon Icon="Icons.Material.Filled.DragIndicator" Class="drag-handle" />
-                                                                            </div>
-                                                                        </div>
-                                                                    }
-                                                                    @if (!levelItems.Any())
-                                                                    {
-                                                                        <MudText Typo="Typo.body2" Class="empty-level-text">
-                                                                            Drop work items here or click items from the left panel
-                                                                        </MudText>
-                                                                    }
-                                                                </MudStack>
+                                                            <MudDropZone T="AzDoBoards.Client.WorkItemTypeInfo" Identifier="@($"level-{level}")" Class="level-drop-zone"> 
+                                                                @if (!levelItems.Any())
+                                                                {
+                                                                    <MudText Typo="Typo.body2" Class="empty-level-text">
+                                                                        Drop work items here or click items from the left panel
+                                                                    </MudText>
+                                                                }
                                                             </MudDropZone>
                                                         </MudPaper>
                                                     }
@@ -268,12 +160,7 @@
                                                             <MudIcon Icon="Icons.Material.Filled.Info" Class="mr-2" />
                                                             No hierarchy defined. Get started:
                                                         </MudText>
-                                                        <MudButton Variant="Variant.Outlined"
-                                                                   Color="Color.Primary"
-                                                                   Size="Size.Small"
-                                                                   OnClick="@(() => AddLevel())"
-                                                                   StartIcon="Icons.Material.Filled.Add"
-                                                                   Class="mt-2">
+                                                        <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small" OnClick="@(() => AddLevel())" StartIcon="Icons.Material.Filled.Add" Class="mt-2">
                                                             Create First Level
                                                         </MudButton>
                                                     </MudStack>
@@ -284,10 +171,18 @@
                                 </MudGrid>
                             </ChildContent>
                             <ItemRenderer>
-                                <div class="draggable-item-ghost" style="@GetWorkItemChipStyle(context, true)">
+                                @{
+                                    var level = GetLevelForItem(context);
+                                    var isInHierarchy = level >= 0;
+                                }
+                                <div class="draggable-item-wrapper @(isInHierarchy ? "hierarchy-chip" : "clickable-chip")" style="@GetWorkItemChipStyle(context, isInHierarchy)" @onclick="@(() => { if (!isInHierarchy) AddToHierarchy(context); })">
                                     <div class="d-flex align-center pa-2">
                                         <MudIcon Icon="@GetWorkItemIcon(context)" Size="Size.Small" Class="mr-2" />
                                         <MudText Class="flex-grow-1">@context.Name</MudText>
+                                        @if (isInHierarchy)
+                                        {
+                                            <MudIconButton Icon="Icons.Material.Filled.Close" Size="Size.Small" OnClick="@(() => RemoveFromHierarchy(context, level))" Class="close-button" />
+                                        }
                                         <MudIcon Icon="Icons.Material.Filled.DragIndicator" Class="drag-handle" />
                                     </div>
                                 </div>
@@ -306,7 +201,8 @@
             </MudCard>
         </MudItem>
 
-        <!-- Hierarchy Preview -->
+
+@*         <!-- Hierarchy Preview -->
         @if (workItemHierarchy?.Any() == true)
         {
             <MudItem xs="12">
@@ -316,17 +212,11 @@
                             <MudIcon Icon="Icons.Material.Filled.Code" Class="mr-2" />
                             Hierarchy Preview (JSON)
                         </MudText>
-                        <MudTextField T="string"
-                                      Value="@hierarchyJson"
-                                      Label="JSON Representation"
-                                      Variant="Variant.Outlined"
-                                      Lines="10"
-                                      ReadOnly="true"
-                                      Class="json-preview" />
+                        <MudTextField T="string" Value="@hierarchyJson" Label="JSON Representation" Variant="Variant.Outlined" Lines="10" ReadOnly="true" Class="json-preview" />
                     </MudCardContent>
                 </MudCard>
             </MudItem>
-        }
+        } *@
     </MudGrid>
 </MudContainer>
 
@@ -532,9 +422,7 @@
     private void AddToHierarchy(AzDoBoards.Client.WorkItemTypeInfo workItem)
     {
         if (workItemHierarchy.Count == 0)
-        {
             workItemHierarchy.Add(new List<AzDoBoards.Client.WorkItemTypeInfo>());
-        }
 
         workItemHierarchy[0].Add(workItem);
         UpdateUnassignedWorkItems();
@@ -550,14 +438,22 @@
 
             // Remove empty levels
             if (!workItemHierarchy[level].Any())
-            {
                 workItemHierarchy.RemoveAt(level);
-            }
 
             UpdateUnassignedWorkItems();
             hasHierarchyChanges = true;
             StateHasChanged();
         }
+    }
+
+    private int GetLevelForItem(AzDoBoards.Client.WorkItemTypeInfo item)
+    {
+        for (int i = 0; i < workItemHierarchy.Count; i++)
+        {
+            if (workItemHierarchy[i].Contains(item))
+                return i;
+        }
+        return -1; // Item is unassigned
     }
 
     private void AddLevel(int? position = null)
@@ -622,9 +518,7 @@
 
         // Remove from current location first
         foreach (var level in workItemHierarchy)
-        {
             level.Remove(dropItem.Item);
-        }
 
         // Handle drop to specific level
         if (dropItem.DropzoneIdentifier.StartsWith("level-"))
@@ -633,9 +527,7 @@
 
             // Ensure level exists
             while (workItemHierarchy.Count <= targetLevel)
-            {
                 workItemHierarchy.Add(new List<AzDoBoards.Client.WorkItemTypeInfo>());
-            }
 
             workItemHierarchy[targetLevel].Add(dropItem.Item);
         }
@@ -649,9 +541,7 @@
     private bool GetItemsForDropzone(AzDoBoards.Client.WorkItemTypeInfo item, string dropzone)
     {
         if (dropzone == "unassigned")
-        {
             return unassignedWorkItems?.Contains(item) ?? false;
-        }
 
         if (dropzone.StartsWith("level-"))
         {
@@ -664,7 +554,7 @@
 
     private string GetLevelColor(int level)
     {
-        var colors = new[] { "#1976d2", "#388e3c", "#f57c00", "#d32f2f", "#7b1fa2", "#512da8" };
+        var colors = new[] { "#339947", "#FF7B00", "#773B93", "#009CCC", "#F2CB1D", "#F599D1", "#E60017" };
         return colors[level % colors.Length];
     }
 
@@ -682,14 +572,19 @@
     {
         return workItem.Name.ToLower() switch
         {
-            "epic" => Icons.Material.Filled.Flag,
-            "feature" => Icons.Material.Filled.Star,
-            "user story" => Icons.Material.Filled.BookmarkBorder,
+            "initiative" => Icons.Material.Filled.AccountBalance,
+            "epic" => Icons.Material.Filled.WorkspacePremium,
+            "feature" => Icons.Material.Filled.EmojiEvents,
+            "user story" => Icons.Material.Filled.AutoStories,
             "story" => Icons.Material.Filled.BookmarkBorder,
             "bug" => Icons.Material.Filled.BugReport,
             "task" => Icons.Material.Filled.CheckBox,
-            "test case" => Icons.Material.Filled.Science,
-            "research" => Icons.Material.Filled.Search,
+            "test case" => Icons.Material.Filled.Biotech,
+            "test plan" => Icons.Material.Filled.Assignment,
+            "test suite" => Icons.Material.Filled.Folder,
+            "issue" => Icons.Material.Filled.Construction,
+            "research" => Icons.Material.Filled.Science,
+            "investigation" => Icons.Material.Filled.Gavel,
             _ => Icons.Material.Filled.Work
         };
     }
@@ -829,6 +724,11 @@
         border-radius: 6px;
         padding: 8px;
         transition: all 0.3s ease;
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: flex-start;
     }
 
         .level-drop-zone:hover,
@@ -847,6 +747,7 @@
         align-self: center;
         text-align: center;
         padding: 16px;
+        width: 100%;
     }
 
     .unassigned-panel {
