@@ -120,7 +120,7 @@
                     {
                         <!-- Single Drop Container for all items -->
                         <MudDropContainer T="AzDoBoards.Client.WorkItemTypeInfo"
-                                          Items="@GetAllWorkItemTypes()"
+                                          Items="@availableWorkItemTypes"
                                           ItemsSelector="@GetItemsForDropzone"
                                           ItemDropped="OnItemDropped"
                                           Class="hierarchy-drop-container">
@@ -142,15 +142,16 @@
                                                     <MudStack>
                                                         @foreach (var workItem in unassignedWorkItems)
                                                         {
-                                                            <MudChip T="AzDoBoards.Client.WorkItemTypeInfo"
-                                                                     Value="workItem"
-                                                                     Style="@GetWorkItemChipStyle(workItem, false)"
-                                                                     OnClick="@EventCallback.Factory.Create(this, () => AddToHierarchy(workItem))"
-                                                                     Class="work-item-chip clickable-chip"
-                                                                     Size="Size.Medium">
-                                                                <MudIcon Icon="@GetWorkItemIcon(workItem)" Size="Size.Small" Class="mr-2" />
-                                                                @workItem.Name
-                                                            </MudChip>
+                                                            <div class="draggable-item-wrapper clickable-chip"
+                                                                 style="@GetWorkItemChipStyle(workItem, false)"
+                                                                 @onclick="@(() => AddToHierarchy(workItem))"
+                                                                 @onclick:stopPropagation="true">
+                                                                <div class="d-flex align-center pa-2">
+                                                                    <MudIcon Icon="@GetWorkItemIcon(workItem)" Size="Size.Small" Class="mr-2" />
+                                                                    <MudText Class="flex-grow-1">@workItem.Name</MudText>
+                                                                    <MudIcon Icon="Icons.Material.Filled.DragIndicator" Class="drag-handle" />
+                                                                </div>
+                                                            </div>
                                                         }
                                                     </MudStack>
                                                 }
@@ -234,16 +235,18 @@
                                                                 <MudStack Row Wrap="Wrap.Wrap" Class="level-content">
                                                                     @foreach (var workItem in levelItems)
                                                                     {
-                                                                        <MudChip T="AzDoBoards.Client.WorkItemTypeInfo"
-                                                                                 Value="workItem"
-                                                                                 Style="@GetWorkItemChipStyle(workItem, true)"
-                                                                                 OnClose="@(() => RemoveFromHierarchy(workItem, level))"
-                                                                                 CloseIcon="Icons.Material.Filled.Close"
-                                                                                 Class="work-item-chip hierarchy-chip"
-                                                                                 Size="Size.Medium">
-                                                                            <MudIcon Icon="@GetWorkItemIcon(workItem)" Size="Size.Small" Class="mr-2" />
-                                                                            @workItem.Name
-                                                                        </MudChip>
+                                                                        <div class="draggable-item-wrapper hierarchy-chip"
+                                                                             style="@GetWorkItemChipStyle(workItem, true)">
+                                                                            <div class="d-flex align-center pa-2">
+                                                                                <MudIcon Icon="@GetWorkItemIcon(workItem)" Size="Size.Small" Class="mr-2" />
+                                                                                <MudText Class="flex-grow-1">@workItem.Name</MudText>
+                                                                                <MudIconButton Icon="Icons.Material.Filled.Close"
+                                                                                               Size="Size.Small"
+                                                                                               OnClick="@(() => RemoveFromHierarchy(workItem, level))"
+                                                                                               Class="close-button" />
+                                                                                <MudIcon Icon="Icons.Material.Filled.DragIndicator" Class="drag-handle" />
+                                                                            </div>
+                                                                        </div>
                                                                     }
                                                                     @if (!levelItems.Any())
                                                                     {
@@ -280,6 +283,15 @@
                                     </MudItem>
                                 </MudGrid>
                             </ChildContent>
+                            <ItemRenderer>
+                                <div class="draggable-item-ghost" style="@GetWorkItemChipStyle(context, true)">
+                                    <div class="d-flex align-center pa-2">
+                                        <MudIcon Icon="@GetWorkItemIcon(context)" Size="Size.Small" Class="mr-2" />
+                                        <MudText Class="flex-grow-1">@context.Name</MudText>
+                                        <MudIcon Icon="Icons.Material.Filled.DragIndicator" Class="drag-handle" />
+                                    </div>
+                                </div>
+                            </ItemRenderer>
                         </MudDropContainer>
                     }
                     else if (!string.IsNullOrEmpty(selectedProcessId))
@@ -604,20 +616,6 @@
         StateHasChanged();
     }
 
-    // New method to get all work item types for the single drop container
-    private IList<AzDoBoards.Client.WorkItemTypeInfo> GetAllWorkItemTypes()
-    {
-        var allItems = new List<AzDoBoards.Client.WorkItemTypeInfo>();
-        
-        if (unassignedWorkItems != null)
-            allItems.AddRange(unassignedWorkItems);
-            
-        foreach (var level in workItemHierarchy)
-            allItems.AddRange(level);
-            
-        return allItems;
-    }
-
     private void OnItemDropped(MudItemDropInfo<AzDoBoards.Client.WorkItemTypeInfo> dropItem)
     {
         if (dropItem.Item == null) return;
@@ -702,50 +700,99 @@
 
         if (inHierarchy)
         {
-            return $"background-color: {baseColor}; color: white; margin: 4px; border: 2px solid rgba(255,255,255,0.3); box-shadow: 0 2px 4px rgba(0,0,0,0.2);";
+            return $"background-color: {baseColor}; color: white; margin: 4px; border: 2px solid rgba(255,255,255,0.3); box-shadow: 0 2px 4px rgba(0,0,0,0.2); border-radius: 8px; min-width: 150px; max-width: 200px;";
         }
         else
         {
-            return $"background-color: {baseColor}; color: white; margin: 4px; opacity: 0.9; transition: all 0.2s ease-in-out;";
+            return $"background-color: {baseColor}; color: white; margin: 4px; opacity: 0.9; transition: all 0.2s ease-in-out; border-radius: 8px; min-width: 150px; max-width: 200px;";
         }
     }
 }
 
 <style>
-    .clickable-chip {
-        cursor: pointer;
+    .draggable-item-wrapper {
+        cursor: grab;
         transition: all 0.2s ease-in-out;
+        border-radius: 8px;
+        margin: 4px 0;
+        user-select: none;
+        width: fit-content;
+        min-width: 150px;
+        max-width: 200px;
     }
 
-        .clickable-chip:hover {
+        .draggable-item-wrapper:hover {
             transform: translateY(-2px);
             box-shadow: 0 4px 8px rgba(0,0,0,0.3) !important;
             opacity: 1 !important;
         }
+
+        .draggable-item-wrapper:active {
+            cursor: grabbing;
+        }
+
+    .draggable-item-ghost {
+        cursor: grab;
+        border-radius: 8px;
+        margin: 4px;
+        opacity: 0.9;
+        transition: all 0.2s ease-in-out;
+        user-select: none;
+        min-width: 150px;
+        max-width: 200px;
+        width: fit-content;
+    }
+
+        .draggable-item-ghost:active {
+            cursor: grabbing;
+        }
+
+    .clickable-chip {
+        cursor: pointer;
+        transition: all 0.2s ease-in-out;
+    }
 
     .work-item-chip {
         font-weight: 500;
         font-size: 0.875rem;
     }
 
-    .hierarchy-chip .mud-chip-close-button {
-        background-color: rgba(255, 255, 255, 0.3) !important;
-        border-radius: 50%;
-        margin-left: 8px;
-        width: 20px;
-        height: 20px;
-        min-width: 20px;
+    .flex-grow-1 {
+        flex-grow: 1;
+        text-overflow: ellipsis;
+        overflow: hidden;
+        white-space: nowrap;
+        min-width: 0;
     }
 
-        .hierarchy-chip .mud-chip-close-button:hover {
-            background-color: rgba(255, 255, 255, 0.5) !important;
-            transform: scale(1.1);
+    .drag-handle {
+        color: rgba(255, 255, 255, 0.7);
+        cursor: grab;
+        flex-shrink: 0;
+    }
+
+        .drag-handle:hover {
+            color: white;
         }
 
-        .hierarchy-chip .mud-chip-close-button .mud-icon-root {
-            font-size: 14px;
+    .close-button {
+        color: rgba(255, 255, 255, 0.7) !important;
+        min-width: 20px !important;
+        width: 20px !important;
+        height: 20px !important;
+        padding: 0 !important;
+        flex-shrink: 0;
+    }
+
+        .close-button:hover {
             color: white !important;
+            background-color: rgba(255, 255, 255, 0.1) !important;
         }
+
+    .hierarchy-chip {
+        border: 2px solid rgba(255,255,255,0.3);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
 
     .drop-zone-unassigned {
         border: 2px dashed #ccc;
