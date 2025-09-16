@@ -15,7 +15,7 @@ The intent is to support a custom-defined hierarchy (e.g., Initiative > Epic > F
 - Visual Studio 2022 17.14.13 Preview 1.0+ or Visual Studio 2026 Insider v18.0 Preview 1+
   - *Microsoft TFS Client (to abstract Azure DevOps API calls) NuGet packages leveraged*
 
-- [.NET 10 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/10.0)
+- [.NET 10 SDK RC.1+](https://dotnet.microsoft.com/en-us/download/dotnet/10.0)
 - (Optional) Azurite for Azure Storage Emulation locally.
 - Redis Cache - one of the following:
   - [Azure Cache for Redis](https://azure.microsoft.com/en-us/pricing/details/cache/) (Microsoft-based basic tier for Development, higher tiers for non-Development environments)

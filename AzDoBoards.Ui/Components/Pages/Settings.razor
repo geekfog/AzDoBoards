@@ -32,7 +32,7 @@
                               AdornmentIcon="Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0 ml-3" />
             </ToolBarContent>
             <Columns>
-                <PropertyColumn Property="x => x.Name" Title="Process Name" Sortable="true" />
+                <PropertyColumn Property="x => x.Name" Title="Name" Sortable="true" />
                 <PropertyColumn Property="x => x.Description" Title="Description" Sortable="true" />
                 <PropertyColumn Property="x => x.ProjectCount" Title="Project Count" Sortable="true" />
                 <TemplateColumn Title="Type" Sortable="true" SortBy="@(x => x.IsSystemProcess ? "System" : "Custom")">
@@ -58,14 +58,14 @@
                         }
                     </CellTemplate>
                 </TemplateColumn>
-                <PropertyColumn Property="x => x.ReferenceName" Title="Reference Name" Sortable="true" />
+                <PropertyColumn Property="x => x.ParentProcessName" Title="Parent" Sortable="true" />
                 <TemplateColumn Title="Actions">
                     <CellTemplate>
                         <MudStack Row>
                             <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small"
                                        OnClick="@(() => ViewWorkItemTypes(context.Item.Id, context.Item.Name))"
                                        Disabled="isLoading">
-                                View Work Items
+                                Work Items
                             </MudButton>
                         </MudStack>
                     </CellTemplate>
@@ -84,7 +84,7 @@
         <h4>Work Item Types for @SelectedProcessName</h4>
         <MudDataGrid Items="SelectedProcessWorkItems" Sortable="true" Filterable="true">
             <Columns>
-                <PropertyColumn Property="x => x.Name" Title="Work Item Type" Sortable="true" />
+                <PropertyColumn Property="x => x.Name" Title="Type" Sortable="true" />
                 <PropertyColumn Property="x => x.ReferenceName" Title="Reference Name" Sortable="true" />
                 <PropertyColumn Property="x => x.Description" Title="Description" Sortable="true" />
                 <TemplateColumn Title="Color">
@@ -117,7 +117,7 @@
         if (x.Description.Contains(_searchString, StringComparison.OrdinalIgnoreCase))
             return true;
 
-        if (x.ReferenceName.Contains(_searchString, StringComparison.OrdinalIgnoreCase))
+        if (x.ParentProcessName.Contains(_searchString, StringComparison.OrdinalIgnoreCase))
             return true;
 
         return false;

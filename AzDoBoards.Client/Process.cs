@@ -81,9 +81,19 @@ public class Process(ConnectionFactory connectionFactory) : Base(connectionFacto
                 IsDefault = process.IsDefault,
                 IsEnabled = process.IsEnabled,
                 IsSystemProcess = process.ParentProcessTypeId == Guid.Empty, // System processes don't have a parent
-                ProjectCount = 0 // Will be updated below
+                ProjectCount = 0, // Will be updated below
+                ParentProcessId = process.ParentProcessTypeId == Guid.Empty ? null : process.ParentProcessTypeId
             };
             processes[process.TypeId] = processInfo;
+        }
+
+        // Resolve parent process names
+        foreach (var processInfo in processes.Values)
+        {
+            if (processInfo.ParentProcessId.HasValue && processes.TryGetValue(processInfo.ParentProcessId.Value, out var parentProcess))
+            {
+                processInfo.ParentProcessName = parentProcess.Name;
+            }
         }
 
         // Get project counts and sample projects
@@ -142,6 +152,8 @@ public class ProcessInfo
     public bool IsEnabled { get; set; }
     public bool IsSystemProcess { get; set; }
     public int ProjectCount { get; set; }
+    public Guid? ParentProcessId { get; set; }
+    public string ParentProcessName { get; set; } = string.Empty;
 }
 
 /// <summary>

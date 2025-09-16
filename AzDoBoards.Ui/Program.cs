@@ -105,7 +105,7 @@ public class Program
             app.UseHsts();
         }
 
-        app.UseStatusCodePagesWithReExecute(Utility.Constants.Page_FoundFoundPath, createScopeForErrors: true);
+        app.UseStatusCodePagesWithReExecute(Utility.Constants.Page_FoundFoundPath);
 
         app.UseHttpsRedirection();
 
