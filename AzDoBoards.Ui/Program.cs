@@ -1,4 +1,5 @@
 using AzDoBoards.Client;
+using AzDoBoards.Data;
 using AzDoBoards.Ui.Components;
 using AzDoBoards.Utility;
 using Azure.Identity;
@@ -19,7 +20,7 @@ public class Program
         // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         var builder = WebApplication.CreateBuilder(args);
 
-        if (Server.IsDevelopment) 
+        if (Server.IsDevelopment)
             builder.Configuration.AddUserSecrets(nameof(AzDoBoards)); // Add support for secrets.json for development
 
         // Add Serilog Support
@@ -61,6 +62,10 @@ public class Program
             options.Configuration = redisConnectionString; // Use your Redis connection string
             options.InstanceName = Utility.Constants.Redis_TokenCacheInstanceName;
         });
+
+        // Add Data Services (Settings Repository)
+        var storageConnectionString = builder.Configuration[Utility.Constants.Azure_ConfigStorageConnectionString] ?? Utility.Constants.Azure_DefaultStorageConnectionString;
+        builder.Services.AddDataServices(storageConnectionString);
 
         // Add Dependency Injection
         builder.Services.AddSingleton<CacheBuster>();

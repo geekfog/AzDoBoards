@@ -18,17 +18,15 @@
 
     @if (Processes != null && Processes.Any())
     {
-        <MudDataGrid Items="Processes" Sortable="true" Filterable="true" QuickFilter="@_quickFilter">
+        <MudDataGrid Items="Processes" Filterable="true" QuickFilter="@_quickFilter">
             <ToolBarContent>
                 <MudText Typo="Typo.h6">Process Templates</MudText>
                 <MudSpacer />
-                <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Size="Size.Small"
-                           OnClick="RefreshProcessData" Disabled="isLoading">
+                <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Size="Size.Small" OnClick="RefreshProcessData" Disabled="isLoading">
                     <MudIcon Icon="Icons.Material.Filled.Refresh" Size="Size.Small" />
                     Refresh
                 </MudButton>
-                <MudTextField @bind-Value="_searchString" Placeholder="Search" Adornment="Adornment.Start"
-                              AdornmentIcon="Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0 ml-3" />
+                <MudTextField @bind-Value="_searchString" Placeholder="Search" Adornment="Adornment.Start" AdornmentIcon="Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0 ml-3" />
             </ToolBarContent>
             <Columns>
                 <PropertyColumn Property="x => x.Name" Title="Name" Sortable="true" />
@@ -81,7 +79,7 @@
     {
         <br />
         <h4>Work Item Types for @SelectedProcessName</h4>
-        <MudDataGrid Items="SelectedProcessWorkItems" Sortable="true" Filterable="true">
+        <MudDataGrid Items="SelectedProcessWorkItems" Filterable="true">
             <Columns>
                 <PropertyColumn Property="x => x.Name" Title="Type" Sortable="true" />
                 <PropertyColumn Property="x => x.ReferenceName" Title="Reference Name" Sortable="true" />
@@ -100,12 +98,12 @@
 @code {
     private bool isLoading = true;
     private string StatusMessage = string.Empty;
-    private List<ProcessInfo>? Processes;
-    private List<WorkItemTypeInfo>? SelectedProcessWorkItems;
+    private List<AzDoBoards.Client.ProcessInfo>? Processes;
+    private List<AzDoBoards.Client.WorkItemTypeInfo>? SelectedProcessWorkItems;
     private string SelectedProcessName = string.Empty;
     private string _searchString = string.Empty;
 
-    private Func<ProcessInfo, bool> _quickFilter => x =>
+    private Func<AzDoBoards.Client.ProcessInfo, bool> _quickFilter => x =>
     {
         if (string.IsNullOrWhiteSpace(_searchString))
             return true;
@@ -145,7 +143,7 @@
         {
             // Lazy load services to avoid blocking component creation
             var authProvider = ServiceProvider.GetRequiredService<AuthenticationStateProvider>();
-            var processClient = ServiceProvider.GetRequiredService<Process>();
+            var processClient = ServiceProvider.GetRequiredService<AzDoBoards.Client.Process>();
 
             var authState = await authProvider.GetAuthenticationStateAsync();
             var user = authState.User;
@@ -185,7 +183,7 @@
             StatusMessage = string.Empty;
             StateHasChanged();
 
-            var processClient = ServiceProvider.GetRequiredService<Process>();
+            var processClient = ServiceProvider.GetRequiredService<AzDoBoards.Client.Process>();
             processClient.ClearCache(); // Clear the cache to force refresh
 
             Processes = await processClient.GetProcessesAsync();
@@ -212,7 +210,7 @@
             SelectedProcessName = processName;
             StateHasChanged();
 
-            var processClient = ServiceProvider.GetRequiredService<Process>();
+            var processClient = ServiceProvider.GetRequiredService<AzDoBoards.Client.Process>();
             SelectedProcessWorkItems = await processClient.GetWorkItemTypesForProcessAsync(processId);
 
             AppendStatus($"Loaded {SelectedProcessWorkItems.Count} work item types for process: {processName} (using optimized Process API).");
