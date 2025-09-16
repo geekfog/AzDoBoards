@@ -12,13 +12,58 @@ The intent is to support a custom-defined hierarchy (e.g., Initiative > Epic > F
 
 # Development Technologies
 
-- Visual Studio 2022 17.14.13 Preview 1.0+
-- .NET 10 Preview
-- Microsoft TFS Client (to abstract Azure DevOps API calls)
+- Visual Studio 2022 17.14.13 Preview 1.0+ or Visual Studio 2026 Insider v18.0 Preview 1+
+  - *Microsoft TFS Client (to abstract Azure DevOps API calls) NuGet packages leveraged*
+
+- [.NET 10 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/10.0)
+- (Optional) Azurite for Azure Storage Emulation locally.
 - Redis Cache - one of the following:
+  - [Azure Cache for Redis](https://azure.microsoft.com/en-us/pricing/details/cache/) (Microsoft-based basic tier for Development, higher tiers for non-Development environments)
   - [Memurai](https://www.memurai.com/get-memurai) (Free version of Redis Cache on Developer Machine - can also purchase Enterprise Edition)
-  - Azure Cache for Redis (Microsoft-based free tier for Development, higher tiers for non-Development environments)
   - Redis for Windows ([tporadowski/redis](https://github.com/tporadowski/redis/releases)) - last update February 17, 2022
+- (Optional) Azure Storage Explorer ([Download](https://azure.microsoft.com/en-us/products/storage/storage-explorer))
+
+*At this time, the formatting of source code presumes use of 4K monitor(s) using 100% scale with DPI. This means lines of code or text may go quite wide, which could be harder to see if running lower resolution.*
+
+The following Windows-based script can be helpful in running the application locally:
+
+```bat
+@echo off
+echo Development Environment Startup
+
+:AZURITE
+echo.
+echo ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+echo Azurite Storage Emulator
+echo ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+REM Check if Azurite is running
+tasklist /FI "IMAGENAME eq azurite.exe" | find /I "azurite.exe" >nul
+if errorlevel 1 (
+    echo Azurite is not running. Starting Azurite Emulator...
+    start "Azurite Emulator" "C:\Program Files\Microsoft Visual Studio\2022\Professional\Common7\IDE\Extensions\Microsoft\Azure Storage Emulator\azurite.exe"
+) else (
+    echo Azurite Emulator is already running.
+)
+
+:REDIS
+echo.
+echo ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+echo Redis Cache (Memurai)
+echo ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+REM Check if service is running before stopping it (to reset)
+sc query Memurai | find "RUNNING" >nul
+if %ERRORLEVEL%==0 (
+    net stop Memurai
+) else (
+    echo Memurai Redis Cache was not running.
+)
+net start Memurai
+
+echo.
+echo All Services Launched.
+```
+
+
 
 
 # Configuration
@@ -47,9 +92,14 @@ The settings supported are as follows:
   "Redis": {
     "ConnectionString": "localhost:6379",
     "InstanceName": "AzDoBoardsTokenCache"
+  },
+  "Azure":{
+    "StorageAccountConnectionString": "DefaultEndpointsProtocol=https;AccountName=<storageaccountname>;AccountKey=<accountkey>;EndpointSuffix=core.windows.net"
   }
 }
 ```
+
+The following StorageAccountConnectionString value *UseDevelopmentStorage=true* is used when running locally, and is sufficient to use with Azurite.
 
 ## Azure Portal App Registration
 

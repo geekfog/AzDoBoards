@@ -19,12 +19,12 @@ public class Program
         // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         var builder = WebApplication.CreateBuilder(args);
 
-        // Add support for secrets.json for development
-        if (Server.IsDevelopment) builder.Configuration.AddUserSecrets(nameof(AzDoBoards));
+        if (Server.IsDevelopment) 
+            builder.Configuration.AddUserSecrets(nameof(AzDoBoards)); // Add support for secrets.json for development
 
         // Add Serilog Support
-        builder.Services.AddSerilog();
-        SerilogHelper.Configure(builder.Environment);
+        SerilogHelper.Configure(builder.Environment, builder.Configuration);
+        builder.Host.UseSerilog(); // replace logging with Serilog
 
         // Add Azure KeyVault configuration
         var keyVaultEndpoint = Environment.GetEnvironmentVariable(Utility.Constants.Azure_EnvcfgKeyVaultEndpoint);
