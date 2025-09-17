@@ -33,7 +33,7 @@
                     }
                     else if (availableProcesses?.Any() == true)
                     {
-                        <MudSelect T="string" @bind-Value="selectedProcessId" Label="Selected Process" Placeholder="Choose a process" Class="mb-3">
+                        <MudSelect T="string" @bind-Value="selectedProcessId" @bind-Value:after="OnProcessSelectionChanged" Label="Selected Process" Placeholder="Choose a process" Class="mb-3">
                             @foreach (var process in availableProcesses)
                             {
                                 <MudSelectItem T="string" Value="@process.Id.ToString()">
@@ -42,16 +42,16 @@
                             }
                         </MudSelect>
 
-                        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveProcessSettingAsync" Class="mr-2" Disabled="string.IsNullOrEmpty(selectedProcessId)">
-                            Set as Default
-                        </MudButton>
+                        @if (isLoadingWorkItems)
+                        {
+                            <MudStack Row AlignItems="AlignItems.Center" Class="mb-3">
+                                <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+                                <MudText Typo="Typo.body2" Class="ml-2">Loading work items...</MudText>
+                            </MudStack>
+                        }
 
-                        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="LoadWorkItemTypesAsync" Disabled="string.IsNullOrEmpty(selectedProcessId) || isLoadingWorkItems">
-                            @if (isLoadingWorkItems)
-                            {
-                                <MudProgressCircular Indeterminate="true" Size="Size.Small" Class="mr-2" />
-                            }
-                            Work Items
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveProcessSettingAsync" Class="mr-2" Disabled="!AllowDefaultProcessSelection">
+                            Set as Default
                         </MudButton>
                     }
                     else
@@ -201,7 +201,7 @@
                     }
                     else if (!string.IsNullOrEmpty(selectedProcessId))
                     {
-                        <MudAlert Severity="Severity.Info">Load work item types for the selected process to configure hierarchy.</MudAlert>
+                        <MudAlert Severity="Severity.Info">Work item types will load automatically for the selected process.</MudAlert>
                     }
                     else
                     {
@@ -210,23 +210,6 @@
                 </MudCardContent>
             </MudCard>
         </MudItem>
-
-
-@*         <!-- Hierarchy Preview -->
-        @if (workItemHierarchy?.Any() == true)
-        {
-            <MudItem xs="12">
-                <MudCard>
-                    <MudCardContent>
-                        <MudText Typo="Typo.h6" GutterBottom="true">
-                            <MudIcon Icon="Icons.Material.Filled.Code" Class="mr-2" />
-                            Hierarchy Preview (JSON)
-                        </MudText>
-                        <MudTextField T="string" Value="@hierarchyJson" Label="JSON Representation" Variant="Variant.Outlined" Lines="10" ReadOnly="true" Class="json-preview" />
-                    </MudCardContent>
-                </MudCard>
-            </MudItem>
-        } *@
     </MudGrid>
 </MudContainer>
 
@@ -235,6 +218,7 @@
     private bool isLoadingWorkItems = false;
     private bool hasHierarchyChanges = false;
     private string StatusMessage = string.Empty;
+    private string savedProcessId = string.Empty;
 
     private string selectedProcessId = string.Empty;
     private List<AzDoBoards.Client.ProcessInfo>? availableProcesses;
@@ -248,6 +232,8 @@
         workItemHierarchy.Select(level => level.Select(wi => wi.Name).ToArray()).ToArray(),
         new JsonSerializerOptions { WriteIndented = true });
 
+    private bool AllowDefaultProcessSelection => !string.IsNullOrEmpty(selectedProcessId) && selectedProcessId != savedProcessId;
+
     protected override async Task OnInitializedAsync()
     {
         await LoadSettingsAsync();
@@ -259,7 +245,8 @@
         try
         {
             // Load saved process setting
-            selectedProcessId = await SettingsRepository.GetOrCreateAsync("process", string.Empty);
+            savedProcessId = await SettingsRepository.GetOrCreateAsync("process", string.Empty);
+            selectedProcessId = savedProcessId;
 
             if (!string.IsNullOrEmpty(selectedProcessId))
             {
@@ -307,18 +294,29 @@
         }
     }
 
+    private async Task OnProcessSelectionChanged()
+    {
+        if (!string.IsNullOrEmpty(selectedProcessId))
+        {
+            // Clear existing data
+            availableWorkItemTypes = null;
+            workItemHierarchy.Clear();
+            unassignedWorkItems = null;
+            hasHierarchyChanges = false;
+            
+            await LoadWorkItemTypesAsync();
+            await LoadWorkItemHierarchyAsync();
+            StateHasChanged();
+        }
+    }
+
     private async Task SaveProcessSettingAsync()
     {
         try
         {
             await SettingsRepository.SetAsync("process", selectedProcessId);
+            savedProcessId = selectedProcessId;
             Snackbar.Add("Process setting saved successfully", Severity.Success);
-
-            // Clear existing work item data when process changes
-            availableWorkItemTypes = null;
-            workItemHierarchy.Clear();
-            unassignedWorkItems = null;
-            hasHierarchyChanges = true;
 
             StateHasChanged();
         }
