@@ -425,7 +425,11 @@
     {
         try
         {
-            await SettingsRepository.SetAsync("process", selectedProcessId);
+            // Get the selected process name for notes
+            var selectedProcess = availableProcesses?.FirstOrDefault(p => p.Id.ToString() == selectedProcessId);
+            var processName = selectedProcess?.Name ?? "Unknown Process";
+
+            await SettingsRepository.SetAsync("process", selectedProcessId, $"Process: {processName}");
             savedProcessId = selectedProcessId;
             Snackbar.Add("Process setting saved successfully", Severity.Success);
 
@@ -445,8 +449,12 @@
     {
         try
         {
+            // Get the selected process name for notes
+            var selectedProcess = availableProcesses?.FirstOrDefault(p => p.Id.ToString() == savedProcessId);
+            var processName = selectedProcess?.Name ?? "Unknown Process";
+
             var projectKey = $"project-{savedProcessId}";
-            await SettingsRepository.SetAsync(projectKey, selectedProjectId);
+            await SettingsRepository.SetAsync(projectKey, selectedProjectId, $"Process: {processName}");
             savedProjectId = selectedProjectId;
             Snackbar.Add("Project setting saved successfully", Severity.Success);
 
@@ -533,11 +541,15 @@
     {
         try
         {
+            // Get the selected process name for notes
+            var selectedProcess = availableProcesses?.FirstOrDefault(p => p.Id.ToString() == selectedProcessId);
+            var processName = selectedProcess?.Name ?? "Unknown Process";
+
             var hierarchyKey = $"work-item-hierarchy-{selectedProcessId}";
             var hierarchyData = workItemHierarchy.Select(level => level.Select(wi => wi.Name).ToArray()).ToArray();
             var hierarchyJson = JsonSerializer.Serialize(hierarchyData);
 
-            await SettingsRepository.SetAsync(hierarchyKey, hierarchyJson);
+            await SettingsRepository.SetAsync(hierarchyKey, hierarchyJson, $"Process: {processName}");
             hasHierarchyChanges = false;
 
             Snackbar.Add("Work item hierarchy saved successfully", Severity.Success);

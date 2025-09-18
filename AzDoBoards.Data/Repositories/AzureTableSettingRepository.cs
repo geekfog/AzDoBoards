@@ -53,7 +53,7 @@ public class AzureTableSettingsRepository : ISettingsRepository
         }
     }
 
-    public async Task<Models.KeyValuePair> SetAsync(string key, string value, CancellationToken cancellationToken = default)
+    public async Task<Models.KeyValuePair> SetAsync(string key, string value, string? notes = null, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
         ArgumentNullException.ThrowIfNull(value);
@@ -63,7 +63,7 @@ public class AzureTableSettingsRepository : ISettingsRepository
             await _tableClient.CreateIfNotExistsAsync(cancellationToken);
 
             var now = DateTimeOffset.UtcNow;
-            var entity = new SettingTableEntity(key, value) { UpdatedAt = now };
+            var entity = new SettingTableEntity(key, value, notes ?? string.Empty) { UpdatedAt = now };
 
             // Try to get existing entity to preserve CreatedAt
             var existingResponse = await _tableClient.GetEntityIfExistsAsync<SettingTableEntity>("Settings", key, cancellationToken: cancellationToken);
@@ -72,13 +72,13 @@ public class AzureTableSettingsRepository : ISettingsRepository
                 entity.CreatedAt = existingResponse.Value.CreatedAt;
                 entity.ETag = existingResponse.Value.ETag;
                 await _tableClient.UpdateEntityAsync(entity, entity.ETag, TableUpdateMode.Replace, cancellationToken);
-                _logger.LogDebug("Updated existing setting {Key}", key);
+                _logger.LogDebug("Updated existing setting {Key} with notes: {Notes}", key, notes ?? string.Empty);
             }
             else
             {
                 entity.CreatedAt = now;
                 await _tableClient.AddEntityAsync(entity, cancellationToken);
-                _logger.LogDebug("Created new setting {Key}", key);
+                _logger.LogDebug("Created new setting {Key} with notes: {Notes}", key, notes ?? string.Empty);
             }
 
             return entity.ToKeyValuePair();
@@ -190,9 +190,9 @@ public class AzureTableSettingsRepository : ISettingsRepository
         return ConvertFromString<T>(stringValue);
     }
 
-    public async Task SetSettingAsync<T>(string key, T value, CancellationToken cancellationToken = default)
+    public async Task SetSettingAsync<T>(string key, T value, string? notes = null, CancellationToken cancellationToken = default)
     {
-        await SetAsync(key, ConvertToString(value), cancellationToken);
+        await SetAsync(key, ConvertToString(value), notes, cancellationToken);
     }
 
     private static string ConvertToString<T>(T value)

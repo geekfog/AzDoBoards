@@ -21,9 +21,10 @@ public interface IKeyValueRepository
     /// </summary>
     /// <param name="key">The key to set</param>
     /// <param name="value">The value to set</param>
+    /// <param name="notes">Human-readable notes about what this setting represents</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>The updated key-value pair</returns>
-    Task<Models.KeyValuePair> SetAsync(string key, string value, CancellationToken cancellationToken = default);
+    Task<Models.KeyValuePair> SetAsync(string key, string value, string? notes = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets a value by key. Returns null if not found.

@@ -21,6 +21,7 @@ public interface ISettingsRepository : IKeyValueRepository
     /// <typeparam name="T">The type to convert from</typeparam>
     /// <param name="key">Setting key</param>
     /// <param name="value">Value to set</param>
+    /// <param name="notes">Human-readable notes about what this setting represents</param>
     /// <param name="cancellationToken">Cancellation token</param>
-    Task SetSettingAsync<T>(string key, T value, CancellationToken cancellationToken = default);
+    Task SetSettingAsync<T>(string key, T value, string? notes = null, CancellationToken cancellationToken = default);
 }

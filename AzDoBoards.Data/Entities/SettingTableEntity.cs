@@ -19,6 +19,11 @@ public class SettingTableEntity : ITableEntity
     public string Value { get; set; } = string.Empty;
 
     /// <summary>
+    /// Human-readable notes about what this setting represents
+    /// </summary>
+    public string Notes { get; set; } = string.Empty;
+
+    /// <summary>
     /// When the setting was created
     /// </summary>
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
@@ -30,10 +35,11 @@ public class SettingTableEntity : ITableEntity
 
     public SettingTableEntity() { }
 
-    public SettingTableEntity(string key, string value)
+    public SettingTableEntity(string key, string value, string notes = "")
     {
         RowKey = key;
         Value = value;
+        Notes = notes;
         CreatedAt = DateTimeOffset.UtcNow;
         UpdatedAt = DateTimeOffset.UtcNow;
     }
@@ -47,6 +53,7 @@ public class SettingTableEntity : ITableEntity
         {
             Key = RowKey,
             Value = Value,
+            Notes = Notes,
             CreatedAt = CreatedAt,
             UpdatedAt = UpdatedAt
         };
@@ -61,6 +68,7 @@ public class SettingTableEntity : ITableEntity
         {
             RowKey = keyValuePair.Key,
             Value = keyValuePair.Value,
+            Notes = keyValuePair.Notes,
             CreatedAt = keyValuePair.CreatedAt,
             UpdatedAt = keyValuePair.UpdatedAt
         };

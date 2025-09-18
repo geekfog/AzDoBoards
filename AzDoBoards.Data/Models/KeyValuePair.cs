@@ -16,6 +16,11 @@ public record KeyValuePair
     public required string Value { get; init; }
 
     /// <summary>
+    /// Human-readable notes about what this setting represents
+    /// </summary>
+    public string Notes { get; init; } = string.Empty;
+
+    /// <summary>
     /// When the record was created
     /// </summary>
     public DateTimeOffset CreatedAt { get; init; } = DateTimeOffset.UtcNow;
