@@ -77,11 +77,11 @@
                         }
                         else if (availableProjects?.Any() == true)
                         {
-                            <MudSelect T="string" @bind-Value="selectedProjectName" @bind-Value:after="OnProjectSelectionChanged" Label="Default Project" Placeholder="Choose a project" Class="mb-3">
+                            <MudSelect T="string" @bind-Value="selectedProjectId" @bind-Value:after="OnProjectSelectionChanged" Label="Default Project" Placeholder="Choose a project" Class="mb-3">
                                 @foreach (var project in availableProjects)
                                 {
-                                    <MudSelectItem T="string" Value="@project">
-                                        @project
+                                    <MudSelectItem T="string" Value="@project.Id.ToString()">
+                                        @project.Name
                                     </MudSelectItem>
                                 }
                             </MudSelect>
@@ -92,7 +92,7 @@
                         }
                         else
                         {
-                            <MudAlert Severity="Severity.Warning">No projects available. Please check your connection.</MudAlert>
+                            <MudAlert Severity="Severity.Warning">No projects available.</MudAlert>
                         }
                     }
                     else
@@ -261,12 +261,12 @@
     private bool hasHierarchyChanges = false;
     private string StatusMessage = string.Empty;
     private string savedProcessId = string.Empty;
-    private string savedProjectName = string.Empty;
+    private string savedProjectId = string.Empty;
 
     private string selectedProcessId = string.Empty;
-    private string selectedProjectName = string.Empty;
+    private string selectedProjectId = string.Empty;
     private List<AzDoBoards.Client.ProcessInfo>? availableProcesses;
-    private List<string>? availableProjects;
+    private List<AzDoBoards.Client.ProjectInfo>? availableProjects;
     private List<AzDoBoards.Client.WorkItemTypeInfo>? availableWorkItemTypes;
     private List<AzDoBoards.Client.WorkItemTypeInfo>? unassignedWorkItems;
     private List<List<AzDoBoards.Client.WorkItemTypeInfo>> workItemHierarchy = new();
@@ -278,7 +278,7 @@
         new JsonSerializerOptions { WriteIndented = true });
 
     private bool AllowDefaultProcessSelection => !string.IsNullOrEmpty(selectedProcessId) && selectedProcessId != savedProcessId;
-    private bool AllowDefaultProjectSelection => !string.IsNullOrEmpty(selectedProjectName) && selectedProjectName != savedProjectName;
+    private bool AllowDefaultProjectSelection => !string.IsNullOrEmpty(selectedProjectId) && selectedProjectId != savedProjectId;
 
     protected override async Task OnInitializedAsync()
     {
@@ -314,8 +314,8 @@
         {
             // Load saved project setting for the current process
             var projectKey = $"project-{savedProcessId}";
-            savedProjectName = await SettingsRepository.GetOrCreateAsync(projectKey, string.Empty);
-            selectedProjectName = savedProjectName;
+            savedProjectId = await SettingsRepository.GetOrCreateAsync(projectKey, string.Empty);
+            selectedProjectId = savedProjectId;
 
             // Load available projects
             await LoadProjectsAsync();
@@ -344,12 +344,12 @@
             }
 
             var projectsClient = ServiceProvider.GetRequiredService<AzDoBoards.Client.Projects>();
-            availableProjects = await projectsClient.GetProjectsAsync();
+            availableProjects = await projectsClient.GetProjectInfoAsync();
 
-            // If no saved project name, but we have projects available, select the first one
-            if (string.IsNullOrEmpty(selectedProjectName) && availableProjects?.Any() == true)
+            // If no saved project ID, but we have projects available, select the first one
+            if (string.IsNullOrEmpty(selectedProjectId) && availableProjects?.Any() == true)
             {
-                selectedProjectName = availableProjects[0];
+                selectedProjectId = availableProjects[0].Id.ToString();
             }
 
             StatusMessage = $"Loaded {availableProjects.Count} projects";
@@ -446,8 +446,8 @@
         try
         {
             var projectKey = $"project-{savedProcessId}";
-            await SettingsRepository.SetAsync(projectKey, selectedProjectName);
-            savedProjectName = selectedProjectName;
+            await SettingsRepository.SetAsync(projectKey, selectedProjectId);
+            savedProjectId = selectedProjectId;
             Snackbar.Add("Project setting saved successfully", Severity.Success);
 
             StateHasChanged();
