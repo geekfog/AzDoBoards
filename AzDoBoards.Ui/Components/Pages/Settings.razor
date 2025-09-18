@@ -369,45 +369,6 @@
         }
     }
 
-    private async Task LoadProjectsAsync()
-    {
-        try
-        {
-            isLoadingProjects = true;
-            StateHasChanged();
-
-            var authProvider = ServiceProvider.GetRequiredService<AuthenticationStateProvider>();
-            var authState = await authProvider.GetAuthenticationStateAsync();
-
-            if (!authState.User.Identity?.IsAuthenticated ?? false)
-            {
-                StatusMessage = "Please authenticate to load projects.";
-                return;
-            }
-
-            var projectsClient = ServiceProvider.GetRequiredService<AzDoBoards.Client.Projects>();
-            availableProjects = await projectsClient.GetProjectInfoAsync();
-
-            // If no saved project ID, but we have projects available, select the first one
-            if (string.IsNullOrEmpty(selectedProjectId) && availableProjects?.Any() == true)
-            {
-                selectedProjectId = availableProjects[0].Id.ToString();
-            }
-
-            StatusMessage = $"Loaded {availableProjects?.Count ?? 0} projects";
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error loading projects");
-            StatusMessage = $"Error loading projects: {ex.Message}";
-        }
-        finally
-        {
-            isLoadingProjects = false;
-            StateHasChanged();
-        }
-    }
-
     private async Task LoadProcessesAsync()
     {
         try
@@ -427,9 +388,6 @@
             var processClient = ServiceProvider.GetRequiredService<AzDoBoards.Client.Process>();
             availableProcesses = await processClient.GetProcessesAsync();
 
-            // Load projects immediately after processes are loaded
-            await LoadProjectsAsync();
-
             StatusMessage = $"Loaded {availableProcesses.Count} processes";
         }
         catch (Exception ex)
@@ -444,6 +402,57 @@
         }
     }
 
+    private async Task LoadProjectsAsync()
+    {
+        try
+        {
+            isLoadingProjects = true;
+            // Always clear existing projects when loading starts
+            availableProjects = null;
+            StateHasChanged();
+
+            var authProvider = ServiceProvider.GetRequiredService<AuthenticationStateProvider>();
+            var authState = await authProvider.GetAuthenticationStateAsync();
+
+            if (!authState.User.Identity?.IsAuthenticated ?? false)
+            {
+                StatusMessage = "Please authenticate to load projects.";
+                return;
+            }
+
+            var projectsClient = ServiceProvider.GetRequiredService<AzDoBoards.Client.Projects>();
+            
+            // Filter projects by the currently selected process if available
+            if (!string.IsNullOrEmpty(selectedProcessId) && Guid.TryParse(selectedProcessId, out var processId))
+            {
+                availableProjects = await projectsClient.GetProjectInfoAsync(processId);
+            }
+            else
+            {
+                // Fallback to all projects if no process is selected
+                availableProjects = await projectsClient.GetProjectInfoAsync();
+            }
+
+            // If no saved project ID, but we have projects available, select the first one
+            if (string.IsNullOrEmpty(selectedProjectId) && availableProjects?.Any() == true)
+                selectedProjectId = availableProjects[0].Id.ToString();
+
+            StatusMessage = $"Loaded {availableProjects?.Count ?? 0} projects for the selected process";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading projects");
+            StatusMessage = $"Error loading projects: {ex.Message}";
+            // Ensure projects are cleared on error
+            availableProjects = null;
+        }
+        finally
+        {
+            isLoadingProjects = false;
+            StateHasChanged();
+        }
+    }
+
     private async Task OnProcessSelectionChanged()
     {
         if (!string.IsNullOrEmpty(selectedProcessId))
@@ -454,21 +463,23 @@
             unassignedWorkItems = null;
             hasHierarchyChanges = false;
 
-            // Reset project selection when process changes (they'll need to reselect)
+            // IMPORTANT: Clear projects and project selection when process changes
+            availableProjects = null;
             selectedProjectId = string.Empty;
 
             await LoadWorkItemTypesAsync();
             await LoadWorkItemHierarchyAsync();
             
-            // Projects are already loaded for all processes, so just trigger state change
+            // Load projects for the newly selected process
+            await LoadProjectsAsync();
+            
             StateHasChanged();
         }
     }
 
     private void OnProjectSelectionChanged()
     {
-        // Trigger UI update for button state
-        StateHasChanged();
+        StateHasChanged(); // Trigger UI update for button state
     }
 
     private async Task SaveDefaultConfigurationAsync()
