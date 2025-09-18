@@ -62,6 +62,47 @@
             </MudCard>
         </MudItem>
 
+        <!-- Project Selection -->
+        <MudItem xs="12" md="6">
+            <MudCard>
+                <MudCardContent>
+                    <MudText Typo="Typo.h6" GutterBottom="true">Project Configuration</MudText>
+
+                    @if (!string.IsNullOrEmpty(savedProcessId))
+                    {
+                        @if (isLoadingProjects)
+                        {
+                            <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+                            <MudText Typo="Typo.body2" Class="ml-2">Loading projects...</MudText>
+                        }
+                        else if (availableProjects?.Any() == true)
+                        {
+                            <MudSelect T="string" @bind-Value="selectedProjectName" @bind-Value:after="OnProjectSelectionChanged" Label="Default Project" Placeholder="Choose a project" Class="mb-3">
+                                @foreach (var project in availableProjects)
+                                {
+                                    <MudSelectItem T="string" Value="@project">
+                                        @project
+                                    </MudSelectItem>
+                                }
+                            </MudSelect>
+
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveProjectSettingAsync" Disabled="!AllowDefaultProjectSelection">
+                                Set as Default
+                            </MudButton>
+                        }
+                        else
+                        {
+                            <MudAlert Severity="Severity.Warning">No projects available. Please check your connection.</MudAlert>
+                        }
+                    }
+                    else
+                    {
+                        <MudAlert Severity="Severity.Info">Please select and save a default process first to configure project settings.</MudAlert>
+                    }
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
         <!-- Work Item Hierarchy Configuration (Unassigned and Assigned) -->
         <MudItem xs="12">
             <MudCard>
@@ -148,7 +189,7 @@
                                                                 </MudStack>
                                                             </MudStack>
 
-                                                            <MudDropZone T="AzDoBoards.Client.WorkItemTypeInfo" Identifier="@($"level-{level}")" Class="level-drop-zone"> 
+                                                            <MudDropZone T="AzDoBoards.Client.WorkItemTypeInfo" Identifier="@($"level-{level}")" Class="level-drop-zone">
                                                                 @if (!levelItems.Any())
                                                                 {
                                                                     <MudText Typo="Typo.body2" Class="empty-level-text">
@@ -190,7 +231,7 @@
                                         @if (isInHierarchy)
                                         {
                                             <MudTooltip Text="Remove from hierarchy">
-                                                <MudIconButton Icon="@Icons.Material.Filled.Cancel" Size="Size.Small" OnClick="@(() => RemoveFromHierarchy(context, level))" Variant="Variant.Filled"Color="Color.Surface" Class="work-item-remove-button" />
+                                                <MudIconButton Icon="@Icons.Material.Filled.Cancel" Size="Size.Small" OnClick="@(() => RemoveFromHierarchy(context, level))" Variant="Variant.Filled" Color="Color.Surface" Class="work-item-remove-button" />
                                             </MudTooltip>
                                         }
                                         <MudIcon Icon="Icons.Material.Filled.DragIndicator" Class="drag-handle" />
@@ -216,12 +257,16 @@
 @code {
     private bool isLoadingProcesses = true;
     private bool isLoadingWorkItems = false;
+    private bool isLoadingProjects = false;
     private bool hasHierarchyChanges = false;
     private string StatusMessage = string.Empty;
     private string savedProcessId = string.Empty;
+    private string savedProjectName = string.Empty;
 
     private string selectedProcessId = string.Empty;
+    private string selectedProjectName = string.Empty;
     private List<AzDoBoards.Client.ProcessInfo>? availableProcesses;
+    private List<string>? availableProjects;
     private List<AzDoBoards.Client.WorkItemTypeInfo>? availableWorkItemTypes;
     private List<AzDoBoards.Client.WorkItemTypeInfo>? unassignedWorkItems;
     private List<List<AzDoBoards.Client.WorkItemTypeInfo>> workItemHierarchy = new();
@@ -233,6 +278,7 @@
         new JsonSerializerOptions { WriteIndented = true });
 
     private bool AllowDefaultProcessSelection => !string.IsNullOrEmpty(selectedProcessId) && selectedProcessId != savedProcessId;
+    private bool AllowDefaultProjectSelection => !string.IsNullOrEmpty(selectedProjectName) && selectedProjectName != savedProjectName;
 
     protected override async Task OnInitializedAsync()
     {
@@ -252,12 +298,71 @@
             {
                 await LoadWorkItemTypesAsync();
                 await LoadWorkItemHierarchyAsync();
+                await LoadProjectSettingsAsync();
             }
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error loading settings");
             Snackbar.Add("Error loading settings", Severity.Error);
+        }
+    }
+
+    private async Task LoadProjectSettingsAsync()
+    {
+        try
+        {
+            // Load saved project setting for the current process
+            var projectKey = $"project-{savedProcessId}";
+            savedProjectName = await SettingsRepository.GetOrCreateAsync(projectKey, string.Empty);
+            selectedProjectName = savedProjectName;
+
+            // Load available projects
+            await LoadProjectsAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading project settings");
+            Snackbar.Add("Error loading project settings", Severity.Error);
+        }
+    }
+
+    private async Task LoadProjectsAsync()
+    {
+        try
+        {
+            isLoadingProjects = true;
+            StateHasChanged();
+
+            var authProvider = ServiceProvider.GetRequiredService<AuthenticationStateProvider>();
+            var authState = await authProvider.GetAuthenticationStateAsync();
+
+            if (!authState.User.Identity?.IsAuthenticated ?? false)
+            {
+                StatusMessage = "Please authenticate to load projects.";
+                return;
+            }
+
+            var projectsClient = ServiceProvider.GetRequiredService<AzDoBoards.Client.Projects>();
+            availableProjects = await projectsClient.GetProjectsAsync();
+
+            // If no saved project name, but we have projects available, select the first one
+            if (string.IsNullOrEmpty(selectedProjectName) && availableProjects?.Any() == true)
+            {
+                selectedProjectName = availableProjects[0];
+            }
+
+            StatusMessage = $"Loaded {availableProjects.Count} projects";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading projects");
+            StatusMessage = $"Error loading projects: {ex.Message}";
+        }
+        finally
+        {
+            isLoadingProjects = false;
+            StateHasChanged();
         }
     }
 
@@ -303,11 +408,17 @@
             workItemHierarchy.Clear();
             unassignedWorkItems = null;
             hasHierarchyChanges = false;
-            
+
             await LoadWorkItemTypesAsync();
             await LoadWorkItemHierarchyAsync();
             StateHasChanged();
         }
+    }
+
+    private void OnProjectSelectionChanged()
+    {
+        // Trigger UI update for button state
+        StateHasChanged();
     }
 
     private async Task SaveProcessSettingAsync()
@@ -318,12 +429,33 @@
             savedProcessId = selectedProcessId;
             Snackbar.Add("Process setting saved successfully", Severity.Success);
 
+            // Load project settings for the newly saved process
+            await LoadProjectSettingsAsync();
+
             StateHasChanged();
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error saving process setting");
             Snackbar.Add("Error saving process setting", Severity.Error);
+        }
+    }
+
+    private async Task SaveProjectSettingAsync()
+    {
+        try
+        {
+            var projectKey = $"project-{savedProcessId}";
+            await SettingsRepository.SetAsync(projectKey, selectedProjectName);
+            savedProjectName = selectedProjectName;
+            Snackbar.Add("Project setting saved successfully", Severity.Success);
+
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error saving project setting");
+            Snackbar.Add("Error saving project setting", Severity.Error);
         }
     }
 
@@ -531,7 +663,7 @@
         UpdateUnassignedWorkItems();
         hasHierarchyChanges = true;
         StateHasChanged();
-        }
+    }
 
     private void OnItemDropped(MudItemDropInfo<AzDoBoards.Client.WorkItemTypeInfo> dropItem)
     {
