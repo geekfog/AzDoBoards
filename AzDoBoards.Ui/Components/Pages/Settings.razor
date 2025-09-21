@@ -423,15 +423,9 @@
             var projectsClient = ServiceProvider.GetRequiredService<AzDoBoards.Client.Projects>();
             
             // Filter projects by the currently selected process if available
+            availableProjects = null;
             if (!string.IsNullOrEmpty(selectedProcessId) && Guid.TryParse(selectedProcessId, out var processId))
-            {
                 availableProjects = await projectsClient.GetProjectInfoAsync(processId);
-            }
-            else
-            {
-                // Fallback to all projects if no process is selected
-                availableProjects = await projectsClient.GetProjectInfoAsync();
-            }
 
             // If no saved project ID, but we have projects available, select the first one
             if (string.IsNullOrEmpty(selectedProjectId) && availableProjects?.Any() == true)
@@ -443,8 +437,7 @@
         {
             Logger.LogError(ex, "Error loading projects");
             StatusMessage = $"Error loading projects: {ex.Message}";
-            // Ensure projects are cleared on error
-            availableProjects = null;
+            availableProjects = null; // Ensure projects are cleared on error
         }
         finally
         {

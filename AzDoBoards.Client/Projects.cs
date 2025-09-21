@@ -12,7 +12,11 @@ public class Projects(ConnectionFactory connectionFactory) : Base(connectionFact
         return [.. projects.Select(p => p.Name)];
     }
 
-    public async Task<List<ProjectInfo>> GetProjectInfoAsync()
+    /*
+     * TODO: Fix this method.
+     * Update GetProjectInfoAsync so it only gets the projects for a given process id. Make it optimized to avoid getting all the projects within an organization and then filtering by the process.
+     */
+    public async Task<List<ProjectInfo>> GetProjectInfoAsync(Guid processId)
     {
         var connection = await _connectionFactory.GetConnectionAsync();
         var projectClient = connection.GetClient<ProjectHttpClient>();
@@ -24,7 +28,7 @@ public class Projects(ConnectionFactory connectionFactory) : Base(connectionFact
             Description = p.Description ?? string.Empty,
             State = p.State.ToString(),
             Visibility = p.Visibility.ToString()
-        })];
+        });
     }
 }
 
