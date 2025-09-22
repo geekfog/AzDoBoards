@@ -92,63 +92,13 @@
             </MudCard>
         </MudItem>
 
-        <!-- Work Item Hierarchy Configuration -->
-        <MudItem xs="12" md="6">
-            <MudCard>
-                <MudCardContent>
-                    <MudText Typo="Typo.h6" GutterBottom="true">Work Item Hierarchy Configuration</MudText>
-
-                    @if (!string.IsNullOrEmpty(savedProcessId))
-                    {
-                        @if (availableWorkItemTypes?.Any() == true)
-                        {
-                            <MudText Typo="Typo.body2" Class="mb-3">
-                                Configure the work item hierarchy for <strong>@GetProcessName(savedProcessId)</strong>
-                            </MudText>
-                            
-                            <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small" OnClick="NavigateToHierarchyConfiguration" Class="mb-3">
-                                Configure Hierarchy
-                            </MudButton>
-
-                            @if (workItemHierarchy?.Any() == true)
-                            {
-                                <MudText Typo="Typo.body2" Class="mt-2">
-                                    Current hierarchy: @workItemHierarchy.Count levels configured
-                                </MudText>
-                            }
-                            else
-                            {
-                                <MudText Typo="Typo.body2" Class="mt-2">
-                                    No hierarchy configured yet
-                                </MudText>
-                            }
-                        }
-                        else
-                        {
-                            <MudAlert Severity="Severity.Info">No work item types available for hierarchy configuration.</MudAlert>
-                        }
-                    }
-                    else
-                    {
-                        <MudAlert Severity="Severity.Info">Please save a default process configuration to enable hierarchy setup.</MudAlert>
-                    }
-                </MudCardContent>
-            </MudCard>
-        </MudItem>
-
         <!-- Work Item Hierarchy Configuration (Full Interface) -->
-        @if (!string.IsNullOrEmpty(savedProcessId) && showHierarchyConfiguration)
+        @if (!string.IsNullOrEmpty(selectedProcessId) && availableWorkItemTypes?.Any() == true)
         {
             <MudItem xs="12">
                 <MudCard>
                     <MudCardContent>
-                        <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3">
-                            <MudText Typo="Typo.h6">Work Item Hierarchy Configuration - @GetProcessName(savedProcessId)</MudText>
-                            <MudButton Variant="Variant.Text" Color="Color.Secondary" Size="Size.Small" OnClick="CloseHierarchyConfiguration">
-                                <MudIcon Icon="Icons.Material.Filled.Close" Size="Size.Small" Class="mr-1" />
-                                Close
-                            </MudButton>
-                        </MudStack>
+                        <MudText Typo="Typo.h6" Class="mb-3">Work Item Hierarchy Configuration - @GetProcessName(selectedProcessId)</MudText>
 
                         @if (availableWorkItemTypes?.Any() == true)
                         {
@@ -297,7 +247,6 @@
     private bool isLoadingWorkItems = false;
     private bool isLoadingProjects = false;
     private bool hasHierarchyChanges = false;
-    private bool showHierarchyConfiguration = false;
     private string StatusMessage = string.Empty;
     private string savedProcessId = string.Empty;
     private string savedProjectId = string.Empty;
@@ -317,8 +266,8 @@
         new JsonSerializerOptions { WriteIndented = true });
 
     // Updated logic: Both process and project must be selected, and at least one must be different from saved values
-    private bool AllowDefaultConfigurationSave => 
-        !string.IsNullOrEmpty(selectedProcessId) && 
+    private bool AllowDefaultConfigurationSave =>
+        !string.IsNullOrEmpty(selectedProcessId) &&
         !string.IsNullOrEmpty(selectedProjectId) &&
         (selectedProcessId != savedProcessId || selectedProjectId != savedProjectId);
 
@@ -421,7 +370,7 @@
             }
 
             var projectsClient = ServiceProvider.GetRequiredService<AzDoBoards.Client.Projects>();
-            
+
             // Filter projects by the currently selected process if available
             availableProjects = null;
             if (!string.IsNullOrEmpty(selectedProcessId) && Guid.TryParse(selectedProcessId, out var processId))
@@ -462,10 +411,10 @@
 
             await LoadWorkItemTypesAsync();
             await LoadWorkItemHierarchyAsync();
-            
+
             // Load projects for the newly selected process
             await LoadProjectsAsync();
-            
+
             StateHasChanged();
         }
     }
@@ -510,18 +459,6 @@
             Logger.LogError(ex, "Error saving default configuration");
             Snackbar.Add("Error saving default configuration", Severity.Error);
         }
-    }
-
-    private void NavigateToHierarchyConfiguration()
-    {
-        showHierarchyConfiguration = true;
-        StateHasChanged();
-    }
-
-    private void CloseHierarchyConfiguration()
-    {
-        showHierarchyConfiguration = false;
-        StateHasChanged();
     }
 
     private string GetProcessName(string processId)
