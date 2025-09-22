@@ -34,7 +34,7 @@
                     else if (availableProcesses?.Any() == true)
                     {
                         <MudSelect T="string" @bind-Value="selectedProcessId" @bind-Value:after="OnProcessSelectionChanged" Label="Selected Process" Placeholder="Choose a process" Class="mb-3">
-                            @foreach (var process in availableProcesses)
+                            @foreach (var process in availableProcesses.OrderBy(p => p.Name))
                             {
                                 <MudSelectItem T="string" Value="@process.Id.ToString()">
                                     @process.Name (@(process.IsSystemProcess ? "System" : process.ParentProcessName))
@@ -52,7 +52,7 @@
                         else if (availableProjects?.Any() == true)
                         {
                             <MudSelect T="string" @bind-Value="selectedProjectId" @bind-Value:after="OnProjectSelectionChanged" Label="Selected Project" Placeholder="Choose a project" Class="mb-3">
-                                @foreach (var project in availableProjects)
+                                @foreach (var project in availableProjects.OrderBy(p => p.Name))
                                 {
                                     <MudSelectItem T="string" Value="@project.Id.ToString()">
                                         @project.Name
