@@ -1,8 +1,230 @@
 ﻿@page "/items"
+@using Microsoft.AspNetCore.Components.Authorization
+@using AzDoBoards.Client
+@using AzDoBoards.Data.Abstractions
+@using AzDoBoards.Ui.Services
+@using AzDoBoards.Utility
+@using MudBlazor
+@inject HierarchyService HierarchyService
+@inject ISnackbar Snackbar
+@inject ILogger<Items> Logger
+
 <PageTitle>Items</PageTitle>
 
-<h1>Items</h1>
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <MudText Typo="Typo.h4" GutterBottom="true">Work Items</MudText>
+
+    @if (isLoading)
+    {
+        <MudStack Row AlignItems="AlignItems.Center" Class="my-4">
+            <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+            <MudText Typo="Typo.body2" Class="ml-2">Loading work item hierarchy...</MudText>
+        </MudStack>
+    }
+    else if (workItemHierarchy?.Any() == true)
+    {
+        <MudGrid Class="hierarchy-grid">
+            @for (int levelIndex = 0; levelIndex < workItemHierarchy.Count; levelIndex++)
+            {
+                var level = levelIndex;
+                var levelItems = workItemHierarchy[level];
+                var levelColor = WorkItemHierarchyHelper.GetLevelColor(level);
+
+                <MudItem xs="12" sm="6" md="4" lg="3" xl="2" Class="hierarchy-column">
+                    <MudPaper Class="@GetLevelColumnClass(level)" Style="min-height: 400px;">
+                        <!-- Level Header -->
+                        <div class="@GetLevelHeaderClass(level)" 
+                             style="@GetLevelHeaderStyle(levelColor, selectedLevel == level)"
+                             @onclick="@(() => SelectLevel(level))">
+                            <MudStack Row AlignItems="AlignItems.Center" Justify="Justify.Center" Class="pa-3">
+                                <MudText Typo="Typo.subtitle1" Class="level-title">
+                                    Level @(level + 1)
+                                </MudText>
+                            </MudStack>
+                        </div>
+
+                        <!-- Work Item Types in Level -->
+                        <div class="work-items-container mt-3">
+                            @if (levelItems.Any())
+                            {
+                                @foreach (var workItem in levelItems)
+                                {
+                                    <div class="work-item-chip non-selectable-chip" style="@GetWorkItemChipStyle(workItem)">
+                                        <div class="d-flex align-center pa-2">
+                                            <MudIcon Icon="@GetMudBlazorWorkItemIcon(workItem.Name)" Size="Size.Small" Class="mr-2" />
+                                            <MudText Class="flex-grow-1">@workItem.Name</MudText>
+                                        </div>
+                                    </div>
+                                }
+                                
+                                <!-- Level summary -->
+                                <div class="level-summary mt-2 pa-2">
+                                    <MudText Typo="Typo.caption" Class="text-center">
+                                        @levelItems.Count work item type@(levelItems.Count == 1 ? "" : "s")
+                                    </MudText>
+                                </div>
+                            }
+                            else
+                            {
+                                <MudAlert Severity="Severity.Info" Class="mt-3">
+                                    No work items configured for this level
+                                </MudAlert>
+                            }
+                        </div>
+
+                        <!-- Selection Indicator -->
+                        @if (selectedLevel == level)
+                        {
+                            <div class="selection-indicator">
+                                <MudIcon Icon="Icons.Material.Filled.CheckCircle" Size="Size.Small" Class="selection-check" />
+                            </div>
+                        }
+                    </MudPaper>
+                </MudItem>
+            }
+        </MudGrid>
+
+        @if (selectedLevel >= 0)
+        {
+            <MudAlert Severity="Severity.Success" Class="mt-4">
+                <MudStack Row AlignItems="AlignItems.Center">
+                    <MudIcon Icon="@GetMudBlazorLevelIcon(selectedLevel)" Size="Size.Small" />
+                    <MudText>
+                        You have selected <strong>Level @(selectedLevel + 1)</strong> with @(workItemHierarchy[selectedLevel].Count) work item type(s):
+                        <strong>@string.Join(", ", workItemHierarchy[selectedLevel].Select(w => w.Name))</strong>
+                    </MudText>
+                </MudStack>
+            </MudAlert>
+        }
+    }
+    else if (!isLoading)
+    {
+        <MudAlert Severity="Severity.Warning" Class="my-4">
+            <MudStack>
+                <MudText>
+                    <MudIcon Icon="Icons.Material.Filled.Warning" Class="mr-2" />
+                    No work item hierarchy configured
+                </MudText>
+                <MudText Typo="Typo.body2" Class="mt-2">
+                    Please configure your work item hierarchy in the Settings page first.
+                </MudText>
+                <MudButton Variant="Variant.Outlined" 
+                          Color="Color.Primary" 
+                          StartIcon="Icons.Material.Filled.Settings"
+                          Href="/settings"
+                          Class="mt-2 align-self-start">
+                    Go to Settings
+                </MudButton>
+            </MudStack>
+        </MudAlert>
+    }
+</MudContainer>
 
 @code {
+    private bool isLoading = true;
+    private List<List<WorkItemTypeInfo>>? workItemHierarchy;
+    private int selectedLevel = -1;
 
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadHierarchyDataAsync();
+    }
+
+    private async Task LoadHierarchyDataAsync()
+    {
+        try
+        {
+            isLoading = true;
+            StateHasChanged();
+
+            // Get current process ID
+            var processId = await HierarchyService.GetCurrentProcessIdAsync();
+            if (string.IsNullOrEmpty(processId))
+            {
+                return;
+            }
+
+            // Load work item types
+            var workItemTypes = await HierarchyService.LoadWorkItemTypesAsync(processId);
+            if (workItemTypes == null)
+            {
+                return;
+            }
+
+            // Load hierarchy
+            workItemHierarchy = await HierarchyService.LoadHierarchyAsync(processId, workItemTypes);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading hierarchy data");
+            Snackbar.Add("Error loading work item hierarchy", Severity.Error);
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void SelectLevel(int level)
+    {
+        selectedLevel = selectedLevel == level ? -1 : level;
+        StateHasChanged();
+        
+        // Fire event for level selection (can be extended later)
+        Logger.LogInformation("Level {Level} selected", level);
+    }
+
+    private string GetLevelColumnClass(int level)
+    {
+        return selectedLevel == level ? "level-column pa-4 selected-level" : "level-column pa-4";
+    }
+
+    private string GetLevelHeaderClass(int level)
+    {
+        return selectedLevel == level ? "level-header clickable-header selected" : "level-header clickable-header";
+    }
+
+    private string GetLevelHeaderStyle(string levelColor, bool isSelected)
+    {
+        var baseStyle = $"background-color: {levelColor}; color: white; border-radius: 8px; " +
+                       "cursor: pointer; transition: all 0.2s ease-in-out; user-select: none;";
+        
+        if (isSelected)
+        {
+            baseStyle += " box-shadow: 0 4px 12px rgba(0,0,0,0.3); transform: translateY(-2px);";
+        }
+        else
+        {
+            baseStyle += " box-shadow: 0 2px 4px rgba(0,0,0,0.2);";
+        }
+
+        return baseStyle;
+    }
+
+    private string GetMudBlazorLevelIcon(int level)
+    {
+        var iconName = WorkItemHierarchyHelper.GetLevelIcon(level);
+        return $"Icons.Material.Filled.{ToPascalCase(iconName)}";
+    }
+
+    private string GetMudBlazorWorkItemIcon(string workItemTypeName)
+    {
+        var iconName = WorkItemHierarchyHelper.GetWorkItemTypeIcon(workItemTypeName);
+        return $"Icons.Material.Filled.{ToPascalCase(iconName)}";
+    }
+
+    private string GetWorkItemChipStyle(WorkItemTypeInfo workItem)
+    {
+        var baseColor = !string.IsNullOrEmpty(workItem.Color) ? workItem.Color : "#1976d2";
+        return $"background-color: {baseColor}; color: white; margin: 4px 0; " +
+               $"border-radius: 8px; min-width: 150px; cursor: default; " +
+               $"transition: all 0.2s ease-in-out; box-shadow: 0 1px 3px rgba(0,0,0,0.2);";
+    }
+
+    private static string ToPascalCase(string input)
+    {
+        return string.Join("", input.Split('_').Select(word => 
+            char.ToUpper(word[0]) + word.Substring(1).ToLower()));
+    }
 }

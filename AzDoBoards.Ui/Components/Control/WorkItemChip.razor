@@ -1,0 +1,47 @@
+﻿@using AzDoBoards.Client
+@using AzDoBoards.Utility
+@using MudBlazor
+
+<div class="work-item-chip @CssClass" style="@GetChipStyle()" @onclick="OnClick">
+    <div class="d-flex align-center pa-2">
+        <MudIcon Icon="@GetMudBlazorIcon()" Size="Size.Small" Class="mr-2" />
+        <MudText Class="flex-grow-1">@WorkItem.Name</MudText>
+        @if (ShowActions)
+        {
+            @ChildContent
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public WorkItemTypeInfo WorkItem { get; set; } = default!;
+    [Parameter] public bool IsSelected { get; set; }
+    [Parameter] public bool IsClickable { get; set; } = true;
+    [Parameter] public bool ShowActions { get; set; }
+    [Parameter] public string CssClass { get; set; } = "";
+    [Parameter] public EventCallback OnClick { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private string GetChipStyle()
+    {
+        var baseColor = !string.IsNullOrEmpty(WorkItem.Color) ? WorkItem.Color : "#1976d2";
+        var opacity = IsSelected ? "1" : "0.9";
+        var cursor = IsClickable ? "pointer" : "default";
+        
+        return $"background-color: {baseColor}; color: white; margin: 4px; opacity: {opacity}; " +
+               $"border-radius: 8px; min-width: 150px; max-width: 200px; cursor: {cursor}; " +
+               $"transition: all 0.2s ease-in-out;";
+    }
+
+    private string GetMudBlazorIcon()
+    {
+        var iconName = WorkItemHierarchyHelper.GetWorkItemTypeIcon(WorkItem.Name);
+        return $"Icons.Material.Filled.{ToPascalCase(iconName)}";
+    }
+
+    private static string ToPascalCase(string input)
+    {
+        return string.Join("", input.Split('_').Select(word => 
+            char.ToUpper(word[0]) + word.Substring(1).ToLower()));
+    }
+}

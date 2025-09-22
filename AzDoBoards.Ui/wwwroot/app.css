@@ -1,9 +1,7 @@
 body {
     font-family: 'Roboto', 'Helvetica Neue', Helvetica, Arial, sans-serif;
-
     /* Smooth transition for theme changes */
     transition: background-color 0.2s ease, color 0.2s ease;
-
     /* Default to light theme */
     background-color: #fafafa;
     color: rgba(0, 0, 0, 0.87);
@@ -94,4 +92,293 @@ main {
 .nav-brand {
     flex-shrink: 0;
     min-width: 0;
+}
+
+/* Work Item Hierarchy Styles - Shared between Settings and Items */
+.hierarchy-grid {
+    gap: 16px;
+}
+
+.hierarchy-column {
+    min-width: 250px;
+}
+
+.level-column {
+    background: linear-gradient(145deg, #fafafa, #f0f0f0);
+    border-radius: 12px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.level-header {
+    border-radius: 8px;
+    margin-bottom: 12px;
+    position: relative;
+    overflow: hidden;
+}
+
+.clickable-header {
+    transition: all 0.2s ease-in-out;
+    cursor: pointer;
+    user-select: none;
+}
+
+    .clickable-header:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 16px rgba(0,0,0,0.2) !important;
+    }
+
+    .clickable-header.selected {
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
+        transform: translateY(-2px) !important;
+    }
+
+.level-title {
+    font-weight: 600;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+
+.work-items-container {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.work-item-chip {
+    border-radius: 8px;
+    user-select: none;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: all 0.2s ease-in-out;
+    width: 100%;
+    min-width: 150px;
+    font-weight: 500;
+    font-size: 0.875rem;
+}
+
+    .work-item-chip:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+
+.non-selectable-chip {
+    cursor: default !important;
+}
+
+/* Settings-specific styles */
+.draggable-item-wrapper {
+    cursor: grab;
+    transition: all 0.2s ease-in-out;
+    border-radius: 8px;
+    margin: 4px 0;
+    user-select: none;
+    width: fit-content;
+    min-width: 150px;
+    max-width: 200px;
+}
+
+    .draggable-item-wrapper:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.3) !important;
+        opacity: 1 !important;
+    }
+
+    .draggable-item-wrapper:active {
+        cursor: grabbing;
+    }
+
+.clickable-chip {
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+}
+
+.flex-grow-1 {
+    flex-grow: 1;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+.drag-handle {
+    color: rgba(255, 255, 255, 0.7);
+    cursor: grab;
+    flex-shrink: 0;
+}
+
+    .drag-handle:hover {
+        color: white;
+    }
+
+.work-item-remove-button {
+    min-width: 24px !important;
+    width: 24px !important;
+    height: 24px !important;
+    padding: 0 !important;
+    flex-shrink: 0;
+    margin-left: 4px;
+    margin-right: 4px;
+}
+
+    .work-item-remove-button .mud-icon-root {
+        font-size: 18px !important;
+    }
+
+.hierarchy-chip {
+    border: 2px solid rgba(255,255,255,0.3);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.drop-zone-unassigned {
+    border: 2px dashed #ccc;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    min-height: 60px;
+}
+
+    .drop-zone-unassigned:hover,
+    .drop-zone-unassigned.mud-drop-zone-drag-over {
+        border-color: #1976d2;
+        background-color: rgba(25, 118, 210, 0.05);
+    }
+
+.level-container {
+    padding: 16px;
+    border-radius: 8px;
+    background-color: rgba(255, 255, 255, 0.02);
+}
+
+.level-drop-zone {
+    min-height: 60px;
+    border: 2px dashed transparent;
+    border-radius: 6px;
+    padding: 8px;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: flex-start;
+}
+
+    .level-drop-zone:hover,
+    .level-drop-zone.mud-drop-zone-drag-over {
+        border-color: #4caf50;
+        background-color: rgba(76, 175, 80, 0.1);
+    }
+
+.empty-level-text {
+    color: #666;
+    font-style: italic;
+    align-self: center;
+    text-align: center;
+    padding: 16px;
+    width: 100%;
+}
+
+.unassigned-panel {
+    background: linear-gradient(145deg, #f5f5f5, #e8e8e8);
+    border-radius: 8px;
+}
+
+.hierarchy-panel {
+    background: linear-gradient(145deg, #fafafa, #f0f0f0);
+    border-radius: 8px;
+}
+
+.getting-started-alert {
+    text-align: center;
+    padding: 32px;
+}
+
+/* Dark theme adjustments */
+.mud-theme-dark .level-column {
+    background: linear-gradient(145deg, #2d2d2d, #212121);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.mud-theme-dark .work-item-chip {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+    .mud-theme-dark .work-item-chip:hover {
+        box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+    }
+
+.mud-theme-dark .unassigned-panel {
+    background: linear-gradient(145deg, #2a2a2a, #1e1e1e);
+}
+
+.mud-theme-dark .hierarchy-panel {
+    background: linear-gradient(145deg, #2d2d2d, #212121);
+}
+
+.mud-theme-dark .level-container {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.mud-theme-dark .empty-level-text {
+    color: #aaa;
+}
+
+/* Responsive adjustments */
+@media (max-width: 960px) {
+    .hierarchy-column {
+        min-width: 200px;
+    }
+}
+
+@media (max-width: 600px) {
+    .hierarchy-grid {
+        gap: 8px;
+    }
+
+    .hierarchy-column {
+        min-width: 100%;
+    }
+
+    .level-column {
+        min-height: 200px;
+    }
+}
+
+/* Additional styles for Items page selection indicators */
+.selected-level {
+    border: 3px solid #4caf50 !important;
+    box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2) !important;
+    position: relative;
+}
+
+.selection-indicator {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background-color: #4caf50;
+    border-radius: 50%;
+    padding: 4px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.selection-check {
+    color: white;
+    font-size: 16px !important;
+}
+
+.level-summary {
+    background-color: rgba(0, 0, 0, 0.05);
+    border-radius: 4px;
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+/* Dark theme adjustments */
+.mud-theme-dark .level-summary {
+    background-color: rgba(255, 255, 255, 0.05);
+    border-top-color: rgba(255, 255, 255, 0.1);
+}
+
+.mud-theme-dark .selected-level {
+    border-color: #66bb6a !important;
+    box-shadow: 0 0 0 2px rgba(102, 187, 106, 0.2) !important;
+}
+
+.mud-theme-dark .selection-indicator {
+    background-color: #66bb6a;
 }
