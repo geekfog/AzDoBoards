@@ -4,7 +4,9 @@
 
 <div class="work-item-chip @CssClass" style="@GetChipStyle()" @onclick="OnClick">
     <div class="d-flex align-center pa-2">
-        <MudIcon Icon="@GetMudBlazorIcon()" Size="Size.Small" Class="mr-2" />
+        <div class="work-item-svg-icon mr-2" title="@WorkItem.Name">
+            @((MarkupString)WorkItemHelper.GetWorkItemTypeSvgIcon(WorkItem.Name))
+        </div>
         <MudText Class="flex-grow-1">@WorkItem.Name</MudText>
         @if (ShowActions)
         {
@@ -31,17 +33,5 @@
         return $"background-color: {baseColor}; color: white; margin: 4px; opacity: {opacity}; " +
                $"border-radius: 8px; min-width: 150px; max-width: 200px; cursor: {cursor}; " +
                $"transition: all 0.2s ease-in-out;";
-    }
-
-    private string GetMudBlazorIcon()
-    {
-        var iconName = WorkItemHierarchyHelper.GetWorkItemTypeIcon(WorkItem.Name);
-        return $"Icons.Material.Filled.{ToPascalCase(iconName)}";
-    }
-
-    private static string ToPascalCase(string input)
-    {
-        return string.Join("", input.Split('_').Select(word => 
-            char.ToUpper(word[0]) + word.Substring(1).ToLower()));
     }
 }

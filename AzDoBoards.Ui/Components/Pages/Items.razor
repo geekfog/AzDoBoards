@@ -43,7 +43,7 @@
                             {
                                 <div class="work-item-chip-horizontal" style="@GetWorkItemChipStyle(workItem)">
                                     <div class="d-flex align-center pa-1">
-                                        <MudIcon Icon="@GetMudBlazorWorkItemIcon(workItem.Name)" Size="Size.Small" Class="mr-1" />
+                                        <MudIcon Icon="@WorkItemHelper.GetWorkItemTypeSvgIcon(workItem.Name)" Size="Size.Small" Class="mr-1" />
                                         <MudText Typo="Typo.caption" Class="work-item-text">@workItem.Name</MudText>
                                     </div>
                                 </div>
@@ -64,7 +64,6 @@
         {
             <MudAlert Severity="Severity.Success" Class="mt-4">
                 <MudStack Row AlignItems="AlignItems.Center">
-                    <MudIcon Icon="@GetMudBlazorLevelIcon(selectedLevel)" Size="Size.Small" />
                     <MudText>
                         You have selected <strong>Level @(selectedLevel + 1)</strong> with @(workItemHierarchy[selectedLevel].Count) work item type(s):
                         <strong>@string.Join(", ", workItemHierarchy[selectedLevel].Select(w => w.Name))</strong>
@@ -173,29 +172,11 @@
         return baseStyle;
     }
 
-    private string GetMudBlazorLevelIcon(int level)
-    {
-        var iconName = WorkItemHierarchyHelper.GetLevelIcon(level);
-        return $"Icons.Material.Filled.{ToPascalCase(iconName)}";
-    }
-
-    private string GetMudBlazorWorkItemIcon(string workItemTypeName)
-    {
-        var iconName = WorkItemHierarchyHelper.GetWorkItemTypeIcon(workItemTypeName);
-        return $"Icons.Material.Filled.{ToPascalCase(iconName)}";
-    }
-
     private string GetWorkItemChipStyle(WorkItemTypeInfo workItem)
     {
         var baseColor = !string.IsNullOrEmpty(workItem.Color) ? workItem.Color : "#1976d2";
         return $"background-color: {baseColor}; color: white; " +
                $"border-radius: 4px; " +
                $"transition: all 0.2s ease-in-out; box-shadow: 0 1px 2px rgba(0,0,0,0.2);";
-    }
-
-    private static string ToPascalCase(string input)
-    {
-        return string.Join("", input.Split('_').Select(word => 
-            char.ToUpper(word[0]) + word.Substring(1).ToLower()));
     }
 }

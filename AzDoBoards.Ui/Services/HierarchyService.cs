@@ -83,7 +83,7 @@ public class HierarchyService
             var hierarchyKey = $"work-item-hierarchy-{processId}";
             var hierarchyJson = await _settingsRepository.GetOrCreateAsync(hierarchyKey, "[]");
 
-            var hierarchyData = WorkItemHierarchyHelper.ParseHierarchyJson(hierarchyJson);
+            var hierarchyData = WorkItemHelper.ParseHierarchyJson(hierarchyJson);
             if (hierarchyData != null && availableWorkItemTypes != null)
             {
                 foreach (var level in hierarchyData)

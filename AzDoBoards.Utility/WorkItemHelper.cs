@@ -5,7 +5,7 @@ namespace AzDoBoards.Utility;
 /// <summary>
 /// Helper class for work item hierarchy operations
 /// </summary>
-public static class WorkItemHierarchyHelper
+public static class WorkItemHelper
 {
     /// <summary>
     /// Gets the color for a specific hierarchy level
@@ -19,44 +19,34 @@ public static class WorkItemHierarchyHelper
     }
 
     /// <summary>
-    /// Gets the icon for a work item type based on its name
+    /// Gets the SVG icon for a work item type based on its name
     /// </summary>
     /// <param name="workItemTypeName">The name of the work item type</param>
-    /// <returns>Material icon string</returns>
-    public static string GetWorkItemTypeIcon(string workItemTypeName)
+    /// <returns>SVG icon string</returns>
+    public static string GetWorkItemTypeSvgIcon(string workItemTypeName)
     {
         return workItemTypeName.ToLower() switch
         {
-            "initiative" => "account_balance",
-            "epic" => "workspace_premium",
-            "feature" => "emoji_events",
-            "user story" => "auto_stories",
-            "story" => "bookmark_border",
-            "bug" => "bug_report",
-            "task" => "check_box",
-            "test case" => "biotech",
-            "test plan" => "assignment",
-            "test suite" => "folder",
-            "issue" => "construction",
-            "research" => "science",
-            "investigation" => "gavel",
-            _ => "work"
+            "initiative" => IconSvg.WorkItemIconInitiative,
+            "epic" => IconSvg.WorkItemIconEpic,
+            "feature" => IconSvg.WorkItemIconFeature,
+            "user story" => IconSvg.WorkItemIconUserStory,
+            "story" => IconSvg.WorkItemIconUserStory,
+            "bug" => IconSvg.WorkItemIconBug,
+            "task" => IconSvg.WorkItemIconTask,
+            "issue" => IconSvg.WorkItemIconIssue,
+            "impediment" => IconSvg.WorkItemIconIssue,
+            "research" => IconSvg.WorkItemIconResearch,
+            "test case" => IconSvg.WorkItemIconTestCase,
+            "test plan" => IconSvg.WorkItemIconTestPlan,
+            "test suite" => IconSvg.WorkItemIconTestSuite,
+            "product backlog item" => IconSvg.WorkItemIconProductBacklogItem,
+            "requirement" => IconSvg.WorkItemIconRequirement,
+            "change request" => IconSvg.WorkItemIconChangeRequest,
+            "review" => IconSvg.WorkItemIconReview,
+            "risk" => IconSvg.WorkItemIconRisk,
+            _ => IconSvg.WorkItemIconProductBacklogItem
         };
-    }
-
-    /// <summary>
-    /// Gets the display icon for a hierarchy level
-    /// </summary>
-    /// <param name="level">Zero-based level index</param>
-    /// <returns>Material icon string</returns>
-    public static string GetLevelIcon(int level)
-    {
-        var icons = new[]
-        {
-            "looks_one", "looks_two", "looks_3",
-            "looks_4", "looks_5", "looks_6"
-        };
-        return level < icons.Length ? icons[level] : "looks_one";
     }
 
     /// <summary>

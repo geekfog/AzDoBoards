@@ -507,3 +507,24 @@ main {
         font-size: 0.65rem;
     }
 }
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   Work Item Icon Styling
+   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+.work-item-icon {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    object-fit: contain;
+}
+
+/* Ensure icon displays properly in different containers */
+.work-item-chip-horizontal .work-item-icon {
+    width: 14px;
+    height: 14px;
+}
+
+/* Dark theme adjustments for icons */
+.mud-theme-dark .work-item-icon {
+    filter: brightness(1.1) contrast(1.1);
+}

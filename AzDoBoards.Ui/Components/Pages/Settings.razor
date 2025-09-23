@@ -153,10 +153,9 @@
                                                             var level = i;
                                                             var levelItems = workItemHierarchy[level];
 
-                                                            <MudPaper Class="level-container" Style="@($"border-left: 4px solid {WorkItemHierarchyHelper.GetLevelColor(level)}; margin-bottom: 8px;")">
+                                                            <MudPaper Class="level-container" Style="@($"border-left: 4px solid {WorkItemHelper.GetLevelColor(level)}; margin-bottom: 8px;")">
                                                                 <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="level-header">
                                                                     <MudText Typo="Typo.subtitle2" Class="level-title">
-                                                                        <MudIcon Icon="@GetMudBlazorLevelIcon(level)" Size="Size.Small" Class="mr-2" />
                                                                         Level @(level + 1) (@levelItems.Count items)
                                                                     </MudText>
                                                                     <MudStack Row Spacing="1">
@@ -167,10 +166,10 @@
                                                                             <MudIconButton Icon="@Icons.Material.Filled.MoveDown" Size="Size.Small" OnClick="@(() => MoveLevelDown(level))" Disabled="level == workItemHierarchy.Count - 1" Variant="@(level == workItemHierarchy.Count - 1 ? Variant.Outlined : Variant.Filled)" Color="@(level == workItemHierarchy.Count - 1 ? Color.Default : Color.Info)" />
                                                                         </MudTooltip>
                                                                         <MudTooltip Text="Insert level above">
-                                                                            <MudIconButton Icon="@IconAddRowAbove" Size="Size.Small" OnClick="@(() => AddLevelAbove(level))" Variant="Variant.Filled" Color="Color.Tertiary" />
+                                                                            <MudIconButton Icon="@IconSvg.IconAddRowAbove" Size="Size.Small" OnClick="@(() => AddLevelAbove(level))" Variant="Variant.Filled" Color="Color.Tertiary" />
                                                                         </MudTooltip>
                                                                         <MudTooltip Text="Insert level below">
-                                                                            <MudIconButton Icon="@IconAddRowBelow" Size="Size.Small" OnClick="@(() => AddLevelBelow(level))" Variant="Variant.Filled" Color="Color.Tertiary" />
+                                                                            <MudIconButton Icon="@IconSvg.IconAddRowBelow" Size="Size.Small" OnClick="@(() => AddLevelBelow(level))" Variant="Variant.Filled" Color="Color.Tertiary" />
                                                                         </MudTooltip>
                                                                         @if (workItemHierarchy.Count > 1)
                                                                         {
@@ -218,7 +217,7 @@
                                     }
                                     <div class="draggable-item-wrapper @(isInHierarchy ? "hierarchy-chip" : "clickable-chip")" style="@GetWorkItemChipStyle(context, isInHierarchy)">
                                         <div class="d-flex align-center pa-2" @onclick="@(() => { if (!isInHierarchy) AddToHierarchy(context); })">
-                                            <MudIcon Icon="@GetMudBlazorWorkItemIcon(context.Name)" Size="Size.Small" Class="mr-2" />
+                                            <MudIcon Icon="@WorkItemHelper.GetWorkItemTypeSvgIcon(context.Name)" Size="Size.Small" Class="mr-2" />
                                             <MudText Class="flex-grow-1">@context.Name</MudText>
                                             @if (isInHierarchy)
                                             {
@@ -259,8 +258,6 @@
     private List<AzDoBoards.Client.WorkItemTypeInfo>? availableWorkItemTypes;
     private List<AzDoBoards.Client.WorkItemTypeInfo>? unassignedWorkItems;
     private List<List<AzDoBoards.Client.WorkItemTypeInfo>> workItemHierarchy = new();
-    private const string IconAddRowBelow = "<svg height='24px' viewBox='0 -960 960 960' width='24px' fill='currentColor'><path d='M200-560h560v-240H200v240Zm-80 400v-720h720v720H680v-80h80v-240H200v240h80v80H120Zm360-320Zm0-80v80-80Zm0 0ZM440-80v-80h-80v-80h80v-80h80v80h80v80h-80v80h-80Z'/></svg>";
-    private const string IconAddRowAbove = "<svg height='24px' viewBox='0 -960 960 960' width='24px' fill='currentColor'><path d='M200-160h560v-240H200v240Zm640 80H120v-720h160v80h-80v240h560v-240h-80v-80h160v720ZM480-480Zm0 80v-80 80Zm0 0Zm-40-240v-80h-80v-80h80v-80h80v80h80v80h-80v80h-80Z'/></svg>";
 
     private string hierarchyJson => JsonSerializer.Serialize(
         workItemHierarchy.Select(level => level.Select(wi => wi.Name).ToArray()).ToArray(),
@@ -563,24 +560,24 @@
         }
     }
 
-private void UpdateUnassignedWorkItems()
-{
-    if (availableWorkItemTypes == null)
+    private void UpdateUnassignedWorkItems()
     {
-        unassignedWorkItems = null;
-        return;
-    }
+        if (availableWorkItemTypes == null)
+        {
+            unassignedWorkItems = null;
+            return;
+        }
 
-    var assignedWorkItems = workItemHierarchy.SelectMany(level => level).ToHashSet();
-    unassignedWorkItems = availableWorkItemTypes.Where(wi => !assignedWorkItems.Contains(wi)).ToList();
-    
-    // Automatically create Level 1 if there are unassigned work items but no hierarchy levels
-    if (unassignedWorkItems.Any() && workItemHierarchy.Count == 0)
-    {
-        workItemHierarchy.Add(new List<AzDoBoards.Client.WorkItemTypeInfo>());
-        hasHierarchyChanges = true;
+        var assignedWorkItems = workItemHierarchy.SelectMany(level => level).ToHashSet();
+        unassignedWorkItems = availableWorkItemTypes.Where(wi => !assignedWorkItems.Contains(wi)).ToList();
+        
+        // Automatically create Level 1 if there are unassigned work items but no hierarchy levels
+        if (unassignedWorkItems.Any() && workItemHierarchy.Count == 0)
+        {
+            workItemHierarchy.Add(new List<AzDoBoards.Client.WorkItemTypeInfo>());
+            hasHierarchyChanges = true;
+        }
     }
-}
 
     private void AddToHierarchy(AzDoBoards.Client.WorkItemTypeInfo workItem)
     {
@@ -724,24 +721,6 @@ private void UpdateUnassignedWorkItems()
         }
 
         return false;
-    }
-
-    // Helper methods for UI rendering - call utility functions directly
-    private string GetMudBlazorLevelIcon(int level)
-    {
-        var iconName = WorkItemHierarchyHelper.GetLevelIcon(level);
-        return $"Icons.Material.Filled.{ToPascalCase(iconName)}";
-    }
-
-    private string GetMudBlazorWorkItemIcon(string workItemTypeName)
-    {
-        var iconName = WorkItemHierarchyHelper.GetWorkItemTypeIcon(workItemTypeName);
-        return $"Icons.Material.Filled.{ToPascalCase(iconName)}";
-    }
-
-    private static string ToPascalCase(string input)
-    {
-        return string.Join("", input.Split('_').Select(word => char.ToUpper(word[0]) + word.Substring(1).ToLower()));
     }
 
     private string GetWorkItemChipStyle(AzDoBoards.Client.WorkItemTypeInfo workItem, bool inHierarchy)
