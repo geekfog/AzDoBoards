@@ -1,3 +1,6 @@
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   Global Application Styles
+   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 body {
     font-family: 'Roboto', 'Helvetica Neue', Helvetica, Arial, sans-serif;
     /* Smooth transition for theme changes */
@@ -11,6 +14,9 @@ body {
     cursor: pointer;
 }
 
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   Theme System - Light & Dark Mode
+   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* Dark mode defaults - applied immediately by the script in App.razor */
 html.mud-theme-dark body {
     background-color: #121212;
@@ -55,6 +61,9 @@ main, .content, .top-row, article {
     color: inherit;
 }
 
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   Layout Structure
+   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 .page {
     display: flex;
     flex-direction: row;
@@ -94,7 +103,9 @@ main {
     min-width: 0;
 }
 
-/* Work Item Hierarchy Styles - Shared between Settings and Items */
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   Shared Work Item Hierarchy Components
+   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 .hierarchy-grid {
     gap: 16px;
 }
@@ -103,7 +114,17 @@ main {
     min-width: 250px;
 }
 
-/* Settings Page Styles */
+.flex-grow-1 {
+    flex-grow: 1;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   Settings Page Styles
+   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 .level-column {
     background: linear-gradient(145deg, #fafafa, #f0f0f0);
     border-radius: 12px;
@@ -164,7 +185,7 @@ main {
     cursor: default !important;
 }
 
-/* Settings-specific styles */
+/* Settings - Drag & Drop Components */
 .draggable-item-wrapper {
     cursor: grab;
     transition: all 0.2s ease-in-out;
@@ -189,14 +210,6 @@ main {
 .clickable-chip {
     cursor: pointer;
     transition: all 0.2s ease-in-out;
-}
-
-.flex-grow-1 {
-    flex-grow: 1;
-    text-overflow: ellipsis;
-    overflow: hidden;
-    white-space: nowrap;
-    min-width: 0;
 }
 
 .drag-handle {
@@ -228,6 +241,7 @@ main {
     box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
+/* Settings - Drop Zones */
 .drop-zone-unassigned {
     border: 2px dashed #ccc;
     border-radius: 8px;
@@ -275,6 +289,7 @@ main {
     width: 100%;
 }
 
+/* Settings - Panel Layouts */
 .unassigned-panel {
     background: linear-gradient(145deg, #f5f5f5, #e8e8e8);
     border-radius: 8px;
@@ -290,7 +305,9 @@ main {
     padding: 32px;
 }
 
-/* Items Page Styles - Dynamic Flexible Layout */
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   Items Page Styles
+   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 .hierarchy-flex-container {
     display: flex;
     flex-wrap: wrap;
@@ -330,6 +347,7 @@ main {
     max-width: 400px; /* Maximum width to prevent overly wide boxes */
 }
 
+/* Items Page - Work Item Containers */
 .work-items-horizontal-container {
     display: flex;
     flex-direction: row;
@@ -381,7 +399,9 @@ main {
     min-width: 100px;
 }
 
-/* Dark theme adjustments */
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   Dark Theme Overrides
+   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 .mud-theme-dark .level-column {
     background: linear-gradient(145deg, #2d2d2d, #212121);
     border-color: rgba(255, 255, 255, 0.1);
@@ -425,7 +445,9 @@ main {
     color: #aaa;
 }
 
-/* Responsive adjustments */
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   Responsive Design - Media Queries
+   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 @media (max-width: 960px) {
     .hierarchy-column {
         min-width: 200px;
