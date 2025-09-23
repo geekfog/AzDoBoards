@@ -28,57 +28,34 @@
             {
                 var level = levelIndex;
                 var levelItems = workItemHierarchy[level];
-                var levelColor = WorkItemHierarchyHelper.GetLevelColor(level);
 
                 <MudItem xs="12" sm="6" md="4" lg="3" xl="2" Class="hierarchy-column">
-                    <MudPaper Class="@GetLevelColumnClass(level)" Style="min-height: 400px;">
-                        <!-- Level Header -->
-                        <div class="@GetLevelHeaderClass(level)" 
-                             style="@GetLevelHeaderStyle(levelColor, selectedLevel == level)"
-                             @onclick="@(() => SelectLevel(level))">
-                            <MudStack Row AlignItems="AlignItems.Center" Justify="Justify.Center" Class="pa-3">
-                                <MudText Typo="Typo.subtitle1" Class="level-title">
-                                    Level @(level + 1)
-                                </MudText>
-                            </MudStack>
-                        </div>
-
-                        <!-- Work Item Types in Level -->
-                        <div class="work-items-container mt-3">
+                    <!-- Entire selectable box containing work items -->
+                    <MudPaper Class="@GetLevelColumnClass(level)" 
+                              Style="@GetLevelBoxStyle(selectedLevel == level)" 
+                              @onclick="@(() => SelectLevel(level))">
+                        
+                        <!-- Work Item Types arranged side-by-side -->
+                        <div class="work-items-horizontal-container pa-2">
                             @if (levelItems.Any())
                             {
                                 @foreach (var workItem in levelItems)
                                 {
-                                    <div class="work-item-chip non-selectable-chip" style="@GetWorkItemChipStyle(workItem)">
-                                        <div class="d-flex align-center pa-2">
-                                            <MudIcon Icon="@GetMudBlazorWorkItemIcon(workItem.Name)" Size="Size.Small" Class="mr-2" />
-                                            <MudText Class="flex-grow-1">@workItem.Name</MudText>
+                                    <div class="work-item-chip-horizontal" style="@GetWorkItemChipStyle(workItem)">
+                                        <div class="d-flex align-center pa-1">
+                                            <MudIcon Icon="@GetMudBlazorWorkItemIcon(workItem.Name)" Size="Size.Small" Class="mr-1" />
+                                            <MudText Typo="Typo.caption" Class="work-item-text">@workItem.Name</MudText>
                                         </div>
                                     </div>
                                 }
-                                
-                                <!-- Level summary -->
-                                <div class="level-summary mt-2 pa-2">
-                                    <MudText Typo="Typo.caption" Class="text-center">
-                                        @levelItems.Count work item type@(levelItems.Count == 1 ? "" : "s")
-                                    </MudText>
-                                </div>
                             }
                             else
                             {
-                                <MudAlert Severity="Severity.Info" Class="mt-3">
-                                    No work items configured for this level
-                                </MudAlert>
+                                <div class="empty-level-placeholder">
+                                    <MudText Typo="Typo.caption" Class="text-center">No work items</MudText>
+                                </div>
                             }
                         </div>
-
-                        <!-- Selection Indicator -->
-                        @if (selectedLevel == level)
-                        {
-                            <div class="selection-indicator">
-                                <MudIcon Icon="Icons.Material.Filled.CheckCircle" Size="Size.Small" Class="selection-check" />
-                            </div>
-                        }
                     </MudPaper>
                 </MudItem>
             }
@@ -177,26 +154,21 @@
 
     private string GetLevelColumnClass(int level)
     {
-        return selectedLevel == level ? "level-column pa-4 selected-level" : "level-column pa-4";
+        return "level-box-selectable";
     }
 
-    private string GetLevelHeaderClass(int level)
+    private string GetLevelBoxStyle(bool isSelected)
     {
-        return selectedLevel == level ? "level-header clickable-header selected" : "level-header clickable-header";
-    }
-
-    private string GetLevelHeaderStyle(string levelColor, bool isSelected)
-    {
-        var baseStyle = $"background-color: {levelColor}; color: white; border-radius: 8px; " +
-                       "cursor: pointer; transition: all 0.2s ease-in-out; user-select: none;";
+        var baseStyle = "cursor: pointer; transition: all 0.2s ease-in-out; user-select: none; " +
+                       "border-radius: 8px; min-height: 60px; max-height: 80px; overflow: hidden;";
         
         if (isSelected)
         {
-            baseStyle += " box-shadow: 0 4px 12px rgba(0,0,0,0.3); transform: translateY(-2px);";
+            baseStyle += " border: 3px solid white; box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3);";
         }
         else
         {
-            baseStyle += " box-shadow: 0 2px 4px rgba(0,0,0,0.2);";
+            baseStyle += " border: 1px solid rgba(0, 0, 0, 0.1);";
         }
 
         return baseStyle;
@@ -217,9 +189,9 @@
     private string GetWorkItemChipStyle(WorkItemTypeInfo workItem)
     {
         var baseColor = !string.IsNullOrEmpty(workItem.Color) ? workItem.Color : "#1976d2";
-        return $"background-color: {baseColor}; color: white; margin: 4px 0; " +
-               $"border-radius: 8px; min-width: 150px; cursor: default; " +
-               $"transition: all 0.2s ease-in-out; box-shadow: 0 1px 3px rgba(0,0,0,0.2);";
+        return $"background-color: {baseColor}; color: white; " +
+               $"border-radius: 4px; min-width: 80px; max-width: 120px; " +
+               $"transition: all 0.2s ease-in-out; box-shadow: 0 1px 2px rgba(0,0,0,0.2);";
     }
 
     private static string ToPascalCase(string input)

@@ -103,6 +103,7 @@ main {
     min-width: 250px;
 }
 
+/* Settings Page Styles */
 .level-column {
     background: linear-gradient(145deg, #fafafa, #f0f0f0);
     border-radius: 12px;
@@ -289,8 +290,82 @@ main {
     padding: 32px;
 }
 
+/* Items Page Styles - Compact Horizontal Layout */
+.level-box-selectable {
+    transition: all 0.2s ease-in-out;
+    background: linear-gradient(145deg, #fafafa, #f0f0f0);
+    border-radius: 8px;
+    cursor: pointer;
+    user-select: none;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    min-height: 60px;
+    max-height: 80px;
+    overflow: hidden;
+}
+
+    .level-box-selectable:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+
+    /* White selection border for Items page */
+    .level-box-selectable.selected-level {
+        border: 3px solid white !important;
+        box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3) !important;
+    }
+
+.work-items-horizontal-container {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 4px;
+    align-items: center;
+    justify-content: flex-start;
+    min-height: 40px;
+    padding: 8px;
+}
+
+.work-item-chip-horizontal {
+    flex-shrink: 0;
+    border-radius: 4px;
+    user-select: none;
+    transition: all 0.2s ease-in-out;
+    min-width: 80px;
+    max-width: 120px;
+    font-size: 0.75rem;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+}
+
+    .work-item-chip-horizontal:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+
+.work-item-text {
+    font-size: 0.75rem !important;
+    line-height: 1.2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.empty-level-placeholder {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 40px;
+    color: #666;
+    font-style: italic;
+}
+
 /* Dark theme adjustments */
 .mud-theme-dark .level-column {
+    background: linear-gradient(145deg, #2d2d2d, #212121);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.mud-theme-dark .level-box-selectable {
     background: linear-gradient(145deg, #2d2d2d, #212121);
     border-color: rgba(255, 255, 255, 0.1);
 }
@@ -301,6 +376,14 @@ main {
 
     .mud-theme-dark .work-item-chip:hover {
         box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+    }
+
+.mud-theme-dark .work-item-chip-horizontal {
+    box-shadow: 0 1px 2px rgba(0,0,0,0.4);
+}
+
+    .mud-theme-dark .work-item-chip-horizontal:hover {
+        box-shadow: 0 2px 4px rgba(0,0,0,0.6);
     }
 
 .mud-theme-dark .unassigned-panel {
@@ -315,7 +398,8 @@ main {
     background-color: rgba(255, 255, 255, 0.05);
 }
 
-.mud-theme-dark .empty-level-text {
+.mud-theme-dark .empty-level-text,
+.mud-theme-dark .empty-level-placeholder {
     color: #aaa;
 }
 
@@ -323,6 +407,16 @@ main {
 @media (max-width: 960px) {
     .hierarchy-column {
         min-width: 200px;
+    }
+
+    .work-items-horizontal-container {
+        gap: 2px;
+        padding: 6px;
+    }
+
+    .work-item-chip-horizontal {
+        min-width: 60px;
+        max-width: 100px;
     }
 }
 
@@ -338,47 +432,15 @@ main {
     .level-column {
         min-height: 200px;
     }
-}
 
-/* Additional styles for Items page selection indicators */
-.selected-level {
-    border: 3px solid #4caf50 !important;
-    box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2) !important;
-    position: relative;
-}
+    .work-items-horizontal-container {
+        flex-direction: column;
+        gap: 2px;
+        padding: 4px;
+    }
 
-.selection-indicator {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    background-color: #4caf50;
-    border-radius: 50%;
-    padding: 4px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-}
-
-.selection-check {
-    color: white;
-    font-size: 16px !important;
-}
-
-.level-summary {
-    background-color: rgba(0, 0, 0, 0.05);
-    border-radius: 4px;
-    border-top: 1px solid rgba(0, 0, 0, 0.1);
-}
-
-/* Dark theme adjustments */
-.mud-theme-dark .level-summary {
-    background-color: rgba(255, 255, 255, 0.05);
-    border-top-color: rgba(255, 255, 255, 0.1);
-}
-
-.mud-theme-dark .selected-level {
-    border-color: #66bb6a !important;
-    box-shadow: 0 0 0 2px rgba(102, 187, 106, 0.2) !important;
-}
-
-.mud-theme-dark .selection-indicator {
-    background-color: #66bb6a;
+    .work-item-chip-horizontal {
+        width: 100%;
+        max-width: none;
+    }
 }
