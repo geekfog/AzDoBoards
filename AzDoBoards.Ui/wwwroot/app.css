@@ -290,7 +290,15 @@ main {
     padding: 32px;
 }
 
-/* Items Page Styles - Compact Horizontal Layout */
+/* Items Page Styles - Dynamic Flexible Layout */
+.hierarchy-flex-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    width: 100%;
+    align-items: flex-start;
+}
+
 .level-box-selectable {
     transition: all 0.2s ease-in-out;
     background: linear-gradient(145deg, #fafafa, #f0f0f0);
@@ -301,6 +309,7 @@ main {
     min-height: 60px;
     max-height: 80px;
     overflow: hidden;
+    flex: 0 0 auto; /* Don't grow or shrink, use natural size */
 }
 
     .level-box-selectable:hover {
@@ -314,6 +323,13 @@ main {
         box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3) !important;
     }
 
+.level-box-dynamic {
+    /* Dynamic sizing based on content */
+    width: fit-content;
+    min-width: 120px; /* Minimum width for readability */
+    max-width: 400px; /* Maximum width to prevent overly wide boxes */
+}
+
 .work-items-horizontal-container {
     display: flex;
     flex-direction: row;
@@ -323,6 +339,8 @@ main {
     justify-content: flex-start;
     min-height: 40px;
     padding: 8px;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .work-item-chip-horizontal {
@@ -330,10 +348,13 @@ main {
     border-radius: 4px;
     user-select: none;
     transition: all 0.2s ease-in-out;
-    min-width: 80px;
-    max-width: 120px;
     font-size: 0.75rem;
     box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+    white-space: nowrap;
+    /* Dynamic width based on content */
+    width: fit-content;
+    min-width: 60px;
+    padding: 2px 6px;
 }
 
     .work-item-chip-horizontal:hover {
@@ -344,9 +365,9 @@ main {
 .work-item-text {
     font-size: 0.75rem !important;
     line-height: 1.2;
+    white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    white-space: nowrap;
 }
 
 .empty-level-placeholder {
@@ -357,6 +378,7 @@ main {
     min-height: 40px;
     color: #666;
     font-style: italic;
+    min-width: 100px;
 }
 
 /* Dark theme adjustments */
@@ -409,14 +431,23 @@ main {
         min-width: 200px;
     }
 
+    .hierarchy-flex-container {
+        gap: 3px;
+    }
+
     .work-items-horizontal-container {
         gap: 2px;
         padding: 6px;
     }
 
     .work-item-chip-horizontal {
-        min-width: 60px;
-        max-width: 100px;
+        min-width: 50px;
+        font-size: 0.7rem;
+    }
+
+    .level-box-dynamic {
+        min-width: 100px;
+        max-width: 300px;
     }
 }
 
@@ -433,14 +464,24 @@ main {
         min-height: 200px;
     }
 
-    .work-items-horizontal-container {
+    .hierarchy-flex-container {
         flex-direction: column;
+        gap: 5px;
+        width: 100%;
+    }
+
+    .level-box-dynamic {
+        width: 100%;
+        max-width: none;
+    }
+
+    .work-items-horizontal-container {
         gap: 2px;
         padding: 4px;
     }
 
     .work-item-chip-horizontal {
-        width: 100%;
-        max-width: none;
+        min-width: 40px;
+        font-size: 0.65rem;
     }
 }
