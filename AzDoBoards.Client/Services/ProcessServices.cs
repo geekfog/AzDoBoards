@@ -1,18 +1,19 @@
-﻿using Microsoft.TeamFoundation.Core.WebApi;
+﻿using AzDoBoards.Client.Models;
+using Microsoft.TeamFoundation.Core.WebApi;
 using Microsoft.TeamFoundation.WorkItemTracking.Process.WebApi;
 
-namespace AzDoBoards.Client;
+namespace AzDoBoards.Client.Services;
 
-public class Process(ConnectionFactory connectionFactory) : Base(connectionFactory)
+public class ProcessServices(ConnectionFactory connectionFactory) : Base(connectionFactory)
 {
-    private Dictionary<Guid, ProcessInfo>? _processCache;
+    private Dictionary<Guid, ProcessSummary>? _processCache;
     private Dictionary<Guid, string>? _processToSampleProjectCache;
 
     /// <summary>
     /// Gets all processes in the Azure DevOps organization using the Process API (cached)
     /// </summary>
     /// <returns>List of processes with their details including project counts</returns>
-    public async Task<List<ProcessInfo>> GetProcessesAsync()
+    public async Task<List<ProcessSummary>> GetProcessesAsync()
     {
         if (_processCache != null)
             return [.. _processCache.Values];
@@ -38,14 +39,14 @@ public class Process(ConnectionFactory connectionFactory) : Base(connectionFacto
     /// </summary>
     /// <param name="processId">The ID of the process</param>
     /// <returns>List of unique work item types for the specified process</returns>
-    public async Task<List<WorkItemTypeInfo>> GetWorkItemTypesForProcessAsync(Guid processId)
+    public async Task<List<WorkItemTypeSummary>> GetWorkItemTypesForProcessAsync(Guid processId)
     {
         var connection = await _connectionFactory.GetConnectionAsync();
 
         var processClient = connection.GetClient<WorkItemTrackingProcessHttpClient>();
         var workItemTypes = await processClient.GetProcessWorkItemTypesAsync(processId);
 
-        return [.. workItemTypes.Select(wit => new WorkItemTypeInfo
+        return [.. workItemTypes.Select(wit => new WorkItemTypeSummary
             {
                 ReferenceName = wit.ReferenceName,
                 Name = wit.Name,
@@ -69,10 +70,10 @@ public class Process(ConnectionFactory connectionFactory) : Base(connectionFacto
         var processClient = connection.GetClient<WorkItemTrackingProcessHttpClient>();
         var allProcesses = await processClient.GetListOfProcessesAsync();
 
-        var processes = new Dictionary<Guid, ProcessInfo>();
+        var processes = new Dictionary<Guid, ProcessSummary>();
         foreach (var process in allProcesses)
         {
-            var processInfo = new ProcessInfo
+            var processInfo = new ProcessSummary
             {
                 Id = process.TypeId,
                 Name = process.Name,
@@ -137,34 +138,4 @@ public class Process(ConnectionFactory connectionFactory) : Base(connectionFacto
         _processCache = null;
         _processToSampleProjectCache = null;
     }
-}
-
-/// <summary>
-/// Information about a process in Azure DevOps
-/// </summary>
-public class ProcessInfo
-{
-    public Guid Id { get; set; }
-    public string Name { get; set; } = string.Empty;
-    public string Description { get; set; } = string.Empty;
-    public string ReferenceName { get; set; } = string.Empty;
-    public bool IsDefault { get; set; }
-    public bool IsEnabled { get; set; }
-    public bool IsSystemProcess { get; set; }
-    public int ProjectCount { get; set; }
-    public Guid? ParentProcessId { get; set; }
-    public string ParentProcessName { get; set; } = string.Empty;
-}
-
-/// <summary>
-/// Information about a work item type
-/// </summary>
-public class WorkItemTypeInfo
-{
-    public string ReferenceName { get; set; } = string.Empty;
-    public string Name { get; set; } = string.Empty;
-    public string Description { get; set; } = string.Empty;
-    public string Color { get; set; } = string.Empty;
-    public string Icon { get; set; } = string.Empty;
-    public bool IsDisabled { get; set; }
 }

@@ -1,4 +1,5 @@
 using AzDoBoards.Client;
+using AzDoBoards.Client.Services;
 using AzDoBoards.Data;
 using AzDoBoards.Ui.Components;
 using AzDoBoards.Utility;
@@ -77,8 +78,8 @@ public class Program
             var httpContextAccessor = sp.GetRequiredService<IHttpContextAccessor>();
             return new ConnectionFactory(tokenAcquisition, httpContextAccessor, organizationUrl);
         });
-        builder.Services.AddScoped<Projects>(); // Register Projects (which depends on ConnectionFactory)
-        builder.Services.AddScoped<Process>(); // Register Process (which depends on ConnectionFactory)
+        builder.Services.AddScoped<ProjectServices>(); // Register Projects (which depends on ConnectionFactory)
+        builder.Services.AddScoped<ProcessServices>(); // Register Process (which depends on ConnectionFactory)
         builder.Services.AddSingleton<IConnectionMultiplexer>(sp => ConnectionMultiplexer.Connect(redisConnectionString)); // Register Redis connection multiplexer
         builder.Services.AddScoped<Services.HierarchyService>();
 

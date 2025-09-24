@@ -1,8 +1,9 @@
-﻿using Microsoft.TeamFoundation.Core.WebApi;
+﻿using AzDoBoards.Client.Models;
+using Microsoft.TeamFoundation.Core.WebApi;
 
-namespace AzDoBoards.Client;
+namespace AzDoBoards.Client.Services;
 
-public class Projects(ConnectionFactory connectionFactory) : Base(connectionFactory)
+public class ProjectServices(ConnectionFactory connectionFactory) : Base(connectionFactory)
 {
     public async Task<List<string>> GetProjectsAsync()
     {
@@ -17,13 +18,13 @@ public class Projects(ConnectionFactory connectionFactory) : Base(connectionFact
     /// </summary>
     /// <param name="processId">The process template ID to filter by</param>
     /// <returns>List of projects using the specified process template</returns>
-    public async Task<List<ProjectInfo>> GetProjectInfoAsync(Guid processId)
+    public async Task<List<ProjectSummary>> GetProjectInfoAsync(Guid processId)
     {
         var connection = await _connectionFactory.GetConnectionAsync();
         var projectClient = connection.GetClient<ProjectHttpClient>();
 
         var allProjects = await projectClient.GetProjects(); // Get all projects first (this is necessary as there's no direct API to filter by process)
-        var filteredProjects = new List<ProjectInfo>();
+        var filteredProjects = new List<ProjectSummary>();
 
         // Filter projects by checking each project's process template
         foreach (var project in allProjects)
@@ -39,7 +40,7 @@ public class Projects(ConnectionFactory connectionFactory) : Base(connectionFact
                     Guid.TryParse(templateTypeId, out var projectProcessId) &&
                     projectProcessId == processId)
                 {
-                    filteredProjects.Add(new ProjectInfo
+                    filteredProjects.Add(new ProjectSummary
                     {
                         Id = project.Id,
                         Name = project.Name,
@@ -58,16 +59,4 @@ public class Projects(ConnectionFactory connectionFactory) : Base(connectionFact
 
         return filteredProjects;
     }
-}
-
-/// <summary>
-/// Information about a project in Azure DevOps
-/// </summary>
-public class ProjectInfo
-{
-    public Guid Id { get; set; }
-    public string Name { get; set; } = string.Empty;
-    public string Description { get; set; } = string.Empty;
-    public string State { get; set; } = string.Empty;
-    public string Visibility { get; set; } = string.Empty;
 }

@@ -1,6 +1,6 @@
 ﻿@page "/items"
 @using Microsoft.AspNetCore.Components.Authorization
-@using AzDoBoards.Client
+@using AzDoBoards.Client.Models
 @using AzDoBoards.Data.Abstractions
 @using AzDoBoards.Ui.Services
 @using AzDoBoards.Utility
@@ -97,7 +97,7 @@
 
 @code {
     private bool isLoading = true;
-    private List<List<WorkItemTypeInfo>>? workItemHierarchy;
+    private List<List<WorkItemTypeSummary>>? workItemHierarchy;
     private int selectedLevel = -1;
 
     protected override async Task OnInitializedAsync()
@@ -172,7 +172,7 @@
         return baseStyle;
     }
 
-    private string GetWorkItemChipStyle(WorkItemTypeInfo workItem)
+    private string GetWorkItemChipStyle(WorkItemTypeSummary workItem)
     {
         var baseColor = !string.IsNullOrEmpty(workItem.Color) ? workItem.Color : "#1976d2";
         return $"background-color: {baseColor}; color: white; " +

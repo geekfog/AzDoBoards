@@ -1,8 +1,8 @@
-﻿using AzDoBoards.Client;
+﻿using AzDoBoards.Client.Models;
+using AzDoBoards.Client.Services;
 using AzDoBoards.Data.Abstractions;
 using AzDoBoards.Utility;
 using Microsoft.AspNetCore.Components.Authorization;
-using Microsoft.Extensions.Logging;
 
 namespace AzDoBoards.Ui.Services;
 
@@ -48,7 +48,7 @@ public class HierarchyService
     /// <summary>
     /// Loads work item types for the current process
     /// </summary>
-    public async Task<List<WorkItemTypeInfo>?> LoadWorkItemTypesAsync(string processId)
+    public async Task<List<WorkItemTypeSummary>?> LoadWorkItemTypesAsync(string processId)
     {
         if (string.IsNullOrEmpty(processId) || !Guid.TryParse(processId, out var processGuid))
             return null;
@@ -61,7 +61,7 @@ public class HierarchyService
             if (!authState.User.Identity?.IsAuthenticated ?? false)
                 return null;
 
-            var processClient = _serviceProvider.GetRequiredService<Process>();
+            var processClient = _serviceProvider.GetRequiredService<ProcessServices>();
             return await processClient.GetWorkItemTypesForProcessAsync(processGuid);
         }
         catch (Exception ex)
@@ -74,9 +74,9 @@ public class HierarchyService
     /// <summary>
     /// Loads the work item hierarchy for the current process
     /// </summary>
-    public async Task<List<List<WorkItemTypeInfo>>> LoadHierarchyAsync(string processId, List<WorkItemTypeInfo> availableWorkItemTypes)
+    public async Task<List<List<WorkItemTypeSummary>>> LoadHierarchyAsync(string processId, List<WorkItemTypeSummary> availableWorkItemTypes)
     {
-        var hierarchy = new List<List<WorkItemTypeInfo>>();
+        var hierarchy = new List<List<WorkItemTypeSummary>>();
 
         try
         {
@@ -88,7 +88,7 @@ public class HierarchyService
             {
                 foreach (var level in hierarchyData)
                 {
-                    var levelItems = new List<WorkItemTypeInfo>();
+                    var levelItems = new List<WorkItemTypeSummary>();
                     foreach (var workItemName in level)
                     {
                         var workItem = availableWorkItemTypes.FirstOrDefault(w => w.Name == workItemName);

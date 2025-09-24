@@ -1,4 +1,4 @@
-﻿@using AzDoBoards.Client
+﻿@using AzDoBoards.Client.Models
 @using AzDoBoards.Utility
 @using MudBlazor
 
@@ -16,7 +16,7 @@
 </div>
 
 @code {
-    [Parameter] public WorkItemTypeInfo WorkItem { get; set; } = default!;
+    [Parameter] public WorkItemTypeSummary WorkItem { get; set; } = default!;
     [Parameter] public bool IsSelected { get; set; }
     [Parameter] public bool IsClickable { get; set; } = true;
     [Parameter] public bool ShowActions { get; set; }

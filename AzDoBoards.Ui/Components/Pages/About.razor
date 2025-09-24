@@ -1,7 +1,8 @@
 ﻿@page "/about"
+@using System.Security.Claims
+@using AzDoBoards.Client.Services
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.Identity.Client
-@using System.Security.Claims
 @using MudBlazor
 @inject IServiceProvider ServiceProvider
 
@@ -101,7 +102,7 @@
         {
             // Lazy load services to avoid blocking component creation
             var authProvider = ServiceProvider.GetRequiredService<AuthenticationStateProvider>();
-            var projectClient = ServiceProvider.GetRequiredService<Client.Projects>();
+            var projectClient = ServiceProvider.GetRequiredService<ProjectServices>();
             var redis = ServiceProvider.GetRequiredService<StackExchange.Redis.IConnectionMultiplexer>();
 
             var authState = await authProvider.GetAuthenticationStateAsync();

@@ -1,9 +1,11 @@
-﻿@using Microsoft.AspNetCore.Components.Authorization
+﻿@using System.Text.Json
 @using AzDoBoards.Client
+@using AzDoBoards.Client.Models
+@using AzDoBoards.Client.Services
 @using AzDoBoards.Data.Abstractions
 @using AzDoBoards.Utility
+@using Microsoft.AspNetCore.Components.Authorization
 @using MudBlazor
-@using System.Text.Json
 @inject ISettingsRepository SettingsRepository
 @inject IServiceProvider ServiceProvider
 @inject ISnackbar Snackbar
@@ -95,7 +97,7 @@ else
                         <MudText Typo="Typo.h6" Class="mb-3">Work Item Hierarchy Configuration - @GetProcessName(selectedProcessId)</MudText>
 
                         <!-- Single Drop Container for all items -->
-                        <MudDropContainer T="AzDoBoards.Client.WorkItemTypeInfo" Items="@availableWorkItemTypes" ItemsSelector="@GetItemsForDropzone" ItemDropped="OnItemDropped" Class="hierarchy-drop-container">
+                        <MudDropContainer T="WorkItemTypeSummary" Items="@availableWorkItemTypes" ItemsSelector="@GetItemsForDropzone" ItemDropped="OnItemDropped" Class="hierarchy-drop-container">
                             <ChildContent>
                                 <MudGrid>
                                     <!-- Unassigned Work Item Types -->
@@ -106,7 +108,7 @@ else
                                                 Unassigned Work Items (@(unassignedWorkItems?.Count ?? 0))
                                             </MudText>
 
-                                            <MudDropZone T="AzDoBoards.Client.WorkItemTypeInfo" Identifier="unassigned" Class="pa-2 drop-zone-content drop-zone-unassigned">
+                                            <MudDropZone T="WorkItemTypeSummary" Identifier="unassigned" Class="pa-2 drop-zone-content drop-zone-unassigned">
                                                 @if (unassignedWorkItems?.Any() == false)
                                                 {
                                                     <MudAlert Severity="Severity.Success">
@@ -171,7 +173,7 @@ else
                                                                 </MudStack>
                                                             </MudStack>
 
-                                                            <MudDropZone T="AzDoBoards.Client.WorkItemTypeInfo" Identifier="@($"level-{level}")" Class="level-drop-zone">
+                                                            <MudDropZone T="WorkItemTypeSummary" Identifier="@($"level-{level}")" Class="level-drop-zone">
                                                                 @if (!levelItems.Any())
                                                                 {
                                                                     <MudText Typo="Typo.body2" Class="empty-level-text">
@@ -242,11 +244,11 @@ else
 
     private string selectedProcessId = string.Empty;
     private string selectedProjectId = string.Empty;
-    private List<AzDoBoards.Client.ProcessInfo>? availableProcesses;
-    private List<AzDoBoards.Client.ProjectInfo>? availableProjects;
-    private List<AzDoBoards.Client.WorkItemTypeInfo>? availableWorkItemTypes;
-    private List<AzDoBoards.Client.WorkItemTypeInfo>? unassignedWorkItems;
-    private List<List<AzDoBoards.Client.WorkItemTypeInfo>> workItemHierarchy = new();
+    private List<ProcessSummary>? availableProcesses;
+    private List<ProjectSummary>? availableProjects;
+    private List<WorkItemTypeSummary>? availableWorkItemTypes;
+    private List<WorkItemTypeSummary>? unassignedWorkItems;
+    private List<List<WorkItemTypeSummary>> workItemHierarchy = new();
 
     private bool AllowDefaultConfigurationSave =>
         !string.IsNullOrEmpty(selectedProcessId) &&
@@ -327,7 +329,7 @@ else
                 return;
             }
 
-            var processClient = ServiceProvider.GetRequiredService<AzDoBoards.Client.Process>();
+            var processClient = ServiceProvider.GetRequiredService<ProcessServices>();
             availableProcesses = await processClient.GetProcessesAsync();
 
             await OnStatusMessage.InvokeAsync($"Loaded {availableProcesses.Count} processes");
@@ -362,7 +364,7 @@ else
                 return;
             }
 
-            var projectsClient = ServiceProvider.GetRequiredService<AzDoBoards.Client.Projects>();
+            var projectsClient = ServiceProvider.GetRequiredService<ProjectServices>();
 
             if (Guid.TryParse(selectedProcessId, out var processId))
             {
@@ -398,7 +400,7 @@ else
             isLoadingWorkItemTypes = true;
             if (!isInitialLoading) StateHasChanged();
 
-            var processClient = ServiceProvider.GetRequiredService<AzDoBoards.Client.Process>();
+            var processClient = ServiceProvider.GetRequiredService<ProcessServices>();
             availableWorkItemTypes = await processClient.GetWorkItemTypesForProcessAsync(processId);
 
             await OnStatusMessage.InvokeAsync($"Loaded {availableWorkItemTypes.Count} work item types");
@@ -506,7 +508,7 @@ else
                     workItemHierarchy.Clear();
                     foreach (var level in hierarchyData)
                     {
-                        var levelItems = new List<AzDoBoards.Client.WorkItemTypeInfo>();
+                        var levelItems = new List<WorkItemTypeSummary>();
                         foreach (var workItemName in level)
                         {
                             var workItem = availableWorkItemTypes.FirstOrDefault(w => w.Name == workItemName);
@@ -567,15 +569,15 @@ else
         
         if (unassignedWorkItems.Any() && workItemHierarchy.Count == 0)
         {
-            workItemHierarchy.Add(new List<AzDoBoards.Client.WorkItemTypeInfo>());
+            workItemHierarchy.Add(new List<WorkItemTypeSummary>());
             hasHierarchyChanges = true;
         }
     }
 
-    private void AddToHierarchy(AzDoBoards.Client.WorkItemTypeInfo workItem)
+    private void AddToHierarchy(WorkItemTypeSummary workItem)
     {
         if (workItemHierarchy.Count == 0)
-            workItemHierarchy.Add(new List<AzDoBoards.Client.WorkItemTypeInfo>());
+            workItemHierarchy.Add(new List<WorkItemTypeSummary>());
 
         workItemHierarchy[0].Add(workItem);
         UpdateUnassignedWorkItems();
@@ -583,7 +585,7 @@ else
         StateHasChanged();
     }
 
-    private void RemoveFromHierarchy(AzDoBoards.Client.WorkItemTypeInfo workItem, int level)
+    private void RemoveFromHierarchy(WorkItemTypeSummary workItem, int level)
     {
         if (level < workItemHierarchy.Count)
         {
@@ -598,7 +600,7 @@ else
         }
     }
 
-    private int GetLevelForItem(AzDoBoards.Client.WorkItemTypeInfo item)
+    private int GetLevelForItem(WorkItemTypeSummary item)
     {
         for (int i = 0; i < workItemHierarchy.Count; i++)
         {
@@ -612,7 +614,7 @@ else
     {
         if (level >= 0 && level <= workItemHierarchy.Count)
         {
-            workItemHierarchy.Insert(level, new List<AzDoBoards.Client.WorkItemTypeInfo>());
+            workItemHierarchy.Insert(level, new List<WorkItemTypeSummary>());
             hasHierarchyChanges = true;
             StateHasChanged();
         }
@@ -622,7 +624,7 @@ else
     {
         if (level >= 0 && level < workItemHierarchy.Count)
         {
-            workItemHierarchy.Insert(level + 1, new List<AzDoBoards.Client.WorkItemTypeInfo>());
+            workItemHierarchy.Insert(level + 1, new List<WorkItemTypeSummary>());
             hasHierarchyChanges = true;
             StateHasChanged();
         }
@@ -662,13 +664,13 @@ else
     private void ClearHierarchy()
     {
         workItemHierarchy.Clear();
-        workItemHierarchy.Add(new List<AzDoBoards.Client.WorkItemTypeInfo>());
+        workItemHierarchy.Add(new List<WorkItemTypeSummary>());
         UpdateUnassignedWorkItems();
         hasHierarchyChanges = true;
         StateHasChanged();
     }
 
-    private void OnItemDropped(MudItemDropInfo<AzDoBoards.Client.WorkItemTypeInfo> dropItem)
+    private void OnItemDropped(MudItemDropInfo<WorkItemTypeSummary> dropItem)
     {
         if (dropItem.Item == null) return;
 
@@ -680,7 +682,7 @@ else
             var targetLevel = int.Parse(dropItem.DropzoneIdentifier.Replace("level-", ""));
 
             while (workItemHierarchy.Count <= targetLevel)
-                workItemHierarchy.Add(new List<AzDoBoards.Client.WorkItemTypeInfo>());
+                workItemHierarchy.Add(new List<WorkItemTypeSummary>());
 
             workItemHierarchy[targetLevel].Add(dropItem.Item);
         }
@@ -690,7 +692,7 @@ else
         StateHasChanged();
     }
 
-    private bool GetItemsForDropzone(AzDoBoards.Client.WorkItemTypeInfo item, string dropzone)
+    private bool GetItemsForDropzone(WorkItemTypeSummary item, string dropzone)
     {
         if (dropzone == "unassigned")
             return unassignedWorkItems?.Contains(item) ?? false;
@@ -704,7 +706,7 @@ else
         return false;
     }
 
-    private string GetWorkItemChipStyle(AzDoBoards.Client.WorkItemTypeInfo workItem, bool inHierarchy)
+    private string GetWorkItemChipStyle(WorkItemTypeSummary workItem, bool inHierarchy)
     {
         var baseColor = !string.IsNullOrEmpty(workItem.Color) ? workItem.Color : "#1976d2";
 

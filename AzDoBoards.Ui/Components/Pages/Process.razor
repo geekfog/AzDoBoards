@@ -1,6 +1,7 @@
 ﻿@page "/process"
+@using AzDoBoards.Client.Models
+@using AzDoBoards.Client.Services
 @using Microsoft.AspNetCore.Components.Authorization
-@using AzDoBoards.Client
 @using MudBlazor
 @inject IServiceProvider ServiceProvider
 
@@ -98,12 +99,12 @@
 @code {
     private bool isLoading = true;
     private string StatusMessage = string.Empty;
-    private List<AzDoBoards.Client.ProcessInfo>? Processes;
-    private List<AzDoBoards.Client.WorkItemTypeInfo>? SelectedProcessWorkItems;
+    private List<ProcessSummary>? Processes;
+    private List<WorkItemTypeSummary>? SelectedProcessWorkItems;
     private string SelectedProcessName = string.Empty;
     private string _searchString = string.Empty;
 
-    private Func<AzDoBoards.Client.ProcessInfo, bool> _quickFilter => x =>
+    private Func<ProcessSummary, bool> _quickFilter => x =>
     {
         if (string.IsNullOrWhiteSpace(_searchString))
             return true;
@@ -143,7 +144,7 @@
         {
             // Lazy load services to avoid blocking component creation
             var authProvider = ServiceProvider.GetRequiredService<AuthenticationStateProvider>();
-            var processClient = ServiceProvider.GetRequiredService<AzDoBoards.Client.Process>();
+            var processClient = ServiceProvider.GetRequiredService<ProcessServices>();
 
             var authState = await authProvider.GetAuthenticationStateAsync();
             var user = authState.User;
@@ -183,7 +184,7 @@
             StatusMessage = string.Empty;
             StateHasChanged();
 
-            var processClient = ServiceProvider.GetRequiredService<AzDoBoards.Client.Process>();
+            var processClient = ServiceProvider.GetRequiredService<ProcessServices>();
             processClient.ClearCache(); // Clear the cache to force refresh
 
             Processes = await processClient.GetProcessesAsync();
@@ -210,7 +211,7 @@
             SelectedProcessName = processName;
             StateHasChanged();
 
-            var processClient = ServiceProvider.GetRequiredService<AzDoBoards.Client.Process>();
+            var processClient = ServiceProvider.GetRequiredService<ProcessServices>();
             SelectedProcessWorkItems = await processClient.GetWorkItemTypesForProcessAsync(processId);
 
             AppendStatus($"Loaded {SelectedProcessWorkItems.Count} work item types for process: {processName} (using optimized Process API).");
