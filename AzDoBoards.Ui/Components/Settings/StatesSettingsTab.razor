@@ -1,0 +1,53 @@
+﻿@using MudBlazor
+
+<MudCard>
+    <MudCardContent>
+        <MudText Typo="Typo.h6" GutterBottom="true">State Settings</MudText>
+
+        <MudAlert Severity="Severity.Info">
+            <MudIcon Icon="Icons.Material.Filled.Construction" Class="mr-2" />
+            General settings configuration will be implemented here.
+        </MudAlert>
+
+        <MudText Typo="Typo.body2" Class="mt-4">
+            This section will contain application-wide settings such as:
+        </MudText>
+
+        <MudStack Class="mt-3">
+            <MudPaper Class="pa-3" Elevation="1">
+                <MudStack Row AlignItems="AlignItems.Center">
+                    <MudIcon Icon="Icons.Material.Filled.Palette" />
+                    <MudText>Theme and appearance preferences</MudText>
+                </MudStack>
+            </MudPaper>
+            <MudPaper Class="pa-3" Elevation="1">
+                <MudStack Row AlignItems="AlignItems.Center">
+                    <MudIcon Icon="Icons.Material.Filled.Language" />
+                    <MudText>Language and localization settings</MudText>
+                </MudStack>
+            </MudPaper>
+            <MudPaper Class="pa-3" Elevation="1">
+                <MudStack Row AlignItems="AlignItems.Center">
+                    <MudIcon Icon="Icons.Material.Filled.Notifications" />
+                    <MudText>Notification preferences</MudText>
+                </MudStack>
+            </MudPaper>
+            <MudPaper Class="pa-3" Elevation="1">
+                <MudStack Row AlignItems="AlignItems.Center">
+                    <MudIcon Icon="Icons.Material.Filled.Security" />
+                    <MudText>Security and privacy settings</MudText>
+                </MudStack>
+            </MudPaper>
+        </MudStack>
+    </MudCardContent>
+</MudCard>
+
+@code {
+    [Parameter] public EventCallback<string> OnStatusMessage { get; set; }
+
+    public Task InitializeAsync()
+    {
+        // Placeholder for initialization logic
+        return Task.CompletedTask;
+    }
+}
