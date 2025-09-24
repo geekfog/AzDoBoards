@@ -1,53 +1,254 @@
-﻿@using MudBlazor
+﻿@using AzDoBoards.Client.Models
+@using AzDoBoards.Client.Services
+@using AzDoBoards.Data.Abstractions
+@using AzDoBoards.Ui.Services
+@using AzDoBoards.Utility
+@using Microsoft.AspNetCore.Components.Authorization
+@using MudBlazor
+@inject ISettingsRepository SettingsRepository
+@inject IServiceProvider ServiceProvider
+@inject ISnackbar Snackbar
+@inject ILogger<StatesSettingsTab> Logger
+@inject HierarchyService HierarchyService
 
-<MudCard>
-    <MudCardContent>
-        <MudText Typo="Typo.h6" GutterBottom="true">State Settings</MudText>
+@if (isInitialLoading)
+{
+    <MudStack Row AlignItems="AlignItems.Center" Class="mb-4">
+        <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+        <MudText Typo="Typo.body2" Class="ml-2">Loading state configuration...</MudText>
+    </MudStack>
+}
+else
+{
+    <MudCard>
+        <MudCardContent>
+            <MudText Typo="Typo.h6" GutterBottom="true">Work Item States</MudText>
 
-        <MudAlert Severity="Severity.Info">
-            <MudIcon Icon="Icons.Material.Filled.Construction" Class="mr-2" />
-            General settings configuration will be implemented here.
-        </MudAlert>
+            @if (!string.IsNullOrEmpty(currentProcessId))
+            {
+                @if (stateGroups?.Any() == true)
+                {
+                    <MudText Typo="Typo.body2" Class="mb-4">
+                        States for process: <strong>@GetProcessName()</strong>
+                    </MudText>
 
-        <MudText Typo="Typo.body2" Class="mt-4">
-            This section will contain application-wide settings such as:
-        </MudText>
+                    @foreach (var stateGroup in stateGroups)
+                    {
+                        <MudPaper Class="mb-4 pa-4" Elevation="2">
+                            <MudText Typo="Typo.h6" Class="mb-3" Style="@($"color: {GetCategoryColor(stateGroup.Category)};")">
+                                <MudIcon Icon="@GetCategoryIcon(stateGroup.Category)" Class="mr-2" />
+                                @stateGroup.DisplayName
+                            </MudText>
 
-        <MudStack Class="mt-3">
-            <MudPaper Class="pa-3" Elevation="1">
-                <MudStack Row AlignItems="AlignItems.Center">
-                    <MudIcon Icon="Icons.Material.Filled.Palette" />
-                    <MudText>Theme and appearance preferences</MudText>
+                            @if (stateGroup.States?.Any() == true)
+                            {
+                                <MudGrid>
+                                    @foreach (var state in stateGroup.States.OrderBy(s => s.Order))
+                                    {
+                                        <MudItem xs="12" sm="6" md="4" lg="3">
+                                            <MudPaper Class="pa-3" Elevation="1" Style="@($"border-left: 4px solid {state.Color}; min-height: 120px;")">
+                                                <MudStack>
+                                                    <MudText Typo="Typo.subtitle1" Class="mb-2">
+                                                        @state.Name
+                                                    </MudText>
+                                                    
+                                                    <MudText Typo="Typo.caption" Class="mb-2">
+                                                        Work Item Types:
+                                                    </MudText>
+                                                    
+                                                    <MudStack Spacing="1">
+                                                        @foreach (var workItemType in state.WorkItemTypes.OrderBy(w => w))
+                                                        {
+                                                            <MudChip T="string" Size="Size.Small" 
+                                                                     Style="@($"background-color: {state.Color}; color: white;")"
+                                                                     Class="work-item-type-chip">
+                                                                <MudIcon Icon="@WorkItemHelper.GetWorkItemTypeSvgIcon(workItemType)" Size="Size.Small" Class="mr-1" />
+                                                                @workItemType
+                                                            </MudChip>
+                                                        }
+                                                    </MudStack>
+                                                </MudStack>
+                                            </MudPaper>
+                                        </MudItem>
+                                    }
+                                </MudGrid>
+                            }
+                            else
+                            {
+                                <MudAlert Severity="Severity.Info">
+                                    No states found in this category.
+                                </MudAlert>
+                            }
+                        </MudPaper>
+                    }
+                }
+                else if (!isLoadingStates)
+                {
+                    <MudAlert Severity="Severity.Warning">
+                        No work item states found for the current process. Please ensure a process is configured in the Process settings tab.
+                    </MudAlert>
+                }
+            }
+            else
+            {
+                <MudAlert Severity="Severity.Info">
+                    <MudStack>
+                        <MudText>
+                            <MudIcon Icon="Icons.Material.Filled.Info" Class="mr-2" />
+                            No process configuration found.
+                        </MudText>
+                        <MudText Typo="Typo.body2" Class="mt-2">
+                            Please configure a process in the <strong>Process</strong> settings tab first.
+                        </MudText>
+                    </MudStack>
+                </MudAlert>
+            }
+
+            @if (isLoadingStates)
+            {
+                <MudStack Row AlignItems="AlignItems.Center" Class="mt-4">
+                    <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+                    <MudText Typo="Typo.body2" Class="ml-2">Loading work item states...</MudText>
                 </MudStack>
-            </MudPaper>
-            <MudPaper Class="pa-3" Elevation="1">
-                <MudStack Row AlignItems="AlignItems.Center">
-                    <MudIcon Icon="Icons.Material.Filled.Language" />
-                    <MudText>Language and localization settings</MudText>
-                </MudStack>
-            </MudPaper>
-            <MudPaper Class="pa-3" Elevation="1">
-                <MudStack Row AlignItems="AlignItems.Center">
-                    <MudIcon Icon="Icons.Material.Filled.Notifications" />
-                    <MudText>Notification preferences</MudText>
-                </MudStack>
-            </MudPaper>
-            <MudPaper Class="pa-3" Elevation="1">
-                <MudStack Row AlignItems="AlignItems.Center">
-                    <MudIcon Icon="Icons.Material.Filled.Security" />
-                    <MudText>Security and privacy settings</MudText>
-                </MudStack>
-            </MudPaper>
-        </MudStack>
-    </MudCardContent>
-</MudCard>
+            }
+        </MudCardContent>
+    </MudCard>
+}
 
 @code {
     [Parameter] public EventCallback<string> OnStatusMessage { get; set; }
 
-    public Task InitializeAsync()
+    private bool isInitialized = false;
+    private bool isInitialLoading = false;
+    private bool isLoadingStates = false;
+    private string currentProcessId = string.Empty;
+    private List<WorkItemStateGroup>? stateGroups;
+    private List<ProcessSummary>? availableProcesses;
+
+    public async Task InitializeAsync()
     {
-        // Placeholder for initialization logic
-        return Task.CompletedTask;
+        if (isInitialized) return;
+
+        isInitialLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            // Load current process ID from settings
+            currentProcessId = await HierarchyService.GetCurrentProcessIdAsync();
+            
+            if (!string.IsNullOrEmpty(currentProcessId))
+            {
+                // Load process information and states
+                await LoadProcessInfoAsync();
+                await LoadWorkItemStatesAsync();
+            }
+
+            await OnStatusMessage.InvokeAsync($"States settings initialized{(!string.IsNullOrEmpty(currentProcessId) ? $" for process" : " - no process configured")}");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error initializing states settings");
+            await OnStatusMessage.InvokeAsync($"Error loading states: {ex.Message}");
+        }
+        finally
+        {
+            isInitialLoading = false;
+            isInitialized = true;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadProcessInfoAsync()
+    {
+        try
+        {
+            var authProvider = ServiceProvider.GetRequiredService<AuthenticationStateProvider>();
+            var authState = await authProvider.GetAuthenticationStateAsync();
+
+            if (!authState.User.Identity?.IsAuthenticated ?? false)
+            {
+                await OnStatusMessage.InvokeAsync("Please authenticate to load process information.");
+                return;
+            }
+
+            var processClient = ServiceProvider.GetRequiredService<ProcessServices>();
+            availableProcesses = await processClient.GetProcessesAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading process information");
+            await OnStatusMessage.InvokeAsync($"Error loading process information: {ex.Message}");
+        }
+    }
+
+    private async Task LoadWorkItemStatesAsync()
+    {
+        if (string.IsNullOrEmpty(currentProcessId) || !Guid.TryParse(currentProcessId, out var processId))
+            return;
+
+        try
+        {
+            isLoadingStates = true;
+            StateHasChanged();
+
+            var authProvider = ServiceProvider.GetRequiredService<AuthenticationStateProvider>();
+            var authState = await authProvider.GetAuthenticationStateAsync();
+
+            if (!authState.User.Identity?.IsAuthenticated ?? false)
+            {
+                await OnStatusMessage.InvokeAsync("Please authenticate to load work item states.");
+                return;
+            }
+
+            var stateClient = ServiceProvider.GetRequiredService<WorkItemStateServices>();
+            stateGroups = await stateClient.GetWorkItemStatesForProcessAsync(processId);
+
+            var totalStates = stateGroups?.Sum(g => g.States.Count) ?? 0;
+            await OnStatusMessage.InvokeAsync($"Loaded {totalStates} work item states across {stateGroups?.Count ?? 0} categories");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading work item states");
+            await OnStatusMessage.InvokeAsync($"Error loading work item states: {ex.Message}");
+        }
+        finally
+        {
+            isLoadingStates = false;
+            StateHasChanged();
+        }
+    }
+
+    private string GetProcessName()
+    {
+        if (string.IsNullOrEmpty(currentProcessId) || availableProcesses == null)
+            return "Unknown Process";
+
+        var process = availableProcesses.FirstOrDefault(p => p.Id.ToString() == currentProcessId);
+        return process?.Name ?? "Unknown Process";
+    }
+
+    private string GetCategoryColor(string category)
+    {
+        return category switch
+        {
+            "Proposed" => "#FF7B00", // Orange
+            "InProgress" => "#339947", // Green
+            "Completed" => "#773B93", // Purple
+            "Removed" => "#E60017", // Red
+            _ => "#1976d2" // Default blue
+        };
+    }
+
+    private string GetCategoryIcon(string category)
+    {
+        return category switch
+        {
+            "Proposed" => Icons.Material.Filled.Lightbulb,
+            "InProgress" => Icons.Material.Filled.PlayArrow,
+            "Completed" => Icons.Material.Filled.CheckCircle,
+            "Removed" => Icons.Material.Filled.Cancel,
+            _ => Icons.Material.Filled.Circle
+        };
     }
 }

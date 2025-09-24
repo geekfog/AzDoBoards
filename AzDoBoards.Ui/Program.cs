@@ -80,6 +80,7 @@ public class Program
         });
         builder.Services.AddScoped<ProjectServices>(); // Register Projects (which depends on ConnectionFactory)
         builder.Services.AddScoped<ProcessServices>(); // Register Process (which depends on ConnectionFactory)
+        builder.Services.AddScoped<WorkItemStateServices>(); // Register Work Item State Services (which depends on ConnectionFactory)
         builder.Services.AddSingleton<IConnectionMultiplexer>(sp => ConnectionMultiplexer.Connect(redisConnectionString)); // Register Redis connection multiplexer
         builder.Services.AddScoped<Services.HierarchyService>();
 

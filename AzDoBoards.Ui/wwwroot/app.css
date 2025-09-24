@@ -185,6 +185,26 @@ main {
     cursor: default !important;
 }
 
+/* States Settings - Work Item Type Chips */
+.work-item-type-chip {
+    font-size: 0.75rem !important;
+    font-weight: 500 !important;
+    border-radius: 12px !important;
+    padding: 2px 8px !important;
+    margin: 2px !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2) !important;
+    transition: all 0.2s ease-in-out !important;
+}
+
+    .work-item-type-chip:hover {
+        transform: translateY(-1px) !important;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.3) !important;
+    }
+
+    .work-item-type-chip .mud-icon-root {
+        font-size: 14px !important;
+    }
+
 /* Settings - Drag & Drop Components */
 .draggable-item-wrapper {
     cursor: grab;
@@ -426,6 +446,14 @@ main {
 
     .mud-theme-dark .work-item-chip-horizontal:hover {
         box-shadow: 0 2px 4px rgba(0,0,0,0.6);
+    }
+
+.mud-theme-dark .work-item-type-chip {
+    box-shadow: 0 1px 3px rgba(0,0,0,0.4) !important;
+}
+
+    .mud-theme-dark .work-item-type-chip:hover {
+        box-shadow: 0 2px 6px rgba(0,0,0,0.6) !important;
     }
 
 .mud-theme-dark .unassigned-panel {
