@@ -185,15 +185,21 @@ main {
     cursor: default !important;
 }
 
-/* States Settings - Work Item Type Chips */
+/* States Settings - Work Item Type Chips - Updated for horizontal layout */
 .work-item-type-chip {
     font-size: 0.75rem !important;
     font-weight: 500 !important;
     border-radius: 12px !important;
-    padding: 2px 8px !important;
-    margin: 2px !important;
+    padding: 4px 8px !important;
     box-shadow: 0 1px 3px rgba(0,0,0,0.2) !important;
     transition: all 0.2s ease-in-out !important;
+    /* Remove fixed margins and let parent container handle spacing */
+    margin: 0 !important;
+    /* Ensure chips don't break and display inline */
+    display: inline-flex !important;
+    align-items: center !important;
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
 }
 
     .work-item-type-chip:hover {
