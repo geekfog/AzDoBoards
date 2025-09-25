@@ -13,6 +13,7 @@ The intent is to support a custom-defined hierarchy (e.g., Initiative > Epic > F
 # Development Technologies
 
 - Visual Studio 2022 17.14.13 Preview 1.0+ or Visual Studio 2026 Insider v18.0 Preview 1+
+  - [Mudblazor Component Library](https://mudblazor.com/docs/overview)
   - [Material UI](https://mui.com/material-ui/material-icons/)
   - *Microsoft TFS Client (to abstract Azure DevOps API calls) NuGet packages leveraged*
   

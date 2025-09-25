@@ -100,9 +100,10 @@
                     <MudCardContent Class="pa-0">
                         <MudDataGrid T="WorkItem" 
                                    Items="@workItems" 
-                                   Sortable="true" 
+                                   ColumnResizeMode="ResizeMode.Container"
+                                   SortMode="SortMode.Multiple"
                                    Filterable="true" 
-                                   FilterMode="DataGridFilterMode.ColumnFilterRow"
+                                   FilterMode="DataGridFilterMode.ColumnFilterMenu"
                                    Dense="true"
                                    Hover="true"
                                    Striped="true"
@@ -121,7 +122,7 @@
                                 </PropertyColumn>
 
                                 <!-- Work Item State Category -->
-                                <PropertyColumn Property="x => x.StateCategory" Title="State Category" Sortable="true">
+                                <PropertyColumn Property="x => x.StateCategory" Title="Cat" Sortable="true">
                                     <CellTemplate>
                                         <MudChip Size="Size.Small" 
                                                Color="@GetStateCategoryColor(context.Item.StateCategory)"
@@ -165,7 +166,7 @@
                                 </PropertyColumn>
 
                                 <!-- Assigned To -->
-                                <PropertyColumn Property="x => x.AssignedToDisplayName" Title="Assigned To" Sortable="true">
+                                <PropertyColumn Property="x => x.AssignedToDisplayName" Title="Assigned" Sortable="true">
                                     <CellTemplate>
                                         @if (!string.IsNullOrEmpty(context.Item.AssignedToEmail))
                                         {
