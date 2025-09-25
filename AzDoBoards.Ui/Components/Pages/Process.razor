@@ -7,93 +7,95 @@
 
 <PageTitle>Process</PageTitle>
 
-<h1>Azure DevOps Processes</h1>
+<div class="page-content-full-width mt-4">
+    <h1>Azure DevOps Processes</h1>
 
-<div>
-    @if (!string.IsNullOrEmpty(StatusMessage))
-    {
-        <h3>Status</h3>
-        <div>@StatusMessage</div>
-        <br />
-    }
+    <div>
+        @if (!string.IsNullOrEmpty(StatusMessage))
+        {
+            <h3>Status</h3>
+            <div>@StatusMessage</div>
+            <br />
+        }
 
-    @if (Processes != null && Processes.Any())
-    {
-        <MudDataGrid Items="Processes" Filterable="true" QuickFilter="@_quickFilter">
-            <ToolBarContent>
-                <MudText Typo="Typo.h6">Process Templates</MudText>
-                <MudSpacer />
-                <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Size="Size.Small" OnClick="RefreshProcessData" Disabled="isLoading">
-                    <MudIcon Icon="Icons.Material.Filled.Refresh" Size="Size.Small" />
-                    Refresh
-                </MudButton>
-                <MudTextField @bind-Value="_searchString" Placeholder="Search" Adornment="Adornment.Start" AdornmentIcon="Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0 ml-3" />
-            </ToolBarContent>
-            <Columns>
-                <PropertyColumn Property="x => x.Name" Title="Name" Sortable="true" />
-                <PropertyColumn Property="x => x.Description" Title="Description" Sortable="true" />
-                <PropertyColumn Property="x => x.ProjectCount" Title="Project Count" Sortable="true" />
-                <TemplateColumn Title="Type" Sortable="true" SortBy="@(x => x.IsSystemProcess ? "System" : "Custom")">
-                    <CellTemplate>
-                        <MudChip Variant="Variant.Text" Color="@(context.Item.IsSystemProcess? Color.Info: Color.Success)" Size="Size.Small">
-                            @(context.Item.IsSystemProcess ? "System" : "Custom")
-                        </MudChip>
-                    </CellTemplate>
-                </TemplateColumn>
-                <TemplateColumn Title="Status" Sortable="true" SortBy="@(x => x.IsDefault ? "Default" : (x.IsEnabled ? "Enabled" : "Disabled"))">
-                    <CellTemplate>
-                        @if (context.Item.IsDefault)
-                        {
-                            <MudChip Variant="Variant.Text" Color="Color.Warning" Size="Size.Small">Default</MudChip>
-                        }
-                        else if (context.Item.IsEnabled)
-                        {
-                            <MudChip Variant="Variant.Text" Color="Color.Success" Size="Size.Small">Enabled</MudChip>
-                        }
-                        else
-                        {
-                            <MudChip Variant="Variant.Text" Color="Color.Error" Size="Size.Small">Disabled</MudChip>
-                        }
-                    </CellTemplate>
-                </TemplateColumn>
-                <PropertyColumn Property="x => x.ParentProcessName" Title="Parent" Sortable="true" />
-                <TemplateColumn Title="Actions">
-                    <CellTemplate>
-                        <MudStack Row>
-                            <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small"
-                                       OnClick="@(() => ViewWorkItemTypes(context.Item.Id, context.Item.Name))"
-                                       Disabled="isLoading">
-                                Work Items
-                            </MudButton>
-                        </MudStack>
-                    </CellTemplate>
-                </TemplateColumn>
-            </Columns>
-        </MudDataGrid>
-    }
-    else
-    {
-        <div>@(isLoading ? "Loading process data..." : "No process data found.")</div>
-    }
+        @if (Processes != null && Processes.Any())
+        {
+            <MudDataGrid Items="Processes" Filterable="true" QuickFilter="@_quickFilter" Class="full-width">
+                <ToolBarContent>
+                    <MudText Typo="Typo.h6">Process Templates</MudText>
+                    <MudSpacer />
+                    <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Size="Size.Small" OnClick="RefreshProcessData" Disabled="isLoading">
+                        <MudIcon Icon="Icons.Material.Filled.Refresh" Size="Size.Small" />
+                        Refresh
+                    </MudButton>
+                    <MudTextField @bind-Value="_searchString" Placeholder="Search" Adornment="Adornment.Start" AdornmentIcon="Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0 ml-3" />
+                </ToolBarContent>
+                <Columns>
+                    <PropertyColumn Property="x => x.Name" Title="Name" Sortable="true" />
+                    <PropertyColumn Property="x => x.Description" Title="Description" Sortable="true" />
+                    <PropertyColumn Property="x => x.ProjectCount" Title="Project Count" Sortable="true" />
+                    <TemplateColumn Title="Type" Sortable="true" SortBy="@(x => x.IsSystemProcess ? "System" : "Custom")">
+                        <CellTemplate>
+                            <MudChip Variant="Variant.Text" Color="@(context.Item.IsSystemProcess? Color.Info: Color.Success)" Size="Size.Small">
+                                @(context.Item.IsSystemProcess ? "System" : "Custom")
+                            </MudChip>
+                        </CellTemplate>
+                    </TemplateColumn>
+                    <TemplateColumn Title="Status" Sortable="true" SortBy="@(x => x.IsDefault ? "Default" : (x.IsEnabled ? "Enabled" : "Disabled"))">
+                        <CellTemplate>
+                            @if (context.Item.IsDefault)
+                            {
+                                <MudChip Variant="Variant.Text" Color="Color.Warning" Size="Size.Small">Default</MudChip>
+                            }
+                            else if (context.Item.IsEnabled)
+                            {
+                                <MudChip Variant="Variant.Text" Color="Color.Success" Size="Size.Small">Enabled</MudChip>
+                            }
+                            else
+                            {
+                                <MudChip Variant="Variant.Text" Color="Color.Error" Size="Size.Small">Disabled</MudChip>
+                            }
+                        </CellTemplate>
+                    </TemplateColumn>
+                    <PropertyColumn Property="x => x.ParentProcessName" Title="Parent" Sortable="true" />
+                    <TemplateColumn Title="Actions">
+                        <CellTemplate>
+                            <MudStack Row>
+                                <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small"
+                                           OnClick="@(() => ViewWorkItemTypes(context.Item.Id, context.Item.Name))"
+                                           Disabled="isLoading">
+                                    Work Items
+                                </MudButton>
+                            </MudStack>
+                        </CellTemplate>
+                    </TemplateColumn>
+                </Columns>
+            </MudDataGrid>
+        }
+        else
+        {
+            <div>@(isLoading ? "Loading process data..." : "No process data found.")</div>
+        }
 
-    @if (SelectedProcessWorkItems != null && SelectedProcessWorkItems.Any())
-    {
-        <br />
-        <h4>Work Item Types for @SelectedProcessName</h4>
-        <MudDataGrid Items="SelectedProcessWorkItems" Filterable="true">
-            <Columns>
-                <PropertyColumn Property="x => x.Name" Title="Type" Sortable="true" />
-                <PropertyColumn Property="x => x.ReferenceName" Title="Reference Name" Sortable="true" />
-                <PropertyColumn Property="x => x.Description" Title="Description" Sortable="true" />
-                <TemplateColumn Title="Color">
-                    <CellTemplate>
-                        <div style="background-color: @context.Item.Color; width: 20px; height: 20px; border-radius: 3px;"></div>
-                    </CellTemplate>
-                </TemplateColumn>
-                <PropertyColumn Property="x => x.IsDisabled" Title="Disabled" Sortable="true" />
-            </Columns>
-        </MudDataGrid>
-    }
+        @if (SelectedProcessWorkItems != null && SelectedProcessWorkItems.Any())
+        {
+            <br />
+            <h4>Work Item Types for @SelectedProcessName</h4>
+            <MudDataGrid Items="SelectedProcessWorkItems" Filterable="true" Class="full-width">
+                <Columns>
+                    <PropertyColumn Property="x => x.Name" Title="Type" Sortable="true" />
+                    <PropertyColumn Property="x => x.ReferenceName" Title="Reference Name" Sortable="true" />
+                    <PropertyColumn Property="x => x.Description" Title="Description" Sortable="true" />
+                    <TemplateColumn Title="Color">
+                        <CellTemplate>
+                            <div style="background-color: @context.Item.Color; width: 20px; height: 20px; border-radius: 3px;"></div>
+                        </CellTemplate>
+                    </TemplateColumn>
+                    <PropertyColumn Property="x => x.IsDisabled" Title="Disabled" Sortable="true" />
+                </Columns>
+            </MudDataGrid>
+        }
+    </div>
 </div>
 
 @code {

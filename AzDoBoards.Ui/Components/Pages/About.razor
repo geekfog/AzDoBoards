@@ -8,75 +8,77 @@
 
 <PageTitle>About</PageTitle>
 
-<h1>About</h1>
+<div class="page-content-full-width mt-4">
+    <h1>About</h1>
 
-<MudAlert Severity="Severity.Info" Class="mb-4">
-    <MudText Typo="Typo.body1">
-        Having trouble with account authentication?
-        <MudLink Href="/account-help" Color="Color.Primary">
-            <MudIcon Icon="Icons.Material.Filled.Help" Size="Size.Small" Class="me-1" />
-            View Account Selection Help
-        </MudLink>
-    </MudText>
-</MudAlert>
+    <MudAlert Severity="Severity.Info" Class="mb-4">
+        <MudText Typo="Typo.body1">
+            Having trouble with account authentication?
+            <MudLink Href="/account-help" Color="Color.Primary">
+                <MudIcon Icon="Icons.Material.Filled.Help" Size="Size.Small" Class="me-1" />
+                View Account Selection Help
+            </MudLink>
+        </MudText>
+    </MudAlert>
 
-<p>
-    @if (!string.IsNullOrEmpty(StatusMessage))
-    {
-        <h3>Status</h3>
-        <div>@StatusMessage</div>
-    }
+    <p>
+        @if (!string.IsNullOrEmpty(StatusMessage))
+        {
+            <h3>Status</h3>
+            <div>@StatusMessage</div>
+        }
 
-    <h3>Authenticated User Information</h3>
-    @if (User != null)
-    {
-        <div>
-            <strong>User Identity:</strong> @User.Identity?.Name
-            <br />
-            <strong>Authenticated:</strong> @(User.Identity?.IsAuthenticated ?? false)
-            <br />
-            <strong>Claims:</strong>
-            <MudDataGrid Items="UserClaimsList">
+        <h3>Authenticated User Information</h3>
+        @if (User != null)
+        {
+            <div>
+                <strong>User Identity:</strong> @User.Identity?.Name
+                <br />
+                <strong>Authenticated:</strong> @(User.Identity?.IsAuthenticated ?? false)
+                <br />
+                <strong>Claims:</strong>
+                <MudDataGrid Items="UserClaimsList" Class="full-width">
+                    <Columns>
+                        <PropertyColumn Property="x => x.Type" Title="Claim" Sortable="true" />
+                        <PropertyColumn Property="x => x.Value" Title="Value" Sortable="true" />
+                    </Columns>
+                </MudDataGrid>
+            </div>
+        }
+        else
+        {
+            <div>@(isLoading ? "Loading User data..." : "No user information found.")</div>
+        }
+
+        <h3>Projects</h3>
+        @if (Projects != null)
+        {
+            @foreach (var project in Projects)
+            {
+                <div>@project</div>
+            }
+        }
+        else
+        {
+            <div>@(isLoading? "Loading Project data..." : "No project data found.")</div>
+        }
+
+        <h3>Redis Cache</h3>
+        @if (RedisEntries != null && RedisEntries.Any())
+        {
+            <MudDataGrid Items="RedisEntries" Class="mud-table-custom full-width">
                 <Columns>
-                    <PropertyColumn Property="x => x.Type" Title="Claim" Sortable="true" />
+                    <PropertyColumn Property="x => x.Key" Title="Key" Sortable="true" />
                     <PropertyColumn Property="x => x.Value" Title="Value" Sortable="true" />
                 </Columns>
             </MudDataGrid>
-        </div>
-    }
-    else
-    {
-        <div>@(isLoading ? "Loading User data..." : "No user information found.")</div>
-    }
-
-    <h3>Projects</h3>
-    @if (Projects != null)
-    {
-        @foreach (var project in Projects)
-        {
-            <div>@project</div>
         }
-    }
-    else
-    {
-        <div>@(isLoading? "Loading Project data..." : "No project data found.")</div>
-    }
-
-    <h3>Redis Cache</h3>
-    @if (RedisEntries != null && RedisEntries.Any())
-    {
-        <MudDataGrid Items="RedisEntries" Class="mud-table-custom">
-            <Columns>
-                <PropertyColumn Property="x => x.Key" Title="Key" Sortable="true" />
-                <PropertyColumn Property="x => x.Value" Title="Value" Sortable="true" />
-            </Columns>
-        </MudDataGrid>
-    }
-    else
-    {
-        <div>@(isLoading ? "Loading Redis data..." : "No Redis keys found.")</div>
-    }
-</p>
+        else
+        {
+            <div>@(isLoading ? "Loading Redis data..." : "No Redis keys found.")</div>
+        }
+    </p>
+</div>
 
 @code {
     private bool isLoading = true;

@@ -15,6 +15,55 @@ body {
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   Page Layout - Full Width Left-Justified
+   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+/* Override MudBlazor's default centered container behavior */
+.mud-container {
+    max-width: none !important;
+    margin: 0 !important;
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+    width: 100% !important;
+}
+
+/* Ensure page content uses full width */
+.page-content-full-width {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* Override any MudBlazor MaxWidth restrictions */
+.mud-container.mud-container-maxwidth-xs,
+.mud-container.mud-container-maxwidth-sm,
+.mud-container.mud-container-maxwidth-md,
+.mud-container.mud-container-maxwidth-lg,
+.mud-container.mud-container-maxwidth-xl,
+.mud-container.mud-container-maxwidth-false {
+    max-width: none !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+}
+
+/* Ensure data grids use full available width */
+.mud-data-grid {
+    width: 100% !important;
+}
+
+.mud-data-grid .mud-table-container {
+    width: 100% !important;
+    max-width: none !important;
+}
+
+/* Make cards and paper components use full width when needed */
+.mud-paper.full-width,
+.mud-card.full-width {
+    width: 100% !important;
+    max-width: none !important;
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    Theme System - Light & Dark Mode
    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* Dark mode defaults - applied immediately by the script in App.razor */

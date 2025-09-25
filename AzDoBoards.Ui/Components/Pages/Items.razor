@@ -13,7 +13,7 @@
 
 <PageTitle>Items</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+<MudContainer MaxWidth="MaxWidth.False" Class="mt-4 page-content-full-width">
     <MudText Typo="Typo.h4" GutterBottom="true">Work Items</MudText>
 
     @if (isLoading)
@@ -83,7 +83,7 @@
             }
             else if (workItems?.Any() == true)
             {
-                <MudCard Class="mt-4">
+                <MudCard Class="mt-4 full-width">
                     <MudCardHeader>
                         <CardHeaderContent>
                             <MudText Typo="Typo.h6">
