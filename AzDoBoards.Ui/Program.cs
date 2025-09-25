@@ -86,7 +86,38 @@ public class Program
 
         // Add Entra ID (Azure AD) Authentication
         builder.Services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
-            .AddMicrosoftIdentityWebApp(builder.Configuration.GetSection(Utility.Constants.Azure_ConfigSection))
+            .AddMicrosoftIdentityWebApp(options =>
+            {
+                builder.Configuration.GetSection(Utility.Constants.Azure_ConfigSection).Bind(options);
+                
+                // Configure OpenID Connect events for account selection
+                options.Events = new OpenIdConnectEvents
+                {
+                    OnRedirectToIdentityProvider = context =>
+                    {
+                        // Check if we have a prompt parameter in the authentication properties
+                        if (context.Properties.Parameters.TryGetValue("prompt", out var promptValue))
+                        {
+                            context.ProtocolMessage.Prompt = promptValue?.ToString();
+                        }
+                        
+                        // Optionally add domain_hint for work/school accounts
+                        // Uncomment the following lines if you want to hint that work accounts are preferred
+                        // if (!context.ProtocolMessage.Parameters.ContainsKey("domain_hint"))
+                        // {
+                        //     context.ProtocolMessage.DomainHint = "organizations";
+                        // }
+                        
+                        return Task.CompletedTask;
+                    },
+                    OnAuthenticationFailed = context =>
+                    {
+                        // Log authentication failures for debugging
+                        Log.Error("Authentication failed: {Error}", context.Exception?.Message);
+                        return Task.CompletedTask;
+                    }
+                };
+            })
             .EnableTokenAcquisitionToCallDownstreamApi([Utility.Constants.AzureDevOps_OAuthScope]) // Acquire tokens for downstream APIs
             .AddDistributedTokenCaches();
 

@@ -44,10 +44,17 @@
                 </ActivatorContent>
                 <ChildContent>
                     <MudMenuItem OnClick="@(() => Navigation.NavigateTo("/about"))">
+                        <MudIcon Icon="Icons.Material.Filled.Info" Class="me-2" />
                         About
                     </MudMenuItem>
                     <MudDivider />
+                    <MudMenuItem OnClick="@(() => Navigation.NavigateTo("/switch-account", true))" Class="text-primary">
+                        <MudIcon Icon="Icons.Material.Filled.SwapHoriz" Class="me-2" />
+                        Switch Account
+                    </MudMenuItem>
+                    <MudDivider />
                     <MudMenuItem OnClick="@(() => Navigation.NavigateTo("/signout"))">
+                        <MudIcon Icon="Icons.Material.Filled.Logout" Class="me-2" />
                         Logout
                     </MudMenuItem>
                 </ChildContent>

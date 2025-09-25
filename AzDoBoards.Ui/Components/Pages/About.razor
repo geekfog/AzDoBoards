@@ -10,6 +10,16 @@
 
 <h1>About</h1>
 
+<MudAlert Severity="Severity.Info" Class="mb-4">
+    <MudText Typo="Typo.body1">
+        Having trouble with account authentication?
+        <MudLink Href="/account-help" Color="Color.Primary">
+            <MudIcon Icon="Icons.Material.Filled.Help" Size="Size.Small" Class="me-1" />
+            View Account Selection Help
+        </MudLink>
+    </MudText>
+</MudAlert>
+
 <p>
     @if (!string.IsNullOrEmpty(StatusMessage))
     {

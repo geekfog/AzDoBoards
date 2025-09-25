@@ -1,0 +1,32 @@
+@page "/switching-account"
+@using MudBlazor
+@inject NavigationManager Navigation
+
+<PageTitle>Switching Account</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="d-flex justify-center align-center" Style="min-height: 60vh;">
+    <MudCard Class="pa-8 text-center">
+        <MudCardContent>
+            <MudProgressCircular Indeterminate="true" Size="Size.Large" Color="Color.Primary" Class="mb-4" />
+            <MudText Typo="Typo.h5" Class="mb-3">Switching Account</MudText>
+            <MudText Typo="Typo.body1" Class="mb-4">
+                Please wait while we sign you out and prompt for account selection...
+            </MudText>
+            <MudAlert Severity="Severity.Info">
+                <MudText Typo="Typo.body2">
+                    You will be redirected to Microsoft's sign-in page where you can choose the correct account.
+                </MudText>
+            </MudAlert>
+        </MudCardContent>
+    </MudCard>
+</MudContainer>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        await Task.Delay(2000); // Brief delay to show the message
+
+        // Redirect to perform the actual account switch
+        Navigation.NavigateTo("/perform-account-switch", forceLoad: true);
+    }
+}
