@@ -1,11 +1,13 @@
-﻿@page "/items"
+@page "/items"
 @using Microsoft.AspNetCore.Components.Authorization
 @using AzDoBoards.Client.Models
 @using AzDoBoards.Data.Abstractions
 @using AzDoBoards.Ui.Services
 @using AzDoBoards.Utility
 @using MudBlazor
+@using AzDoBoards.Client.Services
 @inject HierarchyService HierarchyService
+@inject WorkItemServices WorkItemServices
 @inject ISnackbar Snackbar
 @inject ILogger<Items> Logger
 
@@ -70,6 +72,215 @@
                     </MudText>
                 </MudStack>
             </MudAlert>
+
+            <!-- Work Items Grid -->
+            @if (isLoadingWorkItems)
+            {
+                <MudStack Row AlignItems="AlignItems.Center" Class="my-4">
+                    <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+                    <MudText Typo="Typo.body2" Class="ml-2">Loading work items...</MudText>
+                </MudStack>
+            }
+            else if (workItems?.Any() == true)
+            {
+                <MudCard Class="mt-4">
+                    <MudCardHeader>
+                        <CardHeaderContent>
+                            <MudText Typo="Typo.h6">
+                                Work Items (@workItems.Count)
+                            </MudText>
+                        </CardHeaderContent>
+                        <CardHeaderActions>
+                            <MudIconButton Icon="Icons.Material.Filled.Refresh" 
+                                         Color="Color.Primary" 
+                                         OnClick="RefreshWorkItemsAsync" 
+                                         Title="Refresh" />
+                        </CardHeaderActions>
+                    </MudCardHeader>
+                    <MudCardContent Class="pa-0">
+                        <MudDataGrid T="WorkItem" 
+                                   Items="@workItems" 
+                                   Sortable="true" 
+                                   Filterable="true" 
+                                   FilterMode="DataGridFilterMode.ColumnFilterRow"
+                                   Dense="true"
+                                   Hover="true"
+                                   Striped="true"
+                                   FixedHeader="true"
+                                   Height="600px">
+                            <Columns>
+                                <!-- Action Column -->
+                                <PropertyColumn Property="x => x.Id" Title="" Sortable="false" Filterable="false" InitialDirection="SortDirection.None">
+                                    <CellTemplate>
+                                        <MudIconButton Icon="Icons.Material.Filled.OpenInNew" 
+                                                     Size="Size.Small" 
+                                                     Color="Color.Primary"
+                                                     OnClick="@(() => OpenWorkItem(context.Item.Id))"
+                                                     Title="Open Work Item" />
+                                    </CellTemplate>
+                                </PropertyColumn>
+
+                                <!-- Work Item State Category -->
+                                <PropertyColumn Property="x => x.StateCategory" Title="State Category" Sortable="true">
+                                    <CellTemplate>
+                                        <MudChip Size="Size.Small" 
+                                               Color="@GetStateCategoryColor(context.Item.StateCategory)"
+                                               Text="@context.Item.StateCategory" />
+                                    </CellTemplate>
+                                </PropertyColumn>
+
+                                <!-- State -->
+                                <PropertyColumn Property="x => x.State" Title="State" Sortable="true" />
+
+                                <!-- ID -->
+                                <PropertyColumn Property="x => x.Id" Title="ID" Sortable="true">
+                                    <CellTemplate>
+                                        <MudLink Href="@GetWorkItemUrl(context.Item.Id)" Target="_blank" Color="Color.Primary">
+                                            @context.Item.Id
+                                        </MudLink>
+                                    </CellTemplate>
+                                </PropertyColumn>
+
+                                <!-- Title -->
+                                <PropertyColumn Property="x => x.Title" Title="Title" Sortable="true">
+                                    <CellTemplate>
+                                        <MudTooltip Text="@context.Item.Title">
+                                            <div style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                                @context.Item.Title
+                                            </div>
+                                        </MudTooltip>
+                                    </CellTemplate>
+                                </PropertyColumn>
+
+                                <!-- Work Item Type (Icon Only) -->
+                                <PropertyColumn Property="x => x.WorkItemType" Title="Type" Sortable="true" Filterable="true">
+                                    <CellTemplate>
+                                        <MudTooltip Text="@context.Item.WorkItemType">
+                                            <div style="@($"color: {context.Item.Color}")">
+                                                <MudIcon Icon="@WorkItemHelper.GetWorkItemTypeSvgIcon(context.Item.WorkItemType)" 
+                                                       Size="Size.Medium" />
+                                            </div>
+                                        </MudTooltip>
+                                    </CellTemplate>
+                                </PropertyColumn>
+
+                                <!-- Assigned To -->
+                                <PropertyColumn Property="x => x.AssignedToDisplayName" Title="Assigned To" Sortable="true">
+                                    <CellTemplate>
+                                        @if (!string.IsNullOrEmpty(context.Item.AssignedToEmail))
+                                        {
+                                            <MudLink Href="@($"mailto:{context.Item.AssignedToEmail}")" 
+                                                   Color="Color.Primary"
+                                                   Title="@context.Item.AssignedToEmail">
+                                                @context.Item.AssignedToDisplayName
+                                            </MudLink>
+                                        }
+                                        else if (!string.IsNullOrEmpty(context.Item.AssignedToDisplayName))
+                                        {
+                                            <MudText>@context.Item.AssignedToDisplayName</MudText>
+                                        }
+                                        else
+                                        {
+                                            <MudText Color="Color.Default">Unassigned</MudText>
+                                        }
+                                    </CellTemplate>
+                                </PropertyColumn>
+
+                                <!-- Priority -->
+                                <PropertyColumn Property="x => x.Priority" Title="Priority" Sortable="true">
+                                    <CellTemplate>
+                                        <MudChip Size="Size.Small" 
+                                               Color="@GetPriorityColor(context.Item.Priority)"
+                                               Text="@(string.IsNullOrEmpty(context.Item.Priority) ? "None" : context.Item.Priority)" />
+                                    </CellTemplate>
+                                </PropertyColumn>
+
+                                <!-- Target Date -->
+                                <PropertyColumn Property="x => x.TargetDate" Title="Target" Sortable="true" Format="MM/dd/yyyy">
+                                    <CellTemplate>
+                                        @if (context.Item.TargetDate.HasValue)
+                                        {
+                                            <MudText Color="@GetDateColor(context.Item.TargetDate.Value)">
+                                                @context.Item.TargetDate.Value.ToString("MM/dd/yyyy")
+                                            </MudText>
+                                        }
+                                        else
+                                        {
+                                            <MudText Color="Color.Default">-</MudText>
+                                        }
+                                    </CellTemplate>
+                                </PropertyColumn>
+
+                                <!-- Modified Date -->
+                                <PropertyColumn Property="x => x.ModifiedDate" Title="Modified" Sortable="true" Format="MM/dd/yyyy" InitialDirection="SortDirection.Descending">
+                                    <CellTemplate>
+                                        <MudText>@context.Item.ModifiedDate.ToString("MM/dd/yyyy")</MudText>
+                                    </CellTemplate>
+                                </PropertyColumn>
+
+                                <!-- Created Date -->
+                                <PropertyColumn Property="x => x.CreatedDate" Title="Created" Sortable="true" Format="MM/dd/yyyy">
+                                    <CellTemplate>
+                                        <MudText>@context.Item.CreatedDate.ToString("MM/dd/yyyy")</MudText>
+                                    </CellTemplate>
+                                </PropertyColumn>
+
+                                <!-- Iteration -->
+                                <PropertyColumn Property="x => x.IterationPath" Title="Iteration" Sortable="true">
+                                    <CellTemplate>
+                                        <MudTooltip Text="@context.Item.IterationPath">
+                                            <div style="max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                                @GetIterationName(context.Item.IterationPath)
+                                            </div>
+                                        </MudTooltip>
+                                    </CellTemplate>
+                                </PropertyColumn>
+
+                                <!-- Area -->
+                                <PropertyColumn Property="x => x.AreaPath" Title="Area" Sortable="true">
+                                    <CellTemplate>
+                                        <MudTooltip Text="@context.Item.AreaPath">
+                                            <div style="max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                                @GetAreaName(context.Item.AreaPath)
+                                            </div>
+                                        </MudTooltip>
+                                    </CellTemplate>
+                                </PropertyColumn>
+
+                                <!-- Tags -->
+                                <PropertyColumn Property="x => x.Tags" Title="Tags" Sortable="false" Filterable="false">
+                                    <CellTemplate>
+                                        <div style="display: flex; flex-wrap: wrap; gap: 2px; max-width: 200px;">
+                                            @foreach (var tag in context.Item.Tags.Take(3))
+                                            {
+                                                <MudChip Size="Size.Small" 
+                                                       Color="Color.Default" 
+                                                       Text="@tag"
+                                                       Style="font-size: 0.7rem; height: 20px;" />
+                                            }
+                                            @if (context.Item.Tags.Count > 3)
+                                            {
+                                                <MudTooltip Text="@string.Join(", ", context.Item.Tags.Skip(3))">
+                                                    <MudChip Size="Size.Small" 
+                                                           Color="Color.Info" 
+                                                           Text="@($"+{context.Item.Tags.Count - 3}")"
+                                                           Style="font-size: 0.7rem; height: 20px;" />
+                                                </MudTooltip>
+                                            }
+                                        </div>
+                                    </CellTemplate>
+                                </PropertyColumn>
+                            </Columns>
+                        </MudDataGrid>
+                    </MudCardContent>
+                </MudCard>
+            }
+            else if (selectedLevel >= 0 && !isLoadingWorkItems)
+            {
+                <MudAlert Severity="Severity.Info" Class="mt-4">
+                    <MudText>No work items found in Proposed or In Progress state categories for the selected work item types.</MudText>
+                </MudAlert>
+            }
         }
     }
     else if (!isLoading)
@@ -97,8 +308,11 @@
 
 @code {
     private bool isLoading = true;
+    private bool isLoadingWorkItems = false;
     private List<List<WorkItemTypeSummary>>? workItemHierarchy;
+    private List<WorkItem>? workItems;
     private int selectedLevel = -1;
+    private string currentProjectId = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
@@ -115,6 +329,13 @@
             // Get current process ID
             var processId = await HierarchyService.GetCurrentProcessIdAsync();
             if (string.IsNullOrEmpty(processId))
+            {
+                return;
+            }
+
+            // Get current project ID
+            currentProjectId = await HierarchyService.GetCurrentProjectIdAsync(processId);
+            if (string.IsNullOrEmpty(currentProjectId))
             {
                 return;
             }
@@ -141,13 +362,125 @@
         }
     }
 
-    private void SelectLevel(int level)
+    private async Task SelectLevel(int level)
     {
         selectedLevel = selectedLevel == level ? -1 : level;
+        
+        if (selectedLevel >= 0)
+        {
+            await LoadWorkItemsForSelectedLevelAsync();
+        }
+        else
+        {
+            workItems = null;
+        }
+        
         StateHasChanged();
         
         // Fire event for level selection (can be extended later)
         Logger.LogInformation("Level {Level} selected", level);
+    }
+
+    private async Task LoadWorkItemsForSelectedLevelAsync()
+    {
+        if (selectedLevel < 0 || workItemHierarchy == null || selectedLevel >= workItemHierarchy.Count)
+            return;
+
+        try
+        {
+            isLoadingWorkItems = true;
+            StateHasChanged();
+
+            var selectedWorkItemTypes = workItemHierarchy[selectedLevel];
+            workItems = await WorkItemServices.GetWorkItemsForHierarchyLevelAsync(currentProjectId, selectedWorkItemTypes);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading work items for selected level");
+            Snackbar.Add("Error loading work items", Severity.Error);
+            workItems = null;
+        }
+        finally
+        {
+            isLoadingWorkItems = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task RefreshWorkItemsAsync()
+    {
+        if (selectedLevel >= 0)
+        {
+            await LoadWorkItemsForSelectedLevelAsync();
+        }
+    }
+
+    private void OpenWorkItem(int workItemId)
+    {
+        // This can be enhanced to open in a modal or navigate to a detail page
+        Logger.LogInformation("Opening work item {WorkItemId}", workItemId);
+        Snackbar.Add($"Opening work item {workItemId}", Severity.Info);
+    }
+
+    private string GetWorkItemUrl(int workItemId)
+    {
+        // This would need to be constructed based on the organization URL
+        // For now, return a placeholder
+        return $"#workitem-{workItemId}";
+    }
+
+    private Color GetStateCategoryColor(string stateCategory)
+    {
+        return stateCategory switch
+        {
+            "Proposed" => Color.Info,
+            "InProgress" => Color.Warning,
+            "Completed" => Color.Success,
+            "Removed" => Color.Error,
+            _ => Color.Default
+        };
+    }
+
+    private Color GetPriorityColor(string priority)
+    {
+        return priority switch
+        {
+            "1" => Color.Error,
+            "2" => Color.Warning,
+            "3" => Color.Info,
+            "4" => Color.Default,
+            _ => Color.Default
+        };
+    }
+
+    private Color GetDateColor(DateTime date)
+    {
+        var today = DateTime.Today;
+        var daysDifference = (date.Date - today).Days;
+
+        if (daysDifference < 0)
+            return Color.Error; // Past due
+        if (daysDifference <= 7)
+            return Color.Warning; // Due within a week
+        return Color.Default;
+    }
+
+    private string GetIterationName(string iterationPath)
+    {
+        if (string.IsNullOrEmpty(iterationPath))
+            return "-";
+
+        var parts = iterationPath.Split('\\');
+        return parts.Length > 0 ? parts[^1] : iterationPath;
+    }
+
+    private string GetAreaName(string areaPath)
+    {
+        if (string.IsNullOrEmpty(areaPath))
+            return "-";
+
+        var parts = areaPath.Split('\\');
+        return parts.Length > 0 ? parts[^1] : areaPath;
     }
 
     private string GetLevelColumnClass(int level)
