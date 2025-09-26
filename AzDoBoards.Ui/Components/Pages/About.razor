@@ -15,7 +15,7 @@
         <MudText Typo="Typo.body1">
             Having trouble with account authentication?
             <MudLink Href="/account-help" Color="Color.Primary">
-                <MudIcon Icon="Icons.Material.Filled.Help" Size="Size.Small" Class="me-1" />
+                <MudIcon Icon="@Icons.Material.Filled.Help" Size="Size.Small" Class="me-1" />
                 View Account Selection Help
             </MudLink>
         </MudText>
@@ -24,19 +24,17 @@
     <p>
         @if (!string.IsNullOrEmpty(StatusMessage))
         {
-            <h3>Status</h3>
-            <div>@StatusMessage</div>
+            <MudAlert Severity="Severity.Info" Class="mb-4">@StatusMessage</MudAlert>
         }
 
-        <h3>Authenticated User Information</h3>
+        <h2>Authenticated User Information</h2>
         @if (User != null)
         {
             <div>
-                <strong>User Identity:</strong> @User.Identity?.Name
-                <br />
-                <strong>Authenticated:</strong> @(User.Identity?.IsAuthenticated ?? false)
-                <br />
-                <strong>Claims:</strong>
+                <p><strong>User Identity:</strong> @User.Identity?.Name</p>
+                <p><strong>Authenticated:</strong> @(User.Identity?.IsAuthenticated ?? false)</p>
+
+                <h3>Claims:</h3>
                 <MudDataGrid Items="UserClaimsList" Class="full-width">
                     <Columns>
                         <PropertyColumn Property="x => x.Type" Title="Claim" Sortable="true" />
@@ -47,23 +45,20 @@
         }
         else
         {
-            <div>@(isLoading ? "Loading User data..." : "No user information found.")</div>
-        }
-
-        <h3>Projects</h3>
-        @if (Projects != null)
-        {
-            @foreach (var project in Projects)
+            @if (isLoading)
             {
-                <div>@project</div>
+                <MudStack Row AlignItems="AlignItems.Center" Class="my-4">
+                    <MudProgressCircular Indeterminate="true" Size="Size.Small" /> 
+                    <MudText Typo="Typo.body2" Class="ml-2">Loading user data...</MudText>
+                </MudStack>
+            }
+            else
+            {
+                <div>No user information found.</div>
             }
         }
-        else
-        {
-            <div>@(isLoading? "Loading Project data..." : "No project data found.")</div>
-        }
 
-        <h3>Redis Cache</h3>
+        <h2>Redis Cache</h2>
         @if (RedisEntries != null && RedisEntries.Any())
         {
             <MudDataGrid Items="RedisEntries" Class="mud-table-custom full-width">
@@ -75,7 +70,17 @@
         }
         else
         {
-            <div>@(isLoading ? "Loading Redis data..." : "No Redis keys found.")</div>
+            @if (isLoading)
+            {
+                <MudStack Row AlignItems="AlignItems.Center" Class="my-4">
+                    <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+                    <MudText Typo="Typo.body2" Class="ml-2">Loading redis data...</MudText>
+                </MudStack>
+            }
+            else
+            {
+                <div>No redis keys found.</div>
+            }
         }
     </p>
 </div>
@@ -85,7 +90,6 @@
     private string StatusMessage = string.Empty;
     private ClaimsPrincipal? User;
     private IEnumerable<string>? UserClaims;
-    private List<string>? Projects;
     private List<string> RedisKeys = new();
     private Dictionary<string, string> RedisValues = new();
     private List<Claim> UserClaimsList = new();
@@ -114,7 +118,6 @@
         {
             // Lazy load services to avoid blocking component creation
             var authProvider = ServiceProvider.GetRequiredService<AuthenticationStateProvider>();
-            var projectClient = ServiceProvider.GetRequiredService<ProjectServices>();
             var redis = ServiceProvider.GetRequiredService<StackExchange.Redis.IConnectionMultiplexer>();
 
             var authState = await authProvider.GetAuthenticationStateAsync();
@@ -128,18 +131,6 @@
             {
                 AppendStatus("User is NOT authenticated.");
                 return;
-            }
-
-            try
-            {
-                Projects = await projectClient.GetProjectsAsync();
-                AppendStatus($"{Projects.Count} project(s) loaded successfully.");
-                await InvokeAsync(StateHasChanged); // Update UI with projects
-            }
-            catch (Exception ex)
-            {
-                AppendStatus($"Error loading projects: {ex.Message} (Type: {ex.GetType().FullName})");
-                await InvokeAsync(StateHasChanged);
             }
 
             try

@@ -91,7 +91,7 @@
                             </MudText>
                         </CardHeaderContent>
                         <CardHeaderActions>
-                            <MudIconButton Icon="Icons.Material.Filled.Refresh" 
+                            <MudIconButton Icon="@Icons.Material.Filled.Refresh" 
                                          Color="Color.Primary" 
                                          OnClick="RefreshWorkItemsAsync" 
                                          Title="Refresh" />
@@ -107,13 +107,12 @@
                                    Dense="true"
                                    Hover="true"
                                    Striped="true"
-                                   FixedHeader="true"
-                                   Height="600px">
+                                   FixedHeader="true">
                             <Columns>
                                 <!-- Action Column -->
                                 <PropertyColumn Property="x => x.Id" Title="" Sortable="false" Filterable="false" InitialDirection="SortDirection.None">
                                     <CellTemplate>
-                                        <MudIconButton Icon="Icons.Material.Filled.OpenInNew" 
+                                        <MudIconButton Icon="@Icons.Material.Filled.OpenInNew" 
                                                      Size="Size.Small" 
                                                      Color="Color.Primary"
                                                      OnClick="@(() => OpenWorkItem(context.Item.Id))"
@@ -289,7 +288,7 @@
         <MudAlert Severity="Severity.Warning" Class="my-4">
             <MudStack>
                 <MudText>
-                    <MudIcon Icon="Icons.Material.Filled.Warning" Class="mr-2" />
+                    <MudIcon Icon="@Icons.Material.Filled.Warning" Class="mr-2" />
                     No work item hierarchy configured
                 </MudText>
                 <MudText Typo="Typo.body2" Class="mt-2">
@@ -297,7 +296,7 @@
                 </MudText>
                 <MudButton Variant="Variant.Outlined" 
                           Color="Color.Primary" 
-                          StartIcon="Icons.Material.Filled.Settings"
+                          StartIcon="@Icons.Material.Filled.Settings"
                           Href="/settings"
                           Class="mt-2 align-self-start">
                     Go to Settings

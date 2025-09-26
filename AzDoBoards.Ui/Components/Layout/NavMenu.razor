@@ -22,7 +22,7 @@
             <div class="nav-item px-3"><NavLink class="nav-link" href="" Match="NavLinkMatch.All"><img src="@Icon("NavDashboard")" class="nav-icon" alt="" role="presentation" /> Dashboard </NavLink></div>
             <div class="nav-item px-3"><NavLink class="nav-link" href="items">                    <img src="@Icon("NavItems")"     class="nav-icon" alt="" role="presentation" /> Items     </NavLink></div>
             <div class="nav-item px-3"><NavLink class="nav-link" href="settings">                 <img src="@Icon("NavSettings")"  class="nav-icon" alt="" role="presentation" /> Settings  </NavLink></div>
-            <div class="nav-item px-3"><NavLink class="nav-link" href="process">                  <img src="@Icon("NavProcess")"  class="nav-icon" alt="" role="presentation" /> Processes </NavLink></div>
+            <div class="nav-item px-3"><NavLink class="nav-link" href="process">                  <img src="@Icon("NavProcess")"   class="nav-icon" alt="" role="presentation" /> Processes </NavLink></div>
         </div>
         
         <div class="nav-item px-3" style="margin-top: auto; padding-bottom: 1rem;">
@@ -44,17 +44,17 @@
                 </ActivatorContent>
                 <ChildContent>
                     <MudMenuItem OnClick="@(() => Navigation.NavigateTo("/about"))">
-                        <MudIcon Icon="Icons.Material.Filled.Info" Class="me-2" />
+                        <MudIcon Icon="@(Utility.IconSvg.Info)" Class="me-2" />
                         About
                     </MudMenuItem>
                     <MudDivider />
-                    <MudMenuItem OnClick="@(() => Navigation.NavigateTo("/switch-account", true))" Class="text-primary">
-                        <MudIcon Icon="Icons.Material.Filled.SwapHoriz" Class="me-2" />
+                    <MudMenuItem OnClick="@(() => Navigation.NavigateTo("/switch-account", true))">
+                        <MudIcon Icon="@(Utility.IconSvg.SwapUser)" Class="me-2" />
                         Switch Account
                     </MudMenuItem>
                     <MudDivider />
                     <MudMenuItem OnClick="@(() => Navigation.NavigateTo("/signout"))">
-                        <MudIcon Icon="Icons.Material.Filled.Logout" Class="me-2" />
+                        <MudIcon Icon="@(Utility.IconSvg.Logout)" Class="me-2" />
                         Logout
                     </MudMenuItem>
                 </ChildContent>

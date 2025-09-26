@@ -8,7 +8,7 @@
         <MudCardHeader>
             <CardHeaderContent>
                 <MudText Typo="Typo.h4">
-                    <MudIcon Icon="Icons.Material.Filled.AccountCircle" Class="me-2" />
+                    <MudIcon Icon="@Icons.Material.Filled.AccountCircle" Class="me-2" />
                     Account Selection Help
                 </MudText>
             </CardHeaderContent>
@@ -22,17 +22,17 @@
 
             <MudText Typo="Typo.h6" Class="mb-3">Common Account Issues</MudText>
             <MudList T="string">
-                <MudListItem T="string" Icon="Icons.Material.Filled.Warning" IconColor="Color.Warning">
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Warning" IconColor="Color.Warning">
                     <MudText>
                         <strong>Multiple Microsoft Accounts:</strong> Your browser might automatically select a personal Microsoft account instead of your work/school account.
                     </MudText>
                 </MudListItem>
-                <MudListItem T="string" Icon="Icons.Material.Filled.Block" IconColor="Color.Error">
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Block" IconColor="Color.Error">
                     <MudText>
                         <strong>Access Denied:</strong> The selected account doesn't have access to your organization's Azure DevOps.
                     </MudText>
                 </MudListItem>
-                <MudListItem T="string" Icon="Icons.Material.Filled.Security" IconColor="Color.Primary">
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Security" IconColor="Color.Primary">
                     <MudText>
                         <strong>Wrong Tenant:</strong> You're authenticated with the wrong Azure Active Directory tenant.
                     </MudText>
@@ -46,7 +46,7 @@
                     <MudItem xs="12" sm="6" md="3">
                         <MudCard Elevation="2" Class="h-100">
                             <MudCardContent Class="text-center">
-                                <MudIcon Icon="Icons.Material.Filled.AccountCircle" Size="Size.Large" Color="Color.Primary" Class="mb-2" />
+                                <MudIcon Icon="@Icons.Material.Filled.AccountCircle" Size="Size.Large" Color="Color.Primary" Class="mb-2" />
                                 <MudText Typo="Typo.h6">1. Access User Menu</MudText>
                                 <MudText Typo="Typo.body2">Click on your profile picture or initials in the navigation menu.</MudText>
                             </MudCardContent>
@@ -55,7 +55,7 @@
                     <MudItem xs="12" sm="6" md="3">
                         <MudCard Elevation="2" Class="h-100">
                             <MudCardContent Class="text-center">
-                                <MudIcon Icon="Icons.Material.Filled.SwapHoriz" Size="Size.Large" Color="Color.Primary" Class="mb-2" />
+                                <MudIcon Icon="@Icons.Material.Filled.SwapHoriz" Size="Size.Large" Color="Color.Primary" Class="mb-2" />
                                 <MudText Typo="Typo.h6">2. Switch Account</MudText>
                                 <MudText Typo="Typo.body2">Click on "Switch Account" from the dropdown menu.</MudText>
                             </MudCardContent>
@@ -64,7 +64,7 @@
                     <MudItem xs="12" sm="6" md="3">
                         <MudCard Elevation="2" Class="h-100">
                             <MudCardContent Class="text-center">
-                                <MudIcon Icon="Icons.Material.Filled.PersonSearch" Size="Size.Large" Color="Color.Primary" Class="mb-2" />
+                                <MudIcon Icon="@Icons.Material.Filled.PersonSearch" Size="Size.Large" Color="Color.Primary" Class="mb-2" />
                                 <MudText Typo="Typo.h6">3. Choose Account</MudText>
                                 <MudText Typo="Typo.body2">Select the correct Microsoft account that has Azure DevOps access.</MudText>
                             </MudCardContent>
@@ -73,7 +73,7 @@
                     <MudItem xs="12" sm="6" md="3">
                         <MudCard Elevation="2" Class="h-100">
                             <MudCardContent Class="text-center">
-                                <MudIcon Icon="Icons.Material.Filled.VerifiedUser" Size="Size.Large" Color="Color.Primary" Class="mb-2" />
+                                <MudIcon Icon="@Icons.Material.Filled.VerifiedUser" Size="Size.Large" Color="Color.Primary" Class="mb-2" />
                                 <MudText Typo="Typo.h6">4. Verify Access</MudText>
                                 <MudText Typo="Typo.body2">Confirm you can access your projects and work items.</MudText>
                             </MudCardContent>
@@ -90,11 +90,11 @@
         </MudCardContent>
         <MudCardActions>
             <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/switch-account">
-                <MudIcon Icon="Icons.Material.Filled.SwapHoriz" Class="me-2" />
+                <MudIcon Icon="@Icons.Material.Filled.SwapHoriz" Class="me-2" />
                 Switch Account Now
             </MudButton>
             <MudButton Variant="Variant.Text" Href="/">
-                <MudIcon Icon="Icons.Material.Filled.Home" Class="me-2" />
+                <MudIcon Icon="@Icons.Material.Filled.Home" Class="me-2" />
                 Return to Dashboard
             </MudButton>
         </MudCardActions>

@@ -1,18 +1,32 @@
 # AzDo Boards Project Management Tool
 
-AzDo Boards ("As-Do") is to be a tool to assist with project management within Azure DevOps Boards. The UI within Azure DevOps Boards is clunky for doing project management and quickly adding or updating information. 
+## Overview
 
-The intent is to support a custom-defined hierarchy (e.g., Initiative > Epic > Feature > User Story / Bug / Research > Tasks).
+<img src="Images/favicon-0512.png" alt="AzDo Boards Icon" style="zoom:25%; float:right;" />AzDo Boards (pronounced "As-Do Boards") is to be a tool to assist with project management within Azure DevOps Boards. The UI within Azure DevOps Boards is clunky for doing project management and quickly adding or updating information. 
 
-*This is an idea that has been noodled for a while. Now this is being attempted for future efficiency of project work, to give back, and to see if there is interest within the open source community. We will see where this goes, if anywhere.*
+This supports a custom-defined work item hierarchy based on work item types (e.g., Initiative > Epic > Feature > User Story / Bug / Research > Tasks).
+
+*This is an idea that has been noodled for a while. Now this is being attempted for future efficiency of project work, to give back, to see if there is interest within the open source community, and potential business opportunities. It is with interest to see where this goes, if anywhere.*
 
 ## Future Action Items
 
 1. Add support for certificates in place of Client Secret for the App Registration and Azure DevOps downstream API support.
 
+## Definitions
+
+| Item           | Definition                                                   |
+| -------------- | ------------------------------------------------------------ |
+| Process        | Refers to the methodology or workflow template that determines available work item types, states, rules, and fields. Common processes (these are System defined) are Agile, Scrum, Basic, and CMMI, each optimized for a particular project management style or compliance need. Inherited processes (recommended, rather than using System defined) can be defined and customized as desired. |
+| State          | Indicates a Work Item's position in the workflow, such as "New," "Active," "Resolved," "Closed," or "Completed," depending on the Work Item Type and Process. |
+| State Category | Groups individual states into broader categories, such as "Proposed," "In Progress," or "Completed." This categorization simplifies reporting, visualization, and automation by allowing different states to be grouped for aggregate tracking. |
+| Work Item      | A unit of work tracked in Azure DevOps Boards—such as a feature, bug, user story, task, or issue. Work items are objects in the system, each with a unique ID and a collection of fields that help teams organize, assign, and track progress against goals. |
+| Work Item Type | Defines the template or schema for a work item, including its fields, workflow states, and rules. Examples include Epic, Feature, User Story, Bug, and Task. The available types depend on the project’s chosen Process. |
+
+
+
 # Development Technologies
 
-- Visual Studio 2022 17.14.13 Preview 1.0+ or Visual Studio 2026 Insider v18.0 Preview 1+
+- Visual Studio 2026 Insider v18.0 or Visual Studio 2022 17.14.14+ Preview
   - [Mudblazor Component Library](https://mudblazor.com/docs/overview)
   - [Material UI](https://mui.com/material-ui/material-icons/)
   - *Microsoft TFS Client (to abstract Azure DevOps API calls) NuGet packages leveraged*
@@ -96,12 +110,12 @@ The settings supported are as follows:
     "InstanceName": "AzDoBoardsTokenCache"
   },
   "Azure":{
-    "StorageAccountConnectionString": "DefaultEndpointsProtocol=https;AccountName=<storageaccountname>;AccountKey=<accountkey>;EndpointSuffix=core.windows.net"
+    "StorageAccountConnectionString": "DefaultEndpointsProtocol=https;AccountName=<storageaccountname>;AccountKey=<accountkey>;EndpointSuffix=core.windows.net" // "UseDevelopmentStorage=true" can be used when running locally with Azurite
   }
 }
 ```
 
-The following StorageAccountConnectionString value *UseDevelopmentStorage=true* is used when running locally, and is sufficient to use with Azurite.
+
 
 ## Azure Portal App Registration
 
@@ -129,8 +143,10 @@ An App Registration is required to allow this application to integrate with Azur
 
    To have the API permissions configured for all users up front so they don't have to approve during login, use the **Enterprise applications** blade (link to it is available via Manage > API permissions) to view and manage consented permissions for individual apps as well as the tenant's consent settings.
 
-   
+# Contributors
 
+The following primary contributors:
 
+- [Hans Dickel](https://github.com/geekfog)
 
 \~End\~

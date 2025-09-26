@@ -104,7 +104,7 @@ else
                                     <MudItem xs="12" md="4">
                                         <MudPaper Class="pa-4 unassigned-panel" Style="min-height: 500px;">
                                             <MudText Typo="Typo.subtitle1" GutterBottom="true">
-                                                <MudIcon Icon="Icons.Material.Filled.Inventory" Class="mr-2" />
+                                                <MudIcon Icon="@Icons.Material.Filled.Inventory" Class="mr-2" />
                                                 Unassigned Work Items (@(unassignedWorkItems?.Count ?? 0))
                                             </MudText>
 
@@ -112,7 +112,7 @@ else
                                                 @if (unassignedWorkItems?.Any() == false)
                                                 {
                                                     <MudAlert Severity="Severity.Success">
-                                                        <MudIcon Icon="Icons.Material.Filled.CheckCircle" Class="mr-2" />
+                                                        <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Class="mr-2" />
                                                         All work item types are assigned to hierarchy
                                                     </MudAlert>
                                                 }
@@ -125,7 +125,7 @@ else
                                         <MudPaper Class="pa-4 hierarchy-panel" Style="min-height: 500px;">
                                             <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3">
                                                 <MudText Typo="Typo.subtitle1">
-                                                    <MudIcon Icon="Icons.Material.Filled.AccountTree" Class="mr-2" />
+                                                    <MudIcon Icon="@Icons.Material.Filled.AccountTree" Class="mr-2" />
                                                     Work Item Hierarchy (@workItemHierarchy.Count levels)
                                                 </MudText>
                                                 <MudStack Row>
@@ -190,7 +190,7 @@ else
                                                 <MudAlert Severity="Severity.Info" Class="getting-started-alert">
                                                     <MudStack>
                                                         <MudText>
-                                                            <MudIcon Icon="Icons.Material.Filled.Info" Class="mr-2" />
+                                                            <MudIcon Icon="@Icons.Material.Filled.Info" Class="mr-2" />
                                                             Hierarchy will be created automatically when you assign work items.
                                                         </MudText>
                                                         <MudText Typo="Typo.body2" Class="mt-2">
@@ -218,7 +218,7 @@ else
                                                 <MudIconButton Icon="@Icons.Material.Filled.Cancel" Size="Size.Small" OnClick="@(() => RemoveFromHierarchy(context, level))" Variant="Variant.Filled" Color="Color.Surface" Class="work-item-remove-button" />
                                             </MudTooltip>
                                         }
-                                        <MudIcon Icon="Icons.Material.Filled.DragIndicator" Class="drag-handle" />
+                                        <MudIcon Icon="@Icons.Material.Filled.DragIndicator" Class="drag-handle" />
                                     </div>
                                 </div>
                             </ItemRenderer>
