@@ -1,6 +1,7 @@
 @page "/switching-account"
 @using MudBlazor
-@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+@implements IDisposable
 
 <PageTitle>Switching Account</PageTitle>
 
@@ -21,12 +22,61 @@
     </MudCard>
 </MudContainer>
 
-@code {
-    protected override async Task OnInitializedAsync()
-    {
-        await Task.Delay(2000); // Brief delay to show the message
+<!-- Hidden form for performing the actual account switch -->
+<form id="account-switch-form" method="post" action="/perform-account-switch" style="display: none;">
+    <AntiforgeryToken />
+</form>
 
-        // Redirect to perform the actual account switch
-        Navigation.NavigateTo("/perform-account-switch", forceLoad: true);
+<script>
+    window.submitAccountSwitchForm = () => {
+        const form = document.getElementById('account-switch-form');
+        if (form) {
+            form.submit();
+        } else {
+            console.error('Account switch form not found');
+        }
+    };
+</script>
+
+@code {
+    private readonly CancellationTokenSource _cancellationTokenSource = new();
+    private bool _disposed = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_disposed)
+        {
+            try
+            {
+                // Check if component is still active before making JS call
+                if (!_cancellationTokenSource.Token.IsCancellationRequested)
+                {
+                    await JSRuntime.InvokeVoidAsync("submitAccountSwitchForm", _cancellationTokenSource.Token);
+                }
+            }
+            catch (TaskCanceledException)
+            {
+                // Expected when component is disposed, ignore
+            }
+            catch (JSDisconnectedException)
+            {
+                // Expected when Blazor circuit is disconnected, ignore
+            }
+            catch (Exception ex)
+            {
+                // Log unexpected errors but don't rethrow to avoid breaking the component
+                Console.WriteLine($"Error in account switch: {ex.Message}");
+            }
+        }
+    }
+
+    public void Dispose()
+    {
+        if (!_disposed)
+        {
+            _disposed = true;
+            _cancellationTokenSource?.Cancel();
+            _cancellationTokenSource?.Dispose();
+        }
     }
 }

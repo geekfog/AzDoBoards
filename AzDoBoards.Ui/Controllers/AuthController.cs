@@ -7,7 +7,9 @@ namespace AzDoBoards.Ui.Controllers;
 
 public class AuthController : Controller
 {
+    [HttpPost]
     [Route("signout")]
+    [ValidateAntiForgeryToken]
     public new IActionResult SignOut()
     {
         return SignOut(
@@ -17,6 +19,7 @@ public class AuthController : Controller
         );
     }
 
+    [HttpGet]
     [Route("switch-account")]
     public IActionResult SwitchAccount()
     {
@@ -24,7 +27,9 @@ public class AuthController : Controller
         return Redirect("/switching-account");
     }
 
+    [HttpPost]
     [Route("perform-account-switch")]
+    [ValidateAntiForgeryToken]
     public IActionResult PerformAccountSwitch()
     {
         // First, sign out the current user
@@ -38,7 +43,9 @@ public class AuthController : Controller
         );
     }
 
+    [HttpPost]
     [Route("switch-to-work-account")]
+    [ValidateAntiForgeryToken]
     public IActionResult SwitchToWorkAccount()
     {
         // First, sign out the current user completely
@@ -52,6 +59,7 @@ public class AuthController : Controller
         );
     }
 
+    [HttpGet]
     [Route("account-selection")]
     public IActionResult PromptAccountSelection()
     {
@@ -68,6 +76,7 @@ public class AuthController : Controller
         return Challenge(properties, OpenIdConnectDefaults.AuthenticationScheme);
     }
 
+    [HttpGet]
     [Route("work-account-selection")]
     public IActionResult PromptWorkAccountSelection()
     {
@@ -86,7 +95,9 @@ public class AuthController : Controller
         return Challenge(properties, OpenIdConnectDefaults.AuthenticationScheme);
     }
 
+    [HttpPost]
     [Route("force-logout")]
+    [ValidateAntiForgeryToken]
     public IActionResult ForceLogout()
     {
         // Complete logout with end session endpoint

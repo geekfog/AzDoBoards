@@ -4,6 +4,7 @@
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject Utility.CacheBuster CacheBuster
+@inject IJSRuntime JSRuntime
 
 <div id="navbarMain" class="top-row ps-3 navbar navbar-dark">
     <div id="navbarContainer" style="display: flex; align-items: center;">
@@ -53,7 +54,7 @@
                         Switch Account
                     </MudMenuItem>
                     <MudDivider />
-                    <MudMenuItem OnClick="@(() => Navigation.NavigateTo("/signout"))">
+                    <MudMenuItem OnClick="HandleSignOut">
                         <MudIcon Icon="@(Utility.IconSvg.Logout)" Class="me-2" />
                         Logout
                     </MudMenuItem>
@@ -62,6 +63,11 @@
         </div>
     </nav>
 </div>
+
+<!-- Hidden forms for POST requests -->
+<form id="signout-form" method="post" action="/signout" style="display: none;">
+    <AntiforgeryToken />
+</form>
 
 @code {
     private string? PreferredUserName;
@@ -85,6 +91,11 @@
         if (!string.IsNullOrEmpty(GravatarUrl)) return;
 
         Initials = !string.IsNullOrEmpty(givenName) || !string.IsNullOrEmpty(surname) ? $"{givenName[0]}{surname[0]}".Trim().ToUpper() : "?";
+    }
+
+    private async Task HandleSignOut()
+    {
+        await JSRuntime.InvokeVoidAsync("document.getElementById('signout-form').submit");
     }
 
     private string GetGravatarUrl(string email)

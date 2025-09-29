@@ -126,12 +126,15 @@ public class Program
             options.FallbackPolicy = options.DefaultPolicy;
         });
 
+        // Add anti-forgery services first
+        builder.Services.AddAntiforgery();
 
-        // Add services to the container
+        // Add services to the container - order matters for Blazor + MVC
         builder.Services.AddRazorComponents()
             .AddInteractiveServerComponents();
 
-        builder.Services.AddControllers(); // Add support for controllers and views (starting with sign out)
+        // Add Controllers with Views (includes anti-forgery support)
+        builder.Services.AddControllersWithViews();
 
         // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         // Build Application
