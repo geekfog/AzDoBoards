@@ -4,6 +4,7 @@
 @using AzDoBoards.Client.Services
 @using AzDoBoards.Data.Abstractions
 @using AzDoBoards.Utility
+@using AzDoBoards.Utility.Models
 @using Microsoft.AspNetCore.Components.Authorization
 @using MudBlazor
 @inject ISettingsRepository SettingsRepository
@@ -148,9 +149,34 @@ else
 
                                                         <MudPaper Class="level-container" Style="@($"border-left: 4px solid {WorkItemHelper.GetLevelColor(level)}; margin-bottom: 8px;")">
                                                             <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="level-header">
-                                                                <MudText Typo="Typo.subtitle2" Class="level-title">
-                                                                    Level @(level + 1) (@levelItems.Count items)
-                                                                </MudText>
+                                                                <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
+                                                                    <MudText Typo="Typo.subtitle2" Class="level-title">
+                                                                        Level @(level + 1) (@levelItems.Count items)
+                                                                    </MudText>
+                                                                    
+                                                                    <!-- Audience Checkboxes -->
+                                                                    <MudStack Row AlignItems="AlignItems.Center" Spacing="1" Class="ml-4">
+                                                                        <MudCheckBox T="bool" 
+                                                                                   Value="@IsAudienceSelected(level, "Roadmap")" 
+                                                                                   ValueChanged="@(value => OnAudienceChanged(level, "Roadmap", value))"
+                                                                                   Label="Roadmap" 
+                                                                                   Color="Color.Primary" 
+                                                                                   Size="Size.Small" />
+                                                                        <MudCheckBox T="bool" 
+                                                                                   Value="@IsAudienceSelected(level, "Planning")" 
+                                                                                   ValueChanged="@(value => OnAudienceChanged(level, "Planning", value))"
+                                                                                   Label="Planning" 
+                                                                                   Color="Color.Secondary" 
+                                                                                   Size="Size.Small" />
+                                                                        <MudCheckBox T="bool" 
+                                                                                   Value="@IsAudienceSelected(level, "Building")" 
+                                                                                   ValueChanged="@(value => OnAudienceChanged(level, "Building", value))"
+                                                                                   Label="Building" 
+                                                                                   Color="Color.Tertiary" 
+                                                                                   Size="Size.Small" />
+                                                                    </MudStack>
+                                                                </MudStack>
+                                                                
                                                                 <MudStack Row Spacing="1">
                                                                     <MudTooltip Text="Move level up">
                                                                         <MudIconButton Icon="@Icons.Material.Filled.MoveUp" Size="Size.Small" OnClick="@(() => MoveLevelUp(level))" Disabled="level == 0" Variant="@(level == 0 ? Variant.Outlined : Variant.Filled)" Color="@(level == 0 ? Color.Default : Color.Info)" />
@@ -248,6 +274,7 @@ else
     private List<WorkItemTypeSummary>? availableWorkItemTypes;
     private List<WorkItemTypeSummary>? unassignedWorkItems;
     private List<List<WorkItemTypeSummary>> workItemHierarchy = new();
+    private List<List<string>> hierarchyAudiences = new(); // Track audiences for each level
 
     private bool AllowDefaultConfigurationSave =>
         !string.IsNullOrEmpty(selectedProcessId) &&
@@ -421,6 +448,7 @@ else
             // Clear dependent data
             availableWorkItemTypes = null;
             workItemHierarchy.Clear();
+            hierarchyAudiences.Clear();
             unassignedWorkItems = null;
             hasHierarchyChanges = false;
             availableProjects = null;
@@ -497,27 +525,30 @@ else
             var hierarchyKey = $"work-item-hierarchy-{selectedProcessId}";
             var hierarchyJson = await SettingsRepository.GetOrCreateAsync(hierarchyKey, "[]");
 
-            if (!string.IsNullOrEmpty(hierarchyJson) && hierarchyJson != "[]")
+            // Try to load using the new format first
+            var hierarchyLevels = WorkItemHelper.ParseHierarchyLevelsJson(hierarchyJson);
+            
+            if (hierarchyLevels != null && availableWorkItemTypes != null)
             {
-                var hierarchyData = JsonSerializer.Deserialize<string[][]>(hierarchyJson);
-                if (hierarchyData != null && availableWorkItemTypes != null)
+                workItemHierarchy.Clear();
+                hierarchyAudiences.Clear();
+
+                foreach (var level in hierarchyLevels)
                 {
-                    workItemHierarchy.Clear();
-                    foreach (var level in hierarchyData)
+                    var levelItems = new List<WorkItemTypeSummary>();
+                    foreach (var workItemName in level.WorkItemTypes)
                     {
-                        var levelItems = new List<WorkItemTypeSummary>();
-                        foreach (var workItemName in level)
+                        var workItem = availableWorkItemTypes.FirstOrDefault(w => w.Name == workItemName);
+                        if (workItem != null)
                         {
-                            var workItem = availableWorkItemTypes.FirstOrDefault(w => w.Name == workItemName);
-                            if (workItem != null)
-                            {
-                                levelItems.Add(workItem);
-                            }
+                            levelItems.Add(workItem);
                         }
-                        if (levelItems.Any())
-                        {
-                            workItemHierarchy.Add(levelItems);
-                        }
+                    }
+                    
+                    if (levelItems.Any())
+                    {
+                        workItemHierarchy.Add(levelItems);
+                        hierarchyAudiences.Add(level.Audience?.ToList() ?? new List<string>());
                     }
                 }
             }
@@ -538,8 +569,22 @@ else
             var processName = selectedProcess?.Name ?? "Unknown Process";
 
             var hierarchyKey = $"work-item-hierarchy-{selectedProcessId}";
-            var hierarchyData = workItemHierarchy.Select(level => level.Select(wi => wi.Name).ToArray()).ToArray();
-            var hierarchyJson = JsonSerializer.Serialize(hierarchyData);
+            
+            // Create hierarchy levels with audiences
+            var hierarchyLevels = new List<HierarchyLevel>();
+            for (int i = 0; i < workItemHierarchy.Count; i++)
+            {
+                var level = workItemHierarchy[i];
+                var audiences = i < hierarchyAudiences.Count ? hierarchyAudiences[i] : new List<string>();
+                
+                hierarchyLevels.Add(new HierarchyLevel
+                {
+                    WorkItemTypes = level.Select(wi => wi.Name).ToList(),
+                    Audience = audiences
+                });
+            }
+
+            var hierarchyJson = WorkItemHelper.SerializeHierarchyLevels(hierarchyLevels);
 
             await SettingsRepository.SetAsync(hierarchyKey, hierarchyJson, $"Process: {processName}");
             hasHierarchyChanges = false;
@@ -567,6 +612,7 @@ else
         if (unassignedWorkItems.Any() && workItemHierarchy.Count == 0)
         {
             workItemHierarchy.Add(new List<WorkItemTypeSummary>());
+            hierarchyAudiences.Add(new List<string>());
             hasHierarchyChanges = true;
         }
     }
@@ -574,7 +620,10 @@ else
     private void AddToHierarchy(WorkItemTypeSummary workItem)
     {
         if (workItemHierarchy.Count == 0)
+        {
             workItemHierarchy.Add(new List<WorkItemTypeSummary>());
+            hierarchyAudiences.Add(new List<string>());
+        }
 
         workItemHierarchy[0].Add(workItem);
         UpdateUnassignedWorkItems();
@@ -589,7 +638,11 @@ else
             workItemHierarchy[level].Remove(workItem);
 
             if (!workItemHierarchy[level].Any())
+            {
                 workItemHierarchy.RemoveAt(level);
+                if (level < hierarchyAudiences.Count)
+                    hierarchyAudiences.RemoveAt(level);
+            }
 
             UpdateUnassignedWorkItems();
             hasHierarchyChanges = true;
@@ -612,6 +665,7 @@ else
         if (level >= 0 && level <= workItemHierarchy.Count)
         {
             workItemHierarchy.Insert(level, new List<WorkItemTypeSummary>());
+            hierarchyAudiences.Insert(level, new List<string>());
             hasHierarchyChanges = true;
             StateHasChanged();
         }
@@ -622,6 +676,7 @@ else
         if (level >= 0 && level < workItemHierarchy.Count)
         {
             workItemHierarchy.Insert(level + 1, new List<WorkItemTypeSummary>());
+            hierarchyAudiences.Insert(level + 1, new List<string>());
             hasHierarchyChanges = true;
             StateHasChanged();
         }
@@ -632,6 +687,8 @@ else
         if (level < workItemHierarchy.Count && workItemHierarchy.Count > 1)
         {
             workItemHierarchy.RemoveAt(level);
+            if (level < hierarchyAudiences.Count)
+                hierarchyAudiences.RemoveAt(level);
             UpdateUnassignedWorkItems();
             hasHierarchyChanges = true;
             StateHasChanged();
@@ -643,6 +700,8 @@ else
         if (level > 0 && level < workItemHierarchy.Count)
         {
             (workItemHierarchy[level], workItemHierarchy[level - 1]) = (workItemHierarchy[level - 1], workItemHierarchy[level]);
+            if (level < hierarchyAudiences.Count && (level - 1) < hierarchyAudiences.Count)
+                (hierarchyAudiences[level], hierarchyAudiences[level - 1]) = (hierarchyAudiences[level - 1], hierarchyAudiences[level]);
             hasHierarchyChanges = true;
             StateHasChanged();
         }
@@ -653,6 +712,8 @@ else
         if (level >= 0 && level < workItemHierarchy.Count - 1)
         {
             (workItemHierarchy[level], workItemHierarchy[level + 1]) = (workItemHierarchy[level + 1], workItemHierarchy[level]);
+            if (level < hierarchyAudiences.Count && (level + 1) < hierarchyAudiences.Count)
+                (hierarchyAudiences[level], hierarchyAudiences[level + 1]) = (hierarchyAudiences[level + 1], hierarchyAudiences[level]);
             hasHierarchyChanges = true;
             StateHasChanged();
         }
@@ -661,7 +722,9 @@ else
     private void ClearHierarchy()
     {
         workItemHierarchy.Clear();
+        hierarchyAudiences.Clear();
         workItemHierarchy.Add(new List<WorkItemTypeSummary>());
+        hierarchyAudiences.Add(new List<string>());
         UpdateUnassignedWorkItems();
         hasHierarchyChanges = true;
         StateHasChanged();
@@ -679,7 +742,10 @@ else
             var targetLevel = int.Parse(dropItem.DropzoneIdentifier.Replace("level-", ""));
 
             while (workItemHierarchy.Count <= targetLevel)
+            {
                 workItemHierarchy.Add(new List<WorkItemTypeSummary>());
+                hierarchyAudiences.Add(new List<string>());
+            }
 
             workItemHierarchy[targetLevel].Add(dropItem.Item);
         }
@@ -711,5 +777,34 @@ else
             return $"background-color: {baseColor}; color: white; margin: 4px; border: 2px solid rgba(255,255,255,0.3); box-shadow: 0 2px 4px rgba(0,0,0,0.2); border-radius: 8px; min-width: 150px; max-width: 200px;";
         else
             return $"background-color: {baseColor}; color: white; margin: 4px; opacity: 0.9; transition: all 0.2s ease-in-out; border-radius: 8px; min-width: 150px; max-width: 200px;";
+    }
+
+    // Audience checkbox methods
+    private bool IsAudienceSelected(int level, string audience)
+    {
+        if (level >= hierarchyAudiences.Count) return false;
+        return hierarchyAudiences[level].Contains(audience);
+    }
+
+    private void OnAudienceChanged(int level, string audience, bool isSelected)
+    {
+        // Ensure we have enough audience lists
+        while (hierarchyAudiences.Count <= level)
+            hierarchyAudiences.Add(new List<string>());
+
+        var levelAudiences = hierarchyAudiences[level];
+        
+        if (isSelected && !levelAudiences.Contains(audience))
+        {
+            levelAudiences.Add(audience);
+            hasHierarchyChanges = true;
+        }
+        else if (!isSelected && levelAudiences.Contains(audience))
+        {
+            levelAudiences.Remove(audience);
+            hasHierarchyChanges = true;
+        }
+
+        StateHasChanged();
     }
 }

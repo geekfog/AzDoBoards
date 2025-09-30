@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using AzDoBoards.Utility.Models;
 
 namespace AzDoBoards.Utility;
 
@@ -50,7 +51,7 @@ public static class WorkItemHelper
     }
 
     /// <summary>
-    /// Parses hierarchy JSON string into a structured format
+    /// Parses hierarchy JSON string into a structured format (legacy format for backward compatibility)
     /// </summary>
     /// <param name="hierarchyJson">JSON string representing the hierarchy</param>
     /// <returns>Array of string arrays representing levels and work item names</returns>
@@ -58,6 +59,20 @@ public static class WorkItemHelper
     {
         if (string.IsNullOrEmpty(hierarchyJson) || hierarchyJson == "[]")
             return null;
+
+        try
+        {
+            // Try parsing as new format first
+            var newFormat = JsonSerializer.Deserialize<HierarchyLevel[]>(hierarchyJson);
+            if (newFormat != null)
+            {
+                return newFormat.Select(level => level.WorkItemTypes.ToArray()).ToArray();
+            }
+        }
+        catch
+        {
+            // Fall back to legacy format
+        }
 
         try
         {
@@ -70,7 +85,50 @@ public static class WorkItemHelper
     }
 
     /// <summary>
-    /// Serializes hierarchy structure to JSON
+    /// Parses hierarchy JSON string into the new HierarchyLevel format
+    /// </summary>
+    /// <param name="hierarchyJson">JSON string representing the hierarchy</param>
+    /// <returns>Array of HierarchyLevel objects</returns>
+    public static HierarchyLevel[]? ParseHierarchyLevelsJson(string hierarchyJson)
+    {
+        if (string.IsNullOrEmpty(hierarchyJson) || hierarchyJson == "[]")
+            return null;
+
+        try
+        {
+            // Try parsing as new format first
+            var newFormat = JsonSerializer.Deserialize<HierarchyLevel[]>(hierarchyJson);
+            if (newFormat != null)
+            {
+                return newFormat;
+            }
+        }
+        catch
+        {
+            // Fall back to legacy format and convert
+            try
+            {
+                var legacyFormat = JsonSerializer.Deserialize<string[][]>(hierarchyJson);
+                if (legacyFormat != null)
+                {
+                    return legacyFormat.Select(level => new HierarchyLevel
+                    {
+                        WorkItemTypes = level.ToList(),
+                        Audience = new List<string>() // Empty audiences for legacy data
+                    }).ToArray();
+                }
+            }
+            catch
+            {
+                // Ignore
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Serializes hierarchy structure to JSON (legacy format)
     /// </summary>
     /// <param name="hierarchy">Hierarchy structure</param>
     /// <returns>JSON string</returns>
@@ -78,5 +136,15 @@ public static class WorkItemHelper
     {
         var hierarchyData = hierarchy.Select(level => level.ToArray()).ToArray();
         return JsonSerializer.Serialize(hierarchyData);
+    }
+
+    /// <summary>
+    /// Serializes hierarchy levels to the new JSON format
+    /// </summary>
+    /// <param name="hierarchyLevels">Hierarchy levels with audiences</param>
+    /// <returns>JSON string</returns>
+    public static string SerializeHierarchyLevels(IEnumerable<HierarchyLevel> hierarchyLevels)
+    {
+        return JsonSerializer.Serialize(hierarchyLevels.ToArray());
     }
 }

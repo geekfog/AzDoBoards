@@ -344,8 +344,8 @@
                 return;
             }
 
-            // Load hierarchy
-            workItemHierarchy = await HierarchyService.LoadHierarchyAsync(processId, workItemTypes);
+            // Load hierarchy using the new method that supports audiences
+            workItemHierarchy = await HierarchyService.LoadHierarchyWithAudiencesAsync(processId, workItemTypes);
         }
         catch (Exception ex)
         {
