@@ -1,11 +1,716 @@
 ﻿@page "/roadmap"
+@using AzDoBoards.Client.Models
+@using AzDoBoards.Ui.Services
+@using AzDoBoards.Utility
+@using AzDoBoards.Utility.Models
+@using Microsoft.AspNetCore.Components.Authorization
+@using MudBlazor
+@inject RoadmapService RoadmapService
+@inject HierarchyService HierarchyService
+@inject ISnackbar Snackbar
+@inject ILogger<Roadmap> Logger
+@inject AuthenticationStateProvider AuthStateProvider
 
 <PageTitle>Roadmap</PageTitle>
 
 <div class="page-content-full-width mt-4">
-	<h1>Roadmap</h1>
+    @if (isLoading)
+    {
+        <MudContainer MaxWidth="MaxWidth.False" Class="d-flex justify-center align-center" Style="height: 200px;">
+            <MudStack AlignItems="AlignItems.Center" Spacing="3">
+                <MudProgressCircular Indeterminate="true" Size="Size.Large" />
+                <MudText Typo="Typo.h6">Loading roadmap data...</MudText>
+            </MudStack>
+        </MudContainer>
+    }
+    else if (!isAuthenticated)
+    {
+        <MudAlert Severity="Severity.Warning" Class="mb-4">
+            <MudText>Please sign in to view the roadmap.</MudText>
+        </MudAlert>
+    }
+    else if (!hasConfiguration)
+    {
+        <MudAlert Severity="Severity.Info" Class="mb-4">
+            <MudText>Please configure your work item hierarchy in Settings > Process to enable the roadmap view.</MudText>
+        </MudAlert>
+    }
+    else
+    {
+        <div class="roadmap-container">
+            <!-- Roadmap Toolbar -->
+            <div class="roadmap-toolbar">
+                <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                    <MudStack Row AlignItems="AlignItems.Center" Spacing="3">
+                        <MudText Typo="Typo.h5">Roadmap</MudText>
+                        <MudDivider Vertical="true" />
+                        
+                        <!-- Date Range Controls -->
+                        <MudDatePicker Date="configuration.StartDate" 
+                                     DateChanged="OnStartDateChanged"
+                                     Label="Start Date" 
+                                     Variant="Variant.Outlined" />
+                        
+                        <MudDatePicker Date="configuration.EndDate" 
+                                     DateChanged="OnEndDateChanged"
+                                     Label="End Date" 
+                                     Variant="Variant.Outlined" />
+                        
+                        <!-- Time Unit Selector -->
+                        <MudSelect T="RoadmapTimeUnit" 
+                                 Value="configuration.TimeUnit" 
+                                 ValueChanged="OnTimeUnitChanged"
+                                 Label="Time Unit" 
+                                 Variant="Variant.Outlined">
+                            <MudSelectItem Value="RoadmapTimeUnit.Week">Week</MudSelectItem>
+                            <MudSelectItem Value="RoadmapTimeUnit.Month">Month</MudSelectItem>
+                            <MudSelectItem Value="RoadmapTimeUnit.Quarter">Quarter</MudSelectItem>
+                        </MudSelect>
+                    </MudStack>
+                    
+                    <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
+                        <MudCheckBox Value="configuration.ShowDependencies" 
+                                   ValueChanged="@(async (bool value) => await OnShowDependenciesChanged(value))"
+                                   Label="Show Dependencies" 
+                                   Color="Color.Primary" />
+                        
+                        <MudIconButton Icon="@Icons.Material.Filled.Refresh" 
+                                     OnClick="LoadRoadmapDataAsync" 
+                                     Variant="Variant.Filled" 
+                                     Color="Color.Primary" 
+                                     data-title="Refresh Data" />
+                    </MudStack>
+                </MudStack>
+            </div>
+
+            <!-- Top Level Column -->
+            <div class="roadmap-top-level-column">
+                <MudText Typo="Typo.subtitle1" Class="mb-3">
+                    <MudIcon Icon="@Icons.Material.Filled.AccountTree" Class="mr-2" />
+                    @string.Join(", ", topLevelWorkItemTypes) (@(topLevelItems?.Count ?? 0))
+                </MudText>
+                
+                @if (topLevelItems?.Any() == true)
+                {
+                    <div class="top-level-items-container">
+                        @foreach (var item in topLevelItems)
+                        {
+                            <div class="top-level-item @(item.IsCollapsed ? "collapsed" : "")" 
+                                 style="--item-color: @item.Color"
+                                 @onclick="() => ToggleTopLevelItem(item.WorkItemId)">
+                                <div class="top-level-item-title">@item.Title</div>
+                                <div class="top-level-item-type">
+                                    <MudIcon Icon="@WorkItemHelper.GetWorkItemTypeSvgIcon(item.WorkItemType)" Size="Size.Small" />
+                                    @item.WorkItemType
+                                    <MudIcon Icon="@(item.IsCollapsed ? Icons.Material.Filled.ChevronRight : Icons.Material.Filled.ExpandMore)" 
+                                           Class="@GetCollapseToggleClass(item.IsCollapsed)" />
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <MudAlert Severity="Severity.Info">
+                        No @string.Join("/", topLevelWorkItemTypes) found in the current project.
+                    </MudAlert>
+                }
+            </div>
+
+            <!-- Unscheduled Column -->
+            <div class="roadmap-unscheduled-column">
+                <MudText Typo="Typo.subtitle1" Class="mb-3">
+                    <MudIcon Icon="@Icons.Material.Filled.Schedule" Class="mr-2" />
+                    Unscheduled (@(unscheduledItems?.Count ?? 0))
+                </MudText>
+                
+                @if (unscheduledItems?.Any() == true)
+                {
+                    <MudDropContainer T="UnscheduledWorkItem" 
+                                    Items="unscheduledItems" 
+                                    ItemDropped="OnUnscheduledItemDropped"
+                                    Class="unscheduled-items-container">
+                        <ChildContent>
+                            <MudDropZone T="UnscheduledWorkItem" 
+                                       Identifier="unscheduled" 
+                                       Class="unscheduled-items-container" 
+                                       AllowReorder="true">
+                            </MudDropZone>
+                        </ChildContent>
+                        <ItemRenderer>
+                            <div class="unscheduled-item" 
+                                 style="--item-color: @context.Color"
+                                 draggable="true">
+                                <div class="unscheduled-item-title">@context.Title</div>
+                                <div class="unscheduled-item-details">
+                                    <span>@context.WorkItemType</span>
+                                    <MudIcon Icon="@Icons.Material.Filled.DragIndicator" Size="Size.Small" />
+                                </div>
+                                @if (!string.IsNullOrEmpty(context.ParentTitle))
+                                {
+                                    <MudText Typo="Typo.caption" Class="mt-1">
+                                        Parent: @context.ParentTitle
+                                    </MudText>
+                                }
+                            </div>
+                        </ItemRenderer>
+                    </MudDropContainer>
+                }
+                else
+                {
+                    <MudAlert Severity="Severity.Success">
+                        All @string.Join("/", lowestLevelWorkItemTypes) are scheduled.
+                    </MudAlert>
+                }
+            </div>
+
+            <!-- Timeline Column -->
+            <div class="roadmap-timeline-column">
+                <!-- Timeline Header -->
+                <div class="timeline-header">
+                    <div class="timeline-months">
+                        @foreach (var month in GetTimelineMonths())
+                        {
+                            <div class="timeline-month" style="width: @(month.Width)%;">
+                                @month.Label
+                            </div>
+                        }
+                    </div>
+                    <div class="timeline-weeks">
+                        @foreach (var week in GetTimelineWeeks())
+                        {
+                            <div class="timeline-week" style="width: @(week.Width)%;">
+                                @week.Label
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <!-- Swimlanes -->
+                <div class="roadmap-swimlanes">
+                    @if (swimlanes?.Any() == true)
+                    {
+                        @foreach (var swimlane in GetVisibleSwimlanes())
+                        {
+                            <div class="roadmap-swimlane">
+                                <div class="swimlane-header level-@swimlane.Level" 
+                                     @onclick="() => ToggleSwimlane(swimlane.WorkItemId)">
+                                    <MudIcon Icon="@WorkItemHelper.GetWorkItemTypeSvgIcon(swimlane.WorkItemType)" Size="Size.Small" Class="mr-2" />
+                                    <MudText Class="flex-grow-1">@swimlane.Title</MudText>
+                                    @if (swimlane.Children.Any())
+                                    {
+                                        <MudIcon Icon="@(swimlane.IsCollapsed ? Icons.Material.Filled.ChevronRight : Icons.Material.Filled.ExpandMore)" />
+                                    }
+                                </div>
+                                
+                                <div class="swimlane-content">
+                                    <!-- Timeline Drop Zone -->
+                                    <MudDropContainer T="RoadmapTimelineItem" 
+                                                    Items="swimlane.TimelineItems" 
+                                                    ItemDropped="(item) => OnTimelineItemDropped(item, swimlane.WorkItemId)"
+                                                    Class="timeline-drop-zone">
+                                        <ChildContent>
+                                            <MudDropZone T="RoadmapTimelineItem" 
+                                                       Identifier="@($"timeline-{swimlane.WorkItemId}")" 
+                                                       Class="timeline-drop-zone">
+                                            </MudDropZone>
+                                        </ChildContent>
+                                        <ItemRenderer>
+                                            <div class="timeline-item" 
+                                                 style="--item-color: @context.Color; left: @(context.LeftPosition)%; width: @(context.Width)%; top: @(context.SwimLaneLevel * 36)px;"
+                                                 draggable="true"
+                                                 @onclick="() => ShowWorkItemDetails(context)">
+                                                <span class="flex-grow-1">@GetDisplayTitle(context.Title)</span>
+                                                @if (!string.IsNullOrEmpty(context.AssignedTo))
+                                                {
+                                                    <MudTooltip Text="@context.AssignedTo">
+                                                        <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" Class="mr-1" />
+                                                    </MudTooltip>
+                                                }
+                                                <MudIcon Icon="@Icons.Material.Filled.DragIndicator" Class="move-icon" Size="Size.Small" />
+                                            </div>
+                                        </ItemRenderer>
+                                    </MudDropContainer>
+                                </div>
+                                
+                                @if (!swimlane.IsCollapsed && swimlane.Children.Any())
+                                {
+                                    <div class="swimlane-children">
+                                        @foreach (var childSwimlane in swimlane.Children)
+                                        {
+                                            <div class="roadmap-swimlane">
+                                                <div class="swimlane-header level-@childSwimlane.Level">
+                                                    <MudIcon Icon="@WorkItemHelper.GetWorkItemTypeSvgIcon(childSwimlane.WorkItemType)" Size="Size.Small" Class="mr-2" />
+                                                    <MudText Class="flex-grow-1">@childSwimlane.Title</MudText>
+                                                </div>
+                                                
+                                                <div class="swimlane-content">
+                                                    <MudDropContainer T="RoadmapTimelineItem" 
+                                                                    Items="childSwimlane.TimelineItems" 
+                                                                    ItemDropped="(item) => OnTimelineItemDropped(item, childSwimlane.WorkItemId)"
+                                                                    Class="timeline-drop-zone">
+                                                        <ChildContent>
+                                                            <MudDropZone T="RoadmapTimelineItem" 
+                                                                       Identifier="@($"timeline-{childSwimlane.WorkItemId}")" 
+                                                                       Class="timeline-drop-zone">
+                                                            </MudDropZone>
+                                                        </ChildContent>
+                                                        <ItemRenderer>
+                                                            <div class="timeline-item" 
+                                                                 style="--item-color: @context.Color; left: @(context.LeftPosition)%; width: @(context.Width)%; top: @(context.SwimLaneLevel * 36)px;"
+                                                                 draggable="true"
+                                                                 @onclick="() => ShowWorkItemDetails(context)">
+                                                                <span class="flex-grow-1">@GetDisplayTitle(context.Title)</span>
+                                                                @if (!string.IsNullOrEmpty(context.AssignedTo))
+                                                                {
+                                                                    <MudTooltip Text="@context.AssignedTo">
+                                                                        <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" Class="mr-1" />
+                                                                    </MudTooltip>
+                                                                }
+                                                                <MudIcon Icon="@Icons.Material.Filled.DragIndicator" Class="move-icon" Size="Size.Small" />
+                                                            </div>
+                                                        </ItemRenderer>
+                                                    </MudDropContainer>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div style="padding: 40px; text-align: center;">
+                            <MudAlert Severity="Severity.Info">
+                                No roadmap data available. Check your work item hierarchy configuration and ensure you have work items in the selected project.
+                            </MudAlert>
+                        </div>
+                    }
+                </div>
+
+                <!-- Dependency Lines (SVG Overlay) -->
+                @if (configuration.ShowDependencies)
+                {
+                    <svg class="dependency-lines-container">
+                        <defs>
+                            <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+                                <path d="M0,0 L0,6 L9,3 z" class="dependency-arrow" />
+                            </marker>
+                        </defs>
+                        @foreach (var dependency in GetVisibleDependencies())
+                        {
+                            <line class="dependency-line @(dependency.Type == DependencyType.Related ? "related" : "")"
+                                  x1="@dependency.X1" y1="@dependency.Y1"
+                                  x2="@dependency.X2" y2="@dependency.Y2" />
+                        }
+                    </svg>
+                }
+            </div>
+        </div>
+    }
 </div>
 
-@code {
+<!-- Work Item Details Dialog -->
+<MudDialog @bind-Visible="showWorkItemDialog" Options="dialogOptions">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@WorkItemHelper.GetWorkItemTypeSvgIcon(selectedWorkItem?.WorkItemType ?? "")" Class="mr-3" />
+            @selectedWorkItem?.Title
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        @if (selectedWorkItem != null)
+        {
+            <MudGrid>
+                <MudItem xs="6">
+                    <MudTextField @bind-Value="selectedWorkItem.Title" 
+                                Label="Title" 
+                                Variant="Variant.Outlined" 
+                                ReadOnly="true" />
+                </MudItem>
+                <MudItem xs="6">
+                    <MudTextField @bind-Value="selectedWorkItem.WorkItemType" 
+                                Label="Type" 
+                                Variant="Variant.Outlined" 
+                                ReadOnly="true" />
+                </MudItem>
+                <MudItem xs="6">
+                    <MudTextField @bind-Value="selectedWorkItem.State" 
+                                Label="State" 
+                                Variant="Variant.Outlined" 
+                                ReadOnly="true" />
+                </MudItem>
+                <MudItem xs="6">
+                    <MudTextField @bind-Value="selectedWorkItem.AssignedTo" 
+                                Label="Assigned To" 
+                                Variant="Variant.Outlined" 
+                                ReadOnly="true" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudDatePicker @bind-Date="selectedWorkItemTargetDate" 
+                                 Label="Target Date" 
+                                 Variant="Variant.Outlined" />
+                </MudItem>
+            </MudGrid>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="CloseWorkItemDialog">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="SaveWorkItemChanges">Save</MudButton>
+    </DialogActions>
+</MudDialog>
 
+@code {
+    private bool isLoading = true;
+    private bool isAuthenticated = false;
+    private bool hasConfiguration = false;
+
+    private string currentProcessId = string.Empty;
+    private string currentProjectId = string.Empty;
+    
+    private List<string> topLevelWorkItemTypes = new();
+    private List<string> parentLevelWorkItemTypes = new();
+    private List<string> lowestLevelWorkItemTypes = new();
+    
+    private List<WorkItem> allWorkItems = new();
+    private List<RoadmapSwimLane> swimlanes = new();
+    private List<RoadmapSwimLane>? topLevelItems = new();
+    private List<UnscheduledWorkItem>? unscheduledItems = new();
+    
+    private RoadmapConfiguration configuration = new();
+    
+    // Dialog state
+    private bool showWorkItemDialog = false;
+    private RoadmapTimelineItem? selectedWorkItem = null;
+    private DateTime? selectedWorkItemTargetDate = null;
+    private DialogOptions dialogOptions = new() { MaxWidth = MaxWidth.Medium, FullWidth = true };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadRoadmapDataAsync();
+    }
+
+    private async Task LoadRoadmapDataAsync()
+    {
+        isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            // Check authentication
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            isAuthenticated = authState.User?.Identity?.IsAuthenticated ?? false;
+
+            if (!isAuthenticated)
+            {
+                isLoading = false;
+                StateHasChanged();
+                return;
+            }
+
+            // Load current configuration
+            currentProcessId = await HierarchyService.GetCurrentProcessIdAsync();
+            currentProjectId = await HierarchyService.GetCurrentProjectIdAsync(currentProcessId);
+
+            if (string.IsNullOrEmpty(currentProcessId) || string.IsNullOrEmpty(currentProjectId))
+            {
+                hasConfiguration = false;
+                isLoading = false;
+                StateHasChanged();
+                return;
+            }
+
+            // Load hierarchy configuration
+            var hierarchyLevels = await RoadmapService.GetRoadmapHierarchyLevelsAsync(currentProcessId);
+            if (!hierarchyLevels.Any())
+            {
+                hasConfiguration = false;
+                isLoading = false;
+                StateHasChanged();
+                return;
+            }
+
+            hasConfiguration = true;
+
+            // Load work item types for each level
+            topLevelWorkItemTypes = await RoadmapService.GetTopLevelWorkItemTypesAsync(currentProcessId);
+            parentLevelWorkItemTypes = await RoadmapService.GetParentLevelWorkItemTypesAsync(currentProcessId);
+            lowestLevelWorkItemTypes = await RoadmapService.GetLowestLevelWorkItemTypesAsync(currentProcessId);
+
+            // Load configuration
+            configuration = await RoadmapService.GetDefaultConfigurationAsync();
+
+            // Load all work items
+            allWorkItems = await RoadmapService.LoadRoadmapWorkItemsAsync(currentProjectId, currentProcessId);
+
+            // Build swimlanes structure
+            swimlanes = await RoadmapService.BuildRoadmapSwimlanesAsync(allWorkItems, currentProcessId);
+            
+            // Extract top level items for the first column
+            topLevelItems = swimlanes;
+
+            // Get unscheduled items
+            unscheduledItems = await RoadmapService.GetUnscheduledWorkItemsAsync(allWorkItems, currentProcessId);
+
+            // Calculate timeline positions
+            foreach (var swimlane in swimlanes)
+            {
+                foreach (var child in swimlane.Children)
+                {
+                    child.TimelineItems = RoadmapService.CalculateTimelinePositions(child.TimelineItems, configuration);
+                }
+            }
+
+            Logger.LogInformation("Loaded roadmap data: {TopLevel} top-level items, {Swimlanes} swimlanes, {Unscheduled} unscheduled items",
+                topLevelItems?.Count ?? 0, swimlanes.Count, unscheduledItems?.Count ?? 0);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading roadmap data");
+            Snackbar.Add($"Error loading roadmap data: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task OnConfigurationChanged()
+    {
+        try
+        {
+            await RoadmapService.SaveConfigurationAsync(configuration);
+            
+            // Recalculate timeline positions with new configuration
+            foreach (var swimlane in swimlanes)
+            {
+                foreach (var child in swimlane.Children)
+                {
+                    child.TimelineItems = RoadmapService.CalculateTimelinePositions(child.TimelineItems, configuration);
+                }
+            }
+            
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error saving configuration");
+            Snackbar.Add("Error saving configuration", Severity.Error);
+        }
+    }
+
+    private async Task OnStartDateChanged(DateTime? newDate)
+    {
+        if (newDate.HasValue)
+        {
+            configuration.StartDate = newDate.Value;
+            await OnConfigurationChanged();
+        }
+    }
+
+    private async Task OnEndDateChanged(DateTime? newDate)
+    {
+        if (newDate.HasValue)
+        {
+            configuration.EndDate = newDate.Value;
+            await OnConfigurationChanged();
+        }
+    }
+
+    private async Task OnTimeUnitChanged(RoadmapTimeUnit newTimeUnit)
+    {
+        configuration.TimeUnit = newTimeUnit;
+        await OnConfigurationChanged();
+    }
+
+    private async Task OnShowDependenciesChanged(bool showDependencies)
+    {
+        configuration.ShowDependencies = showDependencies;
+        await OnConfigurationChanged();
+    }
+
+    private void ToggleTopLevelItem(int workItemId)
+    {
+        var item = topLevelItems?.FirstOrDefault(tl => tl.WorkItemId == workItemId);
+        var swimlane = swimlanes.FirstOrDefault(sl => sl.WorkItemId == workItemId);
+        
+        if (item != null && swimlane != null)
+        {
+            item.IsCollapsed = !item.IsCollapsed;
+            swimlane.IsCollapsed = item.IsCollapsed;
+            StateHasChanged();
+        }
+    }
+
+    private void ToggleSwimlane(int workItemId)
+    {
+        var swimlane = FindSwimlaneById(workItemId);
+        if (swimlane != null)
+        {
+            swimlane.IsCollapsed = !swimlane.IsCollapsed;
+            StateHasChanged();
+        }
+    }
+
+    private RoadmapSwimLane? FindSwimlaneById(int workItemId)
+    {
+        foreach (var swimlane in swimlanes)
+        {
+            if (swimlane.WorkItemId == workItemId)
+                return swimlane;
+            
+            var child = swimlane.Children.FirstOrDefault(c => c.WorkItemId == workItemId);
+            if (child != null)
+                return child;
+        }
+        return null;
+    }
+
+    private List<RoadmapSwimLane> GetVisibleSwimlanes()
+    {
+        return swimlanes.Where(sl => !sl.IsCollapsed || topLevelItems?.Any(tl => tl.WorkItemId == sl.WorkItemId && !tl.IsCollapsed) == true).ToList();
+    }
+
+    private void OnUnscheduledItemDropped(MudItemDropInfo<UnscheduledWorkItem> dropInfo)
+    {
+        // This would be called when an unscheduled item is dropped onto the timeline
+        // The actual drop zone handling would need to be implemented based on where it's dropped
+        Logger.LogInformation("Unscheduled item {WorkItemId} dropped", dropInfo.Item?.WorkItemId);
+        
+        // TODO: Calculate target date based on drop position and update the work item
+        if (dropInfo.Item != null)
+        {
+            Snackbar.Add($"Moved {dropInfo.Item.Title} to timeline", Severity.Success);
+        }
+    }
+
+    private void OnTimelineItemDropped(MudItemDropInfo<RoadmapTimelineItem> dropInfo, int swimlaneId)
+    {
+        // This would be called when a timeline item is moved to a different position
+        Logger.LogInformation("Timeline item {WorkItemId} dropped in swimlane {SwimlaneId}", 
+            dropInfo.Item?.WorkItemId, swimlaneId);
+        
+        // TODO: Calculate new target date based on drop position and update the work item
+        if (dropInfo.Item != null)
+        {
+            Snackbar.Add($"Rescheduled {dropInfo.Item.Title}", Severity.Success);
+        }
+    }
+
+    private void ShowWorkItemDetails(RoadmapTimelineItem item)
+    {
+        selectedWorkItem = item;
+        selectedWorkItemTargetDate = item.TargetDate;
+        showWorkItemDialog = true;
+    }
+
+    private void CloseWorkItemDialog()
+    {
+        showWorkItemDialog = false;
+        selectedWorkItem = null;
+        selectedWorkItemTargetDate = null;
+    }
+
+    private async Task SaveWorkItemChanges()
+    {
+        if (selectedWorkItem == null) return;
+
+        try
+        {
+            var success = await RoadmapService.UpdateWorkItemTargetDateAsync(
+                selectedWorkItem.WorkItemId, selectedWorkItemTargetDate);
+            
+            if (success)
+            {
+                selectedWorkItem.TargetDate = selectedWorkItemTargetDate;
+                Snackbar.Add("Work item updated successfully", Severity.Success);
+                CloseWorkItemDialog();
+                
+                // Recalculate positions
+                foreach (var swimlane in swimlanes)
+                {
+                    foreach (var child in swimlane.Children)
+                    {
+                        child.TimelineItems = RoadmapService.CalculateTimelinePositions(child.TimelineItems, configuration);
+                    }
+                }
+                StateHasChanged();
+            }
+            else
+            {
+                Snackbar.Add("Failed to update work item", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error updating work item {WorkItemId}", selectedWorkItem.WorkItemId);
+            Snackbar.Add("Error updating work item", Severity.Error);
+        }
+    }
+
+    private List<(string Label, double Width)> GetTimelineMonths()
+    {
+        var months = new List<(string Label, double Width)>();
+        var totalDays = (configuration.EndDate - configuration.StartDate).TotalDays;
+        
+        var current = new DateTime(configuration.StartDate.Year, configuration.StartDate.Month, 1);
+        while (current <= configuration.EndDate)
+        {
+            var nextMonth = current.AddMonths(1);
+            var startDate = current < configuration.StartDate ? configuration.StartDate : current;
+            var endDate = nextMonth > configuration.EndDate ? configuration.EndDate : nextMonth.AddDays(-1);
+            var days = (endDate - startDate).TotalDays + 1;
+            var width = (days / totalDays) * 100.0;
+            
+            months.Add((current.ToString("MMM yyyy"), width));
+            current = nextMonth;
+        }
+        
+        return months;
+    }
+
+    private List<(string Label, double Width)> GetTimelineWeeks()
+    {
+        var weeks = new List<(string Label, double Width)>();
+        var totalDays = (configuration.EndDate - configuration.StartDate).TotalDays;
+        
+        var current = configuration.StartDate;
+        while (current <= configuration.EndDate)
+        {
+            var weekEnd = current.AddDays(6);
+            if (weekEnd > configuration.EndDate)
+                weekEnd = configuration.EndDate;
+            
+            var days = (weekEnd - current).TotalDays + 1;
+            var width = (days / totalDays) * 100.0;
+            
+            var weekLabel = configuration.TimeUnit == RoadmapTimeUnit.Week 
+                ? current.ToString("MM/dd") 
+                : current.Day.ToString();
+            
+            weeks.Add((weekLabel, width));
+            current = current.AddDays(7);
+        }
+        
+        return weeks;
+    }
+
+    private List<(double X1, double Y1, double X2, double Y2, DependencyType Type)> GetVisibleDependencies()
+    {
+        // This would return the calculated positions for dependency lines
+        // For now, return empty list as dependency calculation would be complex
+        return new List<(double, double, double, double, DependencyType)>();
+    }
+
+    private string GetDisplayTitle(string title)
+    {
+        return title.Length > 30 ? title.Substring(0, 27) + "..." : title;
+    }
+
+    private string GetCollapseToggleClass(bool isCollapsed)
+    {
+        return $"collapse-toggle {(isCollapsed ? "collapsed" : "")}";
+    }
 }
