@@ -1,18 +1,18 @@
 # AzDo Boards Project Management Tool
 
+***NOTE**: This is under heavy development. In short, it is incomplete. This is an idea that has been noodled for a while. Now this is being attempted for future efficiency of project work, to give back, to see if there is interest within the open source community, and potential business opportunities. The goal is to try different items to see what looks and feels right. AI is leveraged as a coding companion (right now, Claude Sonnet 4, Claude Sonnet 4.5, and GPT-5 are leveraged) as part of the experimentation. It is with interest to see where this goes, if anywhere. The goal is to make a usable product and remove this banner. Perhaps this could be commercially viable (but always open-source), similarly done and inspired by [IdentityServer](https://github.com/DuendeSoftware/products/tree/main/identity-server).*
+
 ## Overview
 
 <img src="Images/favicon-0512.png" alt="AzDo Boards Icon" style="zoom:25%; float:right;" />AzDo Boards (pronounced "As-Do Boards") is to be a tool to assist with project management within Azure DevOps Boards. The UI within Azure DevOps Boards is clunky for doing project management and quickly adding or updating information. 
 
-This supports a custom-defined work item hierarchy based on work item types (e.g., Initiative > Epic > Feature > User Story / Bug / Research > Tasks).
-
-*This is an idea that has been noodled for a while. Now this is being attempted for future efficiency of project work, to give back, to see if there is interest within the open source community, and potential business opportunities. It is with interest to see where this goes, if anywhere.*
+This supports a custom-defined work item hierarchy based on work item types (e.g., Initiative > Epic > Feature > User Story / Bug / Research > Tasks). This helps with reporting and tracking.
 
 ## Future Action Items
 
 1. Add support for certificates in place of Client Secret for the App Registration and Azure DevOps downstream API support.
 
-## Definitions
+# Definitions
 
 | Item           | Definition                                                   |
 | -------------- | ------------------------------------------------------------ |
@@ -21,8 +21,6 @@ This supports a custom-defined work item hierarchy based on work item types (e.g
 | State Category | Groups individual states into broader categories, such as "Proposed," "In Progress," or "Completed." This categorization simplifies reporting, visualization, and automation by allowing different states to be grouped for aggregate tracking. |
 | Work Item      | A unit of work tracked in Azure DevOps Boards—such as a feature, bug, user story, task, or issue. Work items are objects in the system, each with a unique ID and a collection of fields that help teams organize, assign, and track progress against goals. |
 | Work Item Type | Defines the template or schema for a work item, including its fields, workflow states, and rules. Examples include Epic, Feature, User Story, Bug, and Task. The available types depend on the project’s chosen Process. |
-
-
 
 # Development Technologies
 
@@ -38,6 +36,7 @@ This supports a custom-defined work item hierarchy based on work item types (e.g
   - [Memurai](https://www.memurai.com/get-memurai) (Free version of Redis Cache on Developer Machine - can also purchase Enterprise Edition)
   - Redis for Windows ([tporadowski/redis](https://github.com/tporadowski/redis/releases)) - last update February 17, 2022
 - (Optional) Azure Storage Explorer ([Download](https://azure.microsoft.com/en-us/products/storage/storage-explorer))
+- [Snyk](https://app.snyk.io) Code Scanning Service
 
 *At this time, the formatting of source code presumes use of 4K monitor(s) using 100% scale with DPI. This means lines of code or text may go quite wide, which could be harder to see if running lower resolution.*
 
@@ -80,8 +79,6 @@ echo All Services Launched.
 ```
 
 
-
-
 # Configuration
 
 ## Application
@@ -115,8 +112,6 @@ The settings supported are as follows:
 }
 ```
 
-
-
 ## Azure Portal App Registration
 
 An App Registration is required to allow this application to integrate with Azure DevOps using Azure Entra ID authentication (presuming Azure DevOps is integrated into Azure Entra ID via Organization Settings > Microsoft Entra).
@@ -142,11 +137,5 @@ An App Registration is required to allow this application to integrate with Azur
    Additional are automatically added based on the additional claims desired. For the examples given, email and profile are required for the claims to be received.
 
    To have the API permissions configured for all users up front so they don't have to approve during login, use the **Enterprise applications** blade (link to it is available via Manage > API permissions) to view and manage consented permissions for individual apps as well as the tenant's consent settings.
-
-# Contributors
-
-The following primary contributors:
-
-- [Hans Dickel](https://github.com/geekfog)
 
 \~End\~

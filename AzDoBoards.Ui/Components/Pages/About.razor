@@ -4,12 +4,21 @@
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.Identity.Client
 @using MudBlazor
+@using System.Reflection
 @inject IServiceProvider ServiceProvider
 
 <PageTitle>About</PageTitle>
 
 <div class="page-content-full-width mt-4">
     <h1>About</h1>
+
+    <div class="mb-4">
+        <MudCard>
+            <MudCardContent>
+                <MudText Typo="Typo.body2"><strong>Version:</strong> @AssemblyVersion</MudText>
+            </MudCardContent>
+        </MudCard>
+    </div>
 
     <MudAlert Severity="Severity.Info" Class="mb-4">
         <MudText Typo="Typo.body1">
@@ -95,8 +104,13 @@
     private List<Claim> UserClaimsList = new();
     private List<RedisEntry> RedisEntries = new();
 
+    // Assembly version properties
+    private string AssemblyVersion = string.Empty;
+
     protected override void OnInitialized()
     {
+        LoadAssemblyInfo();
+        
         // Fire and forget - don't await
         _ = Task.Run(async () =>
         {
@@ -110,6 +124,12 @@
                 await InvokeAsync(StateHasChanged);
             }
         });
+    }
+
+    private void LoadAssemblyInfo()
+    {
+        var assembly = Assembly.GetExecutingAssembly();
+        AssemblyVersion = assembly.GetName().Version?.ToString() ?? "Unknown";       
     }
 
     private async Task LoadAllDataAsync()

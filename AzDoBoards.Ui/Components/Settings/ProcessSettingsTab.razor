@@ -235,7 +235,6 @@ else
 
     private bool isInitialized = false;
     private bool isInitialLoading = false;
-    private bool isLoadingProcesses = false;
     private bool isLoadingWorkItemTypes = false;
     private bool isLoadingProjects = false;
     private bool hasHierarchyChanges = false;
@@ -317,7 +316,6 @@ else
     {
         try
         {
-            isLoadingProcesses = true;
             if (!isInitialLoading) StateHasChanged();
 
             var authProvider = ServiceProvider.GetRequiredService<AuthenticationStateProvider>();
@@ -341,7 +339,6 @@ else
         }
         finally
         {
-            isLoadingProcesses = false;
             if (!isInitialLoading) StateHasChanged();
         }
     }

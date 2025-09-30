@@ -93,8 +93,7 @@
                         <CardHeaderActions>
                             <MudIconButton Icon="@Icons.Material.Filled.Refresh" 
                                          Color="Color.Primary" 
-                                         OnClick="RefreshWorkItemsAsync" 
-                                         Title="Refresh" />
+                                         OnClick="RefreshWorkItemsAsync" />
                         </CardHeaderActions>
                     </MudCardHeader>
                     <MudCardContent Class="pa-0">
@@ -110,13 +109,12 @@
                                    FixedHeader="true">
                             <Columns>
                                 <!-- Action Column -->
-                                <PropertyColumn Property="x => x.Id" Title="" Sortable="false" Filterable="false" InitialDirection="SortDirection.None">
+                                <PropertyColumn Property="x => x.Id" Sortable="false" Filterable="false" InitialDirection="SortDirection.None">
                                     <CellTemplate>
                                         <MudIconButton Icon="@Icons.Material.Filled.OpenInNew" 
                                                      Size="Size.Small" 
                                                      Color="Color.Primary"
-                                                     OnClick="@(() => OpenWorkItem(context.Item.Id))"
-                                                     Title="Open Work Item" />
+                                                     OnClick="@(() => OpenWorkItem(context.Item.Id))" />
                                     </CellTemplate>
                                 </PropertyColumn>
 
@@ -156,9 +154,8 @@
                                 <PropertyColumn Property="x => x.WorkItemType" Title="Type" Sortable="true" Filterable="true">
                                     <CellTemplate>
                                         <MudTooltip Text="@context.Item.WorkItemType">
-                                            <div style="@($"color: {context.Item.Color}")">
-                                                <MudIcon Icon="@WorkItemHelper.GetWorkItemTypeSvgIcon(context.Item.WorkItemType)" 
-                                                       Size="Size.Medium" />
+                                            <div style="@($"color:#{context.Item.Color}")">
+                                                <MudIcon Icon="@WorkItemHelper.GetWorkItemTypeSvgIcon(context.Item.WorkItemType)" Size="Size.Medium" />
                                             </div>
                                         </MudTooltip>
                                     </CellTemplate>

@@ -30,7 +30,7 @@ public class WorkItemServices(ConnectionFactory connectionFactory) : Base(connec
 
         var workItemIds = workItemQueryResult.WorkItems.Select(wi => wi.Id).ToArray();
         var workItems = await workItemClient.GetWorkItemsAsync(workItemIds, expand: WorkItemExpand.All);
-        return [.. workItems.Select(ConvertToWorkItem)];
+        return [.. workItems.Select(azWorkItem => ConvertToWorkItem(azWorkItem, null))];
     }
 
     /// <summary>
@@ -43,6 +43,13 @@ public class WorkItemServices(ConnectionFactory connectionFactory) : Base(connec
     {
         if (workItemTypes.Count == 0) return [];
 
+        // Create a dictionary to map work item type names to their colors
+        var workItemTypeColors = workItemTypes.ToDictionary(
+            wit => wit.Name, 
+            wit => wit.Color,
+            StringComparer.OrdinalIgnoreCase
+        );
+
         var filter = new WorkItemFilter
         {
             ProjectId = projectId,
@@ -51,7 +58,21 @@ public class WorkItemServices(ConnectionFactory connectionFactory) : Base(connec
             Top = 500 // Increase limit for hierarchy queries
         };
 
-        return await GetWorkItemsAsync(filter);
+        var connection = await _connectionFactory.GetConnectionAsync();
+        var workItemClient = connection.GetClient<WorkItemTrackingHttpClient>();
+
+        // If state categories are specified, we need to resolve them to actual states
+        var resolvedFilter = await ResolveStateCategoriesAsync(filter);
+        
+        var wiqlQuery = BuildWiqlQuery(resolvedFilter); // Build the WIQL query dynamically
+        var wiql = new Wiql { Query = wiqlQuery };
+        var workItemQueryResult = await workItemClient.QueryByWiqlAsync(wiql, resolvedFilter.ProjectId);
+
+        if (workItemQueryResult.WorkItems?.Any() != true) return [];
+
+        var workItemIds = workItemQueryResult.WorkItems.Select(wi => wi.Id).ToArray();
+        var workItems = await workItemClient.GetWorkItemsAsync(workItemIds, expand: WorkItemExpand.All);
+        return [.. workItems.Select(azWorkItem => ConvertToWorkItem(azWorkItem, workItemTypeColors))];
     }
 
     /// <summary>
@@ -263,8 +284,9 @@ public class WorkItemServices(ConnectionFactory connectionFactory) : Base(connec
     /// Converts Azure DevOps WorkItem to our WorkItem model
     /// </summary>
     /// <param name="azWorkItem">Azure DevOps work item</param>
+    /// <param name="workItemTypeColors">Optional dictionary mapping work item types to their colors</param>
     /// <returns>Converted work item</returns>
-    private static WorkItem ConvertToWorkItem(Microsoft.TeamFoundation.WorkItemTracking.WebApi.Models.WorkItem azWorkItem)
+    private static WorkItem ConvertToWorkItem(Microsoft.TeamFoundation.WorkItemTracking.WebApi.Models.WorkItem azWorkItem, Dictionary<string, string>? workItemTypeColors = null)
     {
         var workItem = new WorkItem
         {
@@ -305,8 +327,16 @@ public class WorkItemServices(ConnectionFactory connectionFactory) : Base(connec
                                      .ToList();
         }
 
-        // Set color based on work item type (can be enhanced later)
-        workItem.Color = GetWorkItemTypeColor(workItem.WorkItemType);
+        // Set color based on work item type - use provided colors if available, otherwise use a neutral fallback
+        if (workItemTypeColors?.TryGetValue(workItem.WorkItemType, out var configuredColor) == true && !string.IsNullOrEmpty(configuredColor))
+        {
+            workItem.Color = configuredColor;
+        }
+        else
+        {
+            // Use a neutral fallback color when no configured color is available
+            workItem.Color = "#6C757D"; // Bootstrap's secondary color - neutral gray
+        }
 
         return workItem;
     }
@@ -338,27 +368,5 @@ public class WorkItemServices(ConnectionFactory connectionFactory) : Base(connec
             }
         }
         return default;
-    }
-
-    /// <summary>
-    /// Gets a default color for a work item type
-    /// </summary>
-    /// <param name="workItemType">Work item type name</param>
-    /// <returns>Color hex string</returns>
-    private static string GetWorkItemTypeColor(string workItemType)
-    {
-        return workItemType.ToLower() switch
-        {
-            "epic" => "#FF7B00",
-            "feature" => "#773B93", 
-            "user story" => "#009CCC",
-            "story" => "#009CCC",
-            "bug" => "#E60017",
-            "task" => "#F2CB1D",
-            "issue" => "#CC293D",
-            "impediment" => "#CC293D",
-            "test case" => "#004B50",
-            _ => "#1976d2"
-        };
     }
 }
