@@ -143,11 +143,22 @@ public class RoadmapService
             var parentLevelTypes = await GetParentLevelWorkItemTypesAsync(processId);
             var lowestLevelTypes = await GetLowestLevelWorkItemTypesAsync(processId);
 
-            // Group by top level work items (e.g., Initiatives)
+            _logger.LogInformation("Building swimlanes - Top: {TopTypes}, Parent: {ParentTypes}, Lowest: {LowestTypes}",
+                string.Join(",", topLevelTypes), string.Join(",", parentLevelTypes), string.Join(",", lowestLevelTypes));
+
+            // STEP 1: Create a dictionary of all work items for quick lookup
+            var workItemLookup = workItems.ToDictionary(wi => wi.Id, wi => wi);
+
+            // STEP 2: Get actual parent-child relationships from Azure DevOps
+            var parentChildMap = await GetWorkItemRelationshipsAsync(workItems.Select(wi => wi.Id).ToList());
+
+            // STEP 3: Group by top level work items (e.g., Initiatives)
             var topLevelItems = workItems
                 .Where(wi => topLevelTypes.Contains(wi.WorkItemType, StringComparer.OrdinalIgnoreCase))
                 .OrderBy(wi => wi.Title)
                 .ToList();
+
+            _logger.LogInformation("Found {TopLevelCount} top-level items", topLevelItems.Count);
 
             foreach (var topLevelItem in topLevelItems)
             {
@@ -158,14 +169,22 @@ public class RoadmapService
                     WorkItemType = topLevelItem.WorkItemType,
                     Color = topLevelItem.Color,
                     Level = 0,
-                    IsCollapsed = false
+                    IsCollapsed = false,
+                    Children = new List<RoadmapSwimLane>(),
+                    TimelineItems = new List<RoadmapTimelineItem>()
                 };
 
-                // Find parent level items (e.g., Epics) under this top level item
-                var parentItems = GetChildWorkItems(workItems, topLevelItem.Id)
+                // STEP 4: Find parent level items (e.g., Epics) that are children of this top level item
+                var parentItemIds = parentChildMap.ContainsKey(topLevelItem.Id) ? parentChildMap[topLevelItem.Id] : new List<int>();
+                var parentItems = parentItemIds
+                    .Where(id => workItemLookup.ContainsKey(id))
+                    .Select(id => workItemLookup[id])
                     .Where(wi => parentLevelTypes.Contains(wi.WorkItemType, StringComparer.OrdinalIgnoreCase))
                     .OrderBy(wi => wi.Title)
                     .ToList();
+
+                _logger.LogInformation("Top-level item {TopItemId} '{TopItemTitle}' has {ParentCount} direct children: {ParentIds}",
+                    topLevelItem.Id, topLevelItem.Title, parentItems.Count, string.Join(", ", parentItems.Select(p => p.Id)));
 
                 foreach (var parentItem in parentItems)
                 {
@@ -176,22 +195,35 @@ public class RoadmapService
                         WorkItemType = parentItem.WorkItemType,
                         Color = parentItem.Color,
                         Level = 1,
-                        IsCollapsed = false
+                        IsCollapsed = false,
+                        Children = new List<RoadmapSwimLane>(),
+                        TimelineItems = new List<RoadmapTimelineItem>()
                     };
 
-                    // Find timeline items (e.g., Features) under this parent
-                    var timelineItems = GetChildWorkItems(workItems, parentItem.Id)
+                    // STEP 5: Find timeline items (e.g., Features) that are children of this parent
+                    var timelineItemIds = parentChildMap.ContainsKey(parentItem.Id) ? parentChildMap[parentItem.Id] : new List<int>();
+                    var timelineItems = timelineItemIds
+                        .Where(id => workItemLookup.ContainsKey(id))
+                        .Select(id => workItemLookup[id])
                         .Where(wi => lowestLevelTypes.Contains(wi.WorkItemType, StringComparer.OrdinalIgnoreCase))
                         .Select(ConvertToTimelineItem)
                         .ToList();
+
+                    _logger.LogInformation("Parent item {ParentItemId} '{ParentItemTitle}' has {TimelineItemCount} timeline items: {ItemIds}",
+                        parentItem.Id, parentItem.Title, timelineItems.Count, 
+                        string.Join(", ", timelineItems.Select(ti => $"{ti.WorkItemId}:{ti.Title}")));
 
                     childSwimlane.TimelineItems = timelineItems;
                     swimlane.Children.Add(childSwimlane);
                 }
 
+                _logger.LogInformation("Adding swimlane {SwimlaneName} with {ChildCount} children",
+                    swimlane.Title, swimlane.Children.Count);
+
                 swimlanes.Add(swimlane);
             }
 
+            _logger.LogInformation("Built {TotalSwimlanes} total swimlanes", swimlanes.Count);
             return swimlanes;
         }
         catch (Exception ex)
@@ -368,18 +400,46 @@ public class RoadmapService
 
     #region Private Helper Methods
 
-    private List<WorkItem> GetChildWorkItems(List<WorkItem> allWorkItems, int parentId)
+    /// <summary>
+    /// Gets actual work item relationships from Azure DevOps API
+    /// </summary>
+    /// <param name="workItemIds">List of work item IDs to get relationships for</param>
+    /// <returns>Dictionary mapping parent work item ID to list of child work item IDs</returns>
+    private async Task<Dictionary<int, List<int>>> GetWorkItemRelationshipsAsync(List<int> workItemIds)
     {
-        // This is a simplified implementation. In reality, you'd need to check
-        // the parent-child relationships in Azure DevOps work items
-        // For now, we'll use a heuristic based on similar area/iteration paths
-        var parent = allWorkItems.FirstOrDefault(wi => wi.Id == parentId);
-        if (parent == null) return new List<WorkItem>();
+        var relationships = new Dictionary<int, List<int>>();
+        
+        try
+        {
+            var workItemService = _serviceProvider.GetRequiredService<WorkItemServices>();
+            var parentChildMap = await workItemService.GetWorkItemRelationshipsAsync(workItemIds);
+            
+            _logger.LogInformation("Retrieved {RelationshipCount} parent-child relationships from Azure DevOps API", 
+                parentChildMap.Sum(kvp => kvp.Value.Count));
+                
+            return parentChildMap;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting work item relationships from Azure DevOps API, falling back to simple heuristics");
+            
+            // Fallback to simple heuristics if the API call fails
+            return GetWorkItemRelationshipsFallback(workItemIds);
+        }
+    }
 
-        return allWorkItems
-            .Where(wi => wi.Id != parentId && 
-                        wi.AreaPath.StartsWith(parent.AreaPath, StringComparison.OrdinalIgnoreCase))
-            .ToList();
+    /// <summary>
+    /// Simple fallback for work item relationships when API isn't available
+    /// </summary>
+    private Dictionary<int, List<int>> GetWorkItemRelationshipsFallback(List<int> workItemIds)
+    {
+        var relationships = new Dictionary<int, List<int>>();
+        
+        // This is a temporary implementation - in a real scenario you'd want better logic here
+        // For now, just return empty relationships to avoid the previous bugs
+        _logger.LogWarning("Using empty fallback for work item relationships");
+        
+        return relationships;
     }
 
     private int GetParentWorkItemId(List<WorkItem> workItems, int workItemId, List<string> parentTypes)
@@ -387,9 +447,24 @@ public class RoadmapService
         var workItem = workItems.FirstOrDefault(wi => wi.Id == workItemId);
         if (workItem == null) return 0;
 
+        // First try to use the actual System.Parent field
+        if (workItem.Fields.TryGetValue("System.Parent", out var parentField))
+        {
+            if (parentField is int parentFieldInt)
+            {
+                return parentFieldInt;
+            }
+            else if (parentField is string parentFieldStr && int.TryParse(parentFieldStr, out var parsedParentId))
+            {
+                return parsedParentId;
+            }
+        }
+
+        // Fallback to heuristic based on area path and work item type
         return workItems
             .Where(wi => parentTypes.Contains(wi.WorkItemType, StringComparer.OrdinalIgnoreCase) &&
-                        wi.AreaPath == workItem.AreaPath)
+                        wi.AreaPath == workItem.AreaPath &&
+                        wi.IterationPath == workItem.IterationPath)
             .FirstOrDefault()?.Id ?? 0;
     }
 

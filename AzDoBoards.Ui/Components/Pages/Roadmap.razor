@@ -428,12 +428,6 @@
             unscheduledItems = await RoadmapService.GetUnscheduledWorkItemsAsync(allWorkItems, currentProcessId);
             Logger.LogInformation("Found {UnscheduledCount} unscheduled items", unscheduledItems?.Count ?? 0);
             
-            if (unscheduledItems?.Any() == true)
-            {
-                Logger.LogInformation("Unscheduled items details: {Items}", 
-                    string.Join(", ", unscheduledItems.Take(5).Select(i => $"ID:{i.WorkItemId} Title:'{i.Title}' Type:{i.WorkItemType}")));
-            }
-
             // Calculate timeline positions
             foreach (var swimlane in swimlanes)
             {

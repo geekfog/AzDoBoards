@@ -369,4 +369,64 @@ public class WorkItemServices(ConnectionFactory connectionFactory) : Base(connec
         }
         return default;
     }
+
+    /// <summary>
+    /// Gets parent-child relationships for work items from Azure DevOps
+    /// </summary>
+    /// <param name="workItemIds">List of work item IDs to get relationships for</param>
+    /// <returns>Dictionary mapping parent work item ID to list of child work item IDs</returns>
+    public async Task<Dictionary<int, List<int>>> GetWorkItemRelationshipsAsync(List<int> workItemIds)
+    {
+        var parentChildMap = new Dictionary<int, List<int>>();
+        
+        try
+        {
+            var connection = await _connectionFactory.GetConnectionAsync();
+            var workItemClient = connection.GetClient<WorkItemTrackingHttpClient>();
+
+            // Get work items with relations expanded
+            var workItems = await workItemClient.GetWorkItemsAsync(
+                workItemIds, 
+                expand: WorkItemExpand.Relations);
+
+            foreach (var workItem in workItems)
+            {
+                if (workItem.Relations?.Any() == true)
+                {
+                    // Look for child relationships
+                    var children = new List<int>();
+                    
+                    foreach (var relation in workItem.Relations)
+                    {
+                        // Azure DevOps uses different relation types:
+                        // - "System.LinkTypes.Hierarchy-Forward" for parent->child
+                        // - "System.LinkTypes.Hierarchy-Reverse" for child->parent
+                        if (relation.Rel == "System.LinkTypes.Hierarchy-Forward" && 
+                            relation.Url != null)
+                        {
+                            // Extract work item ID from the URL
+                            var urlParts = relation.Url.Split('/');
+                            if (urlParts.Length > 0 && int.TryParse(urlParts[^1], out var childId))
+                            {
+                                children.Add(childId);
+                            }
+                        }
+                    }
+                    
+                    if (children.Any())
+                    {
+                        parentChildMap[workItem.Id ?? 0] = children;
+                    }
+                }
+            }
+
+            return parentChildMap;
+        }
+        catch (Exception ex)
+        {
+            // Log error but don't throw - let the caller handle the empty result
+            System.Diagnostics.Debug.WriteLine($"Error getting work item relationships: {ex.Message}");
+            return parentChildMap;
+        }
+    }
 }
