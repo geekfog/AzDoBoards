@@ -342,38 +342,85 @@ main {
 .unscheduled-item {
     background: var(--item-color, #6c757d);
     color: white;
-    padding: 8px;
-    border-radius: 4px;
+    padding: 10px;
+    border-radius: 6px;
     font-size: 0.75rem;
     cursor: grab;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
     border: 1px solid rgba(255, 255, 255, 0.3);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    position: relative;
 }
 
 .unscheduled-item:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
 }
 
 .unscheduled-item:active {
     cursor: grabbing;
 }
 
+.unscheduled-item-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 6px;
+    font-weight: 600;
+}
+
+.unscheduled-item-id {
+    font-weight: 700;
+    font-size: 0.8rem;
+    opacity: 0.9;
+    margin-right: 5px;
+}
+
 .unscheduled-item-title {
-    font-weight: 500;
-    margin-bottom: 4px;
-    white-space: nowrap;
+    /*    font-weight: 600;
+    font-size: 0.85rem;
+    margin-bottom: 6px;
+    line-height: 1.2;
     overflow: hidden;
-    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    text-overflow: ellipsis;*/
+    font-weight: 600;
+    font-size: 0.85rem;
 }
 
 .unscheduled-item-details {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     font-size: 0.7rem;
     opacity: 0.9;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+    margin-bottom: 4px;
+}
+
+.unscheduled-item-type {
+    font-weight: 500;
+    background: rgba(255, 255, 255, 0.2);
+    padding: 2px 6px;
+    border-radius: 3px;
+    white-space: nowrap;
+}
+
+.unscheduled-item-assigned {
+    font-weight: 500;
+    opacity: 0.8;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100px;
+}
+
+.unscheduled-item-parent {
+    font-size: 0.7rem;
+    opacity: 0.8;
+    font-style: italic;
+    color: rgba(255, 255, 255, 0.8);
+    line-height: 1.1;
 }
 
 /* Dependency Lines */

@@ -1,4 +1,4 @@
-﻿@page "/roadmap"
+@page "/roadmap"
 @using AzDoBoards.Client.Models
 @using AzDoBoards.Ui.Services
 @using AzDoBoards.Utility
@@ -92,35 +92,36 @@
                 
                 @if (unscheduledItems?.Any() == true)
                 {
-                    <MudDropContainer T="UnscheduledWorkItem" 
-                                    Items="unscheduledItems" 
-                                    ItemDropped="OnUnscheduledItemDropped"
-                                    Class="unscheduled-items-container">
-                        <ChildContent>
-                            <MudDropZone T="UnscheduledWorkItem" 
-                                       Identifier="unscheduled" 
-                                       Class="unscheduled-items-container" 
-                                       AllowReorder="true">
-                            </MudDropZone>
-                        </ChildContent>
-                        <ItemRenderer>
+                    <!-- Direct rendering for testing -->
+                    <div class="unscheduled-items-container">
+                        @foreach (var item in unscheduledItems)
+                        {
                             <div class="unscheduled-item" 
-                                 style="--item-color: @context.Color"
+                                 style="--item-color: @item.Color"
                                  draggable="true">
-                                <div class="unscheduled-item-title">@context.Title</div>
-                                <div class="unscheduled-item-details">
-                                    <span>@context.WorkItemType</span>
-                                    <MudIcon Icon="@Icons.Material.Filled.DragIndicator" Size="Size.Small" />
+                                <div class="unscheduled-item-header">
+                                    <MudIcon Icon="@WorkItemHelper.GetWorkItemTypeSvgIcon(item.WorkItemType)" Size="Size.Small" Class="mr-2" />
+                                    <span class="unscheduled-item-id">@item.WorkItemId: </span>
+                                    <span class="unscheduled-item-title">@item.Title</span>
                                 </div>
-                                @if (!string.IsNullOrEmpty(context.ParentTitle))
+                                
+                                <div class="unscheduled-item-details">
+                                    <span class="unscheduled-item-type">@item.WorkItemType</span>
+                                    @if (!string.IsNullOrEmpty(item.AssignedTo))
+                                    {
+                                        <span class="unscheduled-item-assigned">@item.AssignedTo</span>
+                                    }
+                                    <MudIcon Icon="@Icons.Material.Filled.DragIndicator" Size="Size.Small" Class="ml-auto" />
+                                </div>
+                                @if (!string.IsNullOrEmpty(item.ParentTitle))
                                 {
-                                    <MudText Typo="Typo.caption" Class="mt-1">
-                                        Parent: @context.ParentTitle
+                                    <MudText Typo="Typo.caption" Class="unscheduled-item-parent mt-1">
+                                        Parent: @item.ParentTitle
                                     </MudText>
                                 }
                             </div>
-                        </ItemRenderer>
-                    </MudDropContainer>
+                        }
+                    </div>
                 }
                 else
                 {
@@ -162,7 +163,7 @@
                                 <div class="swimlane-header level-@swimlane.Level" 
                                      @onclick="() => ToggleSwimlane(swimlane.WorkItemId)">
                                     <MudIcon Icon="@WorkItemHelper.GetWorkItemTypeSvgIcon(swimlane.WorkItemType)" Size="Size.Small" Class="mr-2" />
-                                    <MudText Class="flex-grow-1">@swimlane.Title</MudText>
+                                    <MudText Class="flex-grow-1">@swimlane.WorkItemId: @swimlane.Title</MudText>
                                     @if (swimlane.Children.Any())
                                     {
                                         <MudIcon Icon="@(swimlane.IsCollapsed ? Icons.Material.Filled.ChevronRight : Icons.Material.Filled.ExpandMore)" />
@@ -207,7 +208,7 @@
                                             <div class="roadmap-swimlane">
                                                 <div class="swimlane-header level-@childSwimlane.Level">
                                                     <MudIcon Icon="@WorkItemHelper.GetWorkItemTypeSvgIcon(childSwimlane.WorkItemType)" Size="Size.Small" Class="mr-2" />
-                                                    <MudText Class="flex-grow-1">@childSwimlane.Title</MudText>
+                                                    <MudText Class="flex-grow-1">@childSwimlane.WorkItemId: @childSwimlane.Title</MudText>
                                                 </div>
                                                 
                                                 <div class="swimlane-content">
@@ -378,6 +379,8 @@
             currentProcessId = await HierarchyService.GetCurrentProcessIdAsync();
             currentProjectId = await HierarchyService.GetCurrentProjectIdAsync(currentProcessId);
 
+            Logger.LogInformation("ProcessId: {ProcessId}, ProjectId: {ProjectId}", currentProcessId, currentProjectId);
+
             if (string.IsNullOrEmpty(currentProcessId) || string.IsNullOrEmpty(currentProjectId))
             {
                 hasConfiguration = false;
@@ -388,6 +391,8 @@
 
             // Load hierarchy configuration
             var hierarchyLevels = await RoadmapService.GetRoadmapHierarchyLevelsAsync(currentProcessId);
+            Logger.LogInformation("Loaded {HierarchyLevelCount} hierarchy levels", hierarchyLevels.Count);
+            
             if (!hierarchyLevels.Any())
             {
                 hasConfiguration = false;
@@ -403,17 +408,31 @@
             parentLevelWorkItemTypes = await RoadmapService.GetParentLevelWorkItemTypesAsync(currentProcessId);
             lowestLevelWorkItemTypes = await RoadmapService.GetLowestLevelWorkItemTypesAsync(currentProcessId);
 
+            Logger.LogInformation("Work item types - Top: {TopLevel}, Parent: {ParentLevel}, Lowest: {LowestLevel}", 
+                string.Join(", ", topLevelWorkItemTypes), 
+                string.Join(", ", parentLevelWorkItemTypes), 
+                string.Join(", ", lowestLevelWorkItemTypes));
+
             // Load configuration
             configuration = await RoadmapService.GetDefaultConfigurationAsync();
 
             // Load all work items
             allWorkItems = await RoadmapService.LoadRoadmapWorkItemsAsync(currentProjectId, currentProcessId);
+            Logger.LogInformation("Loaded {AllWorkItemsCount} total work items", allWorkItems.Count);
 
             // Build swimlanes structure
             swimlanes = await RoadmapService.BuildRoadmapSwimlanesAsync(allWorkItems, currentProcessId);
+            Logger.LogInformation("Built {SwimlanesCount} swimlanes", swimlanes.Count);
             
             // Get unscheduled items
             unscheduledItems = await RoadmapService.GetUnscheduledWorkItemsAsync(allWorkItems, currentProcessId);
+            Logger.LogInformation("Found {UnscheduledCount} unscheduled items", unscheduledItems?.Count ?? 0);
+            
+            if (unscheduledItems?.Any() == true)
+            {
+                Logger.LogInformation("Unscheduled items details: {Items}", 
+                    string.Join(", ", unscheduledItems.Take(5).Select(i => $"ID:{i.WorkItemId} Title:'{i.Title}' Type:{i.WorkItemType}")));
+            }
 
             // Calculate timeline positions
             foreach (var swimlane in swimlanes)
