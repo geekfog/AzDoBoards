@@ -157,11 +157,11 @@ main {
    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 .roadmap-container {
     display: grid;
-    grid-template-columns: 300px 250px 1fr;
+    grid-template-columns: 250px 1fr;
     grid-template-rows: auto 1fr;
     grid-template-areas: 
-        "toolbar toolbar toolbar"
-        "top-level unscheduled timeline";
+        "toolbar toolbar"
+        "unscheduled timeline";
     height: calc(100vh - 120px);
     gap: 8px;
     overflow: hidden;
@@ -174,15 +174,6 @@ main {
     border: 1px solid rgba(0, 0, 0, 0.1);
     border-radius: 8px;
     margin-bottom: 8px;
-}
-
-.roadmap-top-level-column {
-    grid-area: top-level;
-    overflow-y: auto;
-    background: var(--mud-palette-surface);
-    border: 1px solid rgba(0, 0, 0, 0.1);
-    border-radius: 8px;
-    padding: 8px;
 }
 
 .roadmap-unscheduled-column {
@@ -385,59 +376,6 @@ main {
     align-items: center;
 }
 
-/* Top Level Items */
-.top-level-items-container {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    max-height: 100%;
-    overflow-y: auto;
-}
-
-.top-level-item {
-    background: var(--item-color, #1976d2);
-    color: white;
-    padding: 12px;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-.top-level-item:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-}
-
-.top-level-item.collapsed {
-    opacity: 0.6;
-}
-
-.top-level-item-title {
-    font-weight: 600;
-    font-size: 0.875rem;
-    margin-bottom: 4px;
-}
-
-.top-level-item-type {
-    font-size: 0.75rem;
-    opacity: 0.9;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-}
-
-.collapse-toggle {
-    margin-left: auto;
-    opacity: 0.8;
-    transition: transform 0.2s ease;
-}
-
-.collapse-toggle.collapsed {
-    transform: rotate(-90deg);
-}
-
 /* Dependency Lines */
 .dependency-lines-container {
     position: absolute;
@@ -485,23 +423,21 @@ main {
 /* Responsive Design */
 @media (max-width: 1200px) {
     .roadmap-container {
-        grid-template-columns: 250px 200px 1fr;
+        grid-template-columns: 200px 1fr;
     }
 }
 
 @media (max-width: 968px) {
     .roadmap-container {
         grid-template-columns: 1fr;
-        grid-template-rows: auto auto auto 1fr;
+        grid-template-rows: auto auto 1fr;
         grid-template-areas: 
             "toolbar"
-            "top-level"
             "unscheduled"
             "timeline";
         height: auto;
     }
     
-    .roadmap-top-level-column,
     .roadmap-unscheduled-column {
         max-height: 200px;
     }
