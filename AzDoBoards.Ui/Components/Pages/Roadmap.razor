@@ -7,9 +7,11 @@
 @using MudBlazor
 @inject RoadmapService RoadmapService
 @inject HierarchyService HierarchyService
+@inject RoadmapDragDropService DragDropService
 @inject ISnackbar Snackbar
 @inject ILogger<Roadmap> Logger
 @inject AuthenticationStateProvider AuthStateProvider
+@inject IJSRuntime JSRuntime
 
 <PageTitle>Roadmap</PageTitle>
 
@@ -98,7 +100,9 @@
                         {
                             <div class="unscheduled-item" 
                                  style="--item-color: @item.Color"
-                                 draggable="true">
+                                 draggable="true"
+                                 @ondragstart="@((e) => OnUnscheduledDragStart(e, item))"
+                                 @ondragend="@((e) => OnUnscheduledDragEnd(e, item))">
                                 <div class="unscheduled-item-header">
                                     <MudIcon Icon="@WorkItemHelper.GetWorkItemTypeSvgIcon(item.WorkItemType)" Size="Size.Small" Class="mr-2" />
                                     <span class="unscheduled-item-id">@item.WorkItemId: </span>
@@ -132,13 +136,25 @@
             </div>
 
             <!-- Timeline Column -->
-            <div class="roadmap-timeline-column">
+            <div class="roadmap-timeline-column" id="timeline-column"
+                 @ondrop="@OnTimelineDrop"
+                 @ondragover:preventDefault="true"
+                 @ondragenter="@OnTimelineDragEnter"
+                 @ondragleave="@OnTimelineDragLeave"
+                 onmousemove="if(event.buttons === 0 && window.roadmapDateCalculator) window.roadmapDateCalculator.updateIndicatorPosition(event.clientX)"
+                 ondragover="if(window.roadmapDateCalculator) { window.roadmapDateCalculator.updateIndicatorPosition(event.clientX); event.dataTransfer.dropEffect = 'move'; }">
+                
+                <!-- Date Drop Indicator -->
+                <div class="date-drop-indicator" id="date-drop-indicator"></div>
+                
                 <!-- Timeline Header -->
-                <div class="timeline-header">
+                <div class="timeline-header" id="timeline-header">
                     <div class="timeline-months">
                         @foreach (var month in GetTimelineMonths())
                         {
-                            <div class="timeline-month" style="width: @(month.Width)%;">
+                            <div class="timeline-month" 
+                                 style="width: @(month.Width)%;"
+                                 title="Drop items here to schedule for @month.Label">
                                 @month.Label
                             </div>
                         }
@@ -146,7 +162,9 @@
                     <div class="timeline-weeks">
                         @foreach (var week in GetTimelineWeeks())
                         {
-                            <div class="timeline-week" style="width: @(week.Width)%;">
+                            <div class="timeline-week" 
+                                 style="width: @(week.Width)%;"
+                                 title="Week starting @week.Label">
                                 @week.Label
                             </div>
                         }
@@ -175,7 +193,8 @@
                                     <MudDropContainer T="RoadmapTimelineItem" 
                                                     Items="swimlane.TimelineItems" 
                                                     ItemDropped="(item) => OnTimelineItemDropped(item, swimlane.WorkItemId)"
-                                                    Class="timeline-drop-zone">
+                                                    Class="timeline-drop-zone"
+                                                    @ondragover="OnTimelineDragOver">
                                         <ChildContent>
                                             <MudDropZone T="RoadmapTimelineItem" 
                                                        Identifier="@($"timeline-{swimlane.WorkItemId}")" 
@@ -202,7 +221,7 @@
                                 
                                 @if (!swimlane.IsCollapsed && swimlane.Children.Any())
                                 {
-                                    <div class="swimlane-children">
+                                    <div class="swimlane-children" id="swimlane-children-@swimlane.WorkItemId">
                                         @foreach (var childSwimlane in swimlane.Children)
                                         {
                                             <div class="roadmap-swimlane">
@@ -352,6 +371,10 @@
     private DateTime? selectedWorkItemTargetDate = null;
     private DialogOptions dialogOptions = new() { MaxWidth = MaxWidth.Medium, FullWidth = true };
 
+    // Drag and drop state
+    private UnscheduledWorkItem? currentDraggedItem = null;
+    private bool isDragging = false;
+
     protected override async Task OnInitializedAsync()
     {
         await LoadRoadmapDataAsync();
@@ -458,6 +481,11 @@
         {
             await RoadmapService.SaveConfigurationAsync(configuration);
             
+            // Update JavaScript calculator with new timeline data
+            await JSRuntime.InvokeVoidAsync("roadmapDateCalculator.updateTimelineData",
+                configuration.StartDate.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
+                configuration.EndDate.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"));
+            
             // Recalculate timeline positions with new configuration
             foreach (var swimlane in swimlanes)
             {
@@ -530,26 +558,208 @@
         return null;
     }
 
-    private void OnUnscheduledItemDropped(MudItemDropInfo<UnscheduledWorkItem> dropInfo)
+    // Enhanced Drag and Drop Event Handlers
+    private void OnUnscheduledDragStart(DragEventArgs e, UnscheduledWorkItem item)
     {
-        // This would be called when an unscheduled item is dropped onto the timeline
-        // The actual drop zone handling would need to be implemented based on where it's dropped
-        Logger.LogInformation("Unscheduled item {WorkItemId} dropped", dropInfo.Item?.WorkItemId);
+        currentDraggedItem = item;
+        isDragging = true;
+        e.DataTransfer.EffectAllowed = "move";
+        Logger.LogInformation("Started dragging feature {WorkItemId}: {Title}", item.WorkItemId, item.Title);
+    }
+
+    private async Task OnUnscheduledDragEnd(DragEventArgs e, UnscheduledWorkItem item)
+    {
+        currentDraggedItem = null;
+        isDragging = false;
         
-        // TODO: Calculate target date based on drop position and update the work item
-        if (dropInfo.Item != null)
+        // Clean up visual indicators (fast, single call)
+        await JSRuntime.InvokeVoidAsync("roadmapDateCalculator.hideIndicator");
+        
+        Logger.LogInformation("Ended dragging feature {WorkItemId}: {Title}", item.WorkItemId, item.Title);
+    }
+
+    // Enhanced Epic Drop Handler
+    private async Task OnEpicDrop(DragEventArgs e, int epicId)
+    {
+        if (currentDraggedItem == null)
         {
-            Snackbar.Add($"Moved {dropInfo.Item.Title} to timeline", Severity.Success);
+            Logger.LogWarning("No dragged item found during epic drop");
+            return;
         }
+
+        try
+        {
+            Logger.LogInformation("Processing drop of {WorkItemId} onto epic {EpicId} at position ({ClientX}, {ClientY})", 
+                currentDraggedItem.WorkItemId, epicId, e.ClientX, e.ClientY);
+
+            Snackbar.Add($"Processing drop of {currentDraggedItem.Title}...", Severity.Info);
+
+            // Use the drag drop service to process the drop
+            var dropResult = await DragDropService.ProcessDropAsync(
+                currentDraggedItem, 
+                e.ClientX, 
+                e.ClientY, 
+                configuration.StartDate, 
+                configuration.EndDate, 
+                epicId);
+
+            if (!dropResult.Success)
+            {
+                Logger.LogWarning("Drop validation failed: {ErrorMessage}", dropResult.ErrorMessage);
+                Snackbar.Add($"? {dropResult.ErrorMessage}", Severity.Warning);
+                if (!string.IsNullOrEmpty(dropResult.SuggestedAction))
+                {
+                    Snackbar.Add($"?? {dropResult.SuggestedAction}", Severity.Info);
+                }
+                return;
+            }
+
+            // Update the work item with calculated target date and parent
+            var success = await RoadmapService.UpdateWorkItemTargetDateAndParentAsync(
+                currentDraggedItem.WorkItemId, dropResult.TargetDate, epicId);
+
+            if (success)
+            {
+                var epicName = FindSwimlaneById(epicId)?.Title ?? $"Epic {epicId}";
+                Snackbar.Add($"? Assigned {currentDraggedItem.Title} to {epicName} for {dropResult.TargetDate:MMM dd, yyyy}", Severity.Success);
+                
+                Logger.LogInformation("Successfully updated work item {WorkItemId} - Target: {TargetDate}, Epic: {EpicId}", 
+                    currentDraggedItem.WorkItemId, dropResult.TargetDate, epicId);
+                
+                await LoadRoadmapDataAsync();
+            }
+            else
+            {
+                Logger.LogError("Failed to update work item {WorkItemId}", currentDraggedItem.WorkItemId);
+                Snackbar.Add($"? Failed to update Azure DevOps. Please try again.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Exception during epic drop for work item {WorkItemId}", currentDraggedItem?.WorkItemId);
+            Snackbar.Add($"? Error processing drop: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            // Clean up drag state
+            currentDraggedItem = null;
+            isDragging = false;
+            await JSRuntime.InvokeVoidAsync("roadmapDateCalculator.hideIndicator");
+            StateHasChanged();
+        }
+    }
+
+    // Timeline Drop Handler (new feature)
+    private async Task OnTimelineDrop(DragEventArgs e)
+    {
+        if (currentDraggedItem == null)
+        {
+            Logger.LogWarning("No dragged item found during timeline drop");
+            return;
+        }
+
+        try
+        {
+            Logger.LogInformation("Processing timeline drop of {WorkItemId} at position ({ClientX}, {ClientY})", 
+                currentDraggedItem.WorkItemId, e.ClientX, e.ClientY);
+
+            Snackbar.Add($"Scheduling {currentDraggedItem.Title}...", Severity.Info);
+
+            // Process drop without specific epic (schedule on timeline)
+            var dropResult = await DragDropService.ProcessDropAsync(
+                currentDraggedItem, 
+                e.ClientX, 
+                e.ClientY, 
+                configuration.StartDate, 
+                configuration.EndDate);
+
+            if (!dropResult.Success)
+            {
+                Logger.LogWarning("Timeline drop validation failed: {ErrorMessage}", dropResult.ErrorMessage);
+                Snackbar.Add($"? {dropResult.ErrorMessage}", Severity.Warning);
+                if (!string.IsNullOrEmpty(dropResult.SuggestedAction))
+                {
+                    Snackbar.Add($"?? {dropResult.SuggestedAction}", Severity.Info);
+                }
+                return;
+            }
+
+            // Update work item with target date only (no parent change)
+            var success = await RoadmapService.UpdateWorkItemTargetDateAsync(
+                currentDraggedItem.WorkItemId, dropResult.TargetDate);
+
+            if (success)
+            {
+                Snackbar.Add($"? Scheduled {currentDraggedItem.Title} for {dropResult.TargetDate:MMM dd, yyyy}", Severity.Success);
+                
+                Logger.LogInformation("Successfully scheduled work item {WorkItemId} for {TargetDate}", 
+                    currentDraggedItem.WorkItemId, dropResult.TargetDate);
+                
+                await LoadRoadmapDataAsync();
+            }
+            else
+            {
+                Logger.LogError("Failed to update work item {WorkItemId} target date", currentDraggedItem.WorkItemId);
+                Snackbar.Add($"? Failed to update Azure DevOps. Please try again.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Exception during timeline drop for work item {WorkItemId}", currentDraggedItem?.WorkItemId);
+            Snackbar.Add($"? Error processing timeline drop: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            // Clean up drag state
+            currentDraggedItem = null;
+            isDragging = false;
+            await JSRuntime.InvokeVoidAsync("roadmapDateCalculator.hideIndicator");
+            StateHasChanged();
+        }
+    }
+
+    // High-Performance Drag Over with Pure Client-Side Visual Feedback
+    private void OnTimelineDragOver(DragEventArgs e)
+    {
+        if (currentDraggedItem != null)
+        {
+            e.DataTransfer.DropEffect = "move";
+            // Note: Visual feedback is now handled purely in JavaScript for performance
+            // No C# interop calls during drag operations
+        }
+    }
+
+    private async Task OnTimelineDragEnter(DragEventArgs e)
+    {
+        if (currentDraggedItem != null)
+        {
+            // Initialize the JavaScript calculator with timeline data for performance
+            await JSRuntime.InvokeVoidAsync("roadmapDateCalculator.init", 
+                "timeline-column", 
+                configuration.StartDate.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
+                configuration.EndDate.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"));
+            
+            await JSRuntime.InvokeVoidAsync("roadmapDateCalculator.showIndicator");
+        }
+    }
+
+    private async Task OnTimelineDragLeave(DragEventArgs e)
+    {
+        // Hide the date indicator when dragging leaves the timeline area
+        await JSRuntime.InvokeVoidAsync("roadmapDateCalculator.hideIndicator");
+    }
+
+    private void OnUnscheduledDrop(DragEventArgs e, int parentId)
+    {
+        // Handle drop on unscheduled items area (if needed)
     }
 
     private void OnTimelineItemDropped(MudItemDropInfo<RoadmapTimelineItem> dropInfo, int swimlaneId)
     {
-        // This would be called when a timeline item is moved to a different position
+        // This is for moving existing timeline items - keep existing logic
         Logger.LogInformation("Timeline item {WorkItemId} dropped in swimlane {SwimlaneId}", 
             dropInfo.Item?.WorkItemId, swimlaneId);
         
-        // TODO: Calculate new target date based on drop position and update the work item
         if (dropInfo.Item != null)
         {
             Snackbar.Add($"Rescheduled {dropInfo.Item.Title}", Severity.Success);

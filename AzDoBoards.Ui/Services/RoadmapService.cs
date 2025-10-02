@@ -339,6 +339,37 @@ public class RoadmapService
     }
 
     /// <summary>
+    /// Updates the target date and parent for a work item
+    /// </summary>
+    /// <param name="workItemId">Work item ID to update</param>
+    /// <param name="targetDate">New target date</param>
+    /// <param name="parentWorkItemId">New parent work item ID (optional)</param>
+    /// <returns>True if successful, false otherwise</returns>
+    public async Task<bool> UpdateWorkItemTargetDateAndParentAsync(int workItemId, DateTime? targetDate, int? parentWorkItemId = null)
+    {
+        try
+        {
+            // First update the target date
+            var targetDateResult = await UpdateWorkItemTargetDateAsync(workItemId, targetDate);
+            
+            // TODO: Later we can add parent relationship update here
+            // For now, just log the parent update intention
+            if (parentWorkItemId.HasValue)
+            {
+                _logger.LogInformation("Would also update parent relationship for work item {WorkItemId} to parent {ParentId}", 
+                    workItemId, parentWorkItemId.Value);
+            }
+            
+            return targetDateResult;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating work item {WorkItemId} target date and parent", workItemId);
+            return false;
+        }
+    }
+
+    /// <summary>
     /// Gets default roadmap configuration
     /// </summary>
     public async Task<RoadmapConfiguration> GetDefaultConfigurationAsync()

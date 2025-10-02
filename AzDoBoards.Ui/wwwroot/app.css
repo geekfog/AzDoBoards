@@ -359,6 +359,7 @@ main {
 
 .unscheduled-item:active {
     cursor: grabbing;
+    transform: scale(0.98);
 }
 
 .unscheduled-item-header {
@@ -465,6 +466,23 @@ main {
 .timeline-drop-zone.drag-over {
     border-color: #4caf50;
     background-color: rgba(76, 175, 80, 0.1);
+}
+
+/* Drag and Drop Visual Feedback */
+.epic-swimlane {
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+    border: 2px solid transparent;
+    border-radius: 4px;
+}
+
+.epic-swimlane:hover {
+    background-color: rgba(76, 175, 80, 0.1);
+    border-color: rgba(76, 175, 80, 0.3);
+}
+
+.epic-swimlane.drag-over {
+    background-color: rgba(76, 175, 80, 0.2);
+    border-color: #4caf50;
 }
 
 /* Responsive Design */
@@ -991,4 +1009,46 @@ main {
 /* Dark theme adjustments for icons */
 .mud-theme-dark .work-item-icon {
     filter: brightness(1.1) contrast(1.1);
+}
+
+/* Position Indicator for Date Calculation - High Performance */
+.date-drop-indicator {
+    position: absolute;
+    top: 80px; /* Below timeline header */
+    bottom: 0;
+    left: 0; /* Always start at 0, use transform for positioning */
+    width: 2px;
+    background: linear-gradient(to bottom, #4caf50, rgba(76, 175, 80, 0.7));
+    z-index: 100;
+    opacity: 0;
+    transform: translateX(0px); /* Use transform for better performance */
+    transition: opacity 0.15s ease-out; /* Only animate opacity, not position */
+    pointer-events: none;
+    box-shadow: 0 0 8px rgba(76, 175, 80, 0.8);
+}
+
+.date-drop-indicator.active {
+    opacity: 1;
+}
+
+/* Add a date tooltip that follows the indicator */
+.date-drop-indicator::after {
+    content: attr(data-date);
+    position: absolute;
+    top: -30px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(76, 175, 80, 0.9);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.date-drop-indicator.active::after {
+    opacity: 1;
 }
