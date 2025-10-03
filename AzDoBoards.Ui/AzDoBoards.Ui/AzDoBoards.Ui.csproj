@@ -8,8 +8,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\AzDoBoards.Utility\AzDoBoards.Utility.csproj" />
     <ProjectReference Include="..\AzDoBoards.Ui.Client\AzDoBoards.Ui.Client.csproj" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.0-rc.1.25451.107" />
+	<PackageReference Include="Azure.Extensions.AspNetCore.Configuration.Secrets" Version="1.4.0" />
+	<PackageReference Include="Azure.Identity" Version="1.16.0" />
+	<PackageReference Include="Microsoft.Identity.Web" Version="3.14.1" />
+    <PackageReference Include="MudBlazor" Version="8.12.0" />
   </ItemGroup>
 
 </Project>

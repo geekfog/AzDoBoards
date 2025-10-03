@@ -1,5 +1,8 @@
 using AzDoBoards.Ui.Client.Pages;
 using AzDoBoards.Ui.Components;
+using AzDoBoards.Utility;
+using Azure.Identity;
+using Serilog;
 
 namespace AzDoBoards.Ui
 {
@@ -7,7 +10,33 @@ namespace AzDoBoards.Ui
     {
         public static void Main(string[] args)
         {
+            // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+            // Build Services
+            // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
             var builder = WebApplication.CreateBuilder(args);
+
+            // Add support for secrets.json for development
+            if (Server.IsDevelopment)
+                builder.Configuration.AddUserSecrets(nameof(AzDoBoards));
+
+            // Add Serilog Support
+            SerilogHelper.Configure(builder.Environment, builder.Configuration);
+            builder.Host.UseSerilog(); // replace logging with Serilog
+
+            // Add Azure KeyVault configuration
+            var keyVaultEndpoint = Environment.GetEnvironmentVariable(Utility.Constants.Azure_EnvcfgKeyVaultEndpoint);
+            if (!string.IsNullOrEmpty(keyVaultEndpoint))
+            {
+                var keyVaultEndpointUrl = new Uri(keyVaultEndpoint);
+                try
+                {
+                    builder.Configuration.AddAzureKeyVault(keyVaultEndpointUrl, new DefaultAzureCredential());
+                }
+                catch (Exception ex)
+                {
+                    Log.Error($"Error adding KeyVault configuration: {ex.Message}");
+                }
+            }
 
             // Add services to the container.
             builder.Services.AddRazorComponents()

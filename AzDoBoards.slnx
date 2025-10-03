@@ -5,4 +5,5 @@
   </Folder>
   <Project Path="AzDoBoards.Ui/AzDoBoards.Ui.Client/AzDoBoards.Ui.Client.csproj" />
   <Project Path="AzDoBoards.Ui/AzDoBoards.Ui/AzDoBoards.Ui.csproj" />
+  <Project Path="AzDoBoards.Utility/AzDoBoards.Utility.csproj" />
 </Solution>
