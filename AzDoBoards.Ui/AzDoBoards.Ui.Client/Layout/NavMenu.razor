@@ -1,33 +1,29 @@
-﻿<div id="navbarMain" class="top-row ps-3 navbar navbar-dark">
-    <div id="navbarContainer" style="display: flex; align-items: center;">
-        <img id="navbarLogo" src="@Assets["img/favicon-0128.png"]" srcset="@Assets["img/favicon.svg"]" />
-        <div id="navbarName">
-            <a class="navbar-brand nav-brand" href=""><img alt="Application Name" src="@Assets["img/AzDoBoards.png"]" srcset="@Assets["img/AzDoBoards.svg"]" /></a>
+﻿@using Microsoft.AspNetCore.Components.Routing
+
+<MudNavMenu>
+    <div class="mud-nav-header py-4 px-3">
+        <div style="display: flex; align-items: center;">
+            <img src="@Assets["img/favicon-0128.png"]" srcset="@Assets["img/favicon.svg"]"
+                style="width: 32px; height: 32px; margin-right: 12px;" />
+            <div>
+                <img alt="Application Name" src="@Assets["img/AzDoBoards.png"]" srcset="@Assets["img/AzDoBoards.svg"]"
+                    style="height: 24px;" />
+            </div>
         </div>
     </div>
-</div>
 
-<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+    <MudDivider />
 
-<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
-    <nav class="nav flex-column">
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
-            </NavLink>
-        </div>
+    <MudNavLink Href="/" Match="NavLinkMatch.All" Icon="Icons.Material.Filled.Home">
+        Home
+    </MudNavLink>
 
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="counter">
-                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Counter
-            </NavLink>
-        </div>
+    <MudNavLink Href="/counter" Icon="Icons.Material.Filled.Add">
+        Counter
+    </MudNavLink>
 
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="weather">
-                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Weather
-            </NavLink>
-        </div>
-    </nav>
-</div>
+    <MudNavLink Href="/weather" Icon="Icons.Material.Filled.List">
+        Weather
+    </MudNavLink>
+</MudNavMenu>
 

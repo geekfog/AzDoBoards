@@ -2,6 +2,46 @@
 
 <PageTitle>Home</PageTitle>
 
-<h1>Hello, world!</h1>
+<MudText Typo="Typo.h3" GutterBottom="true">Hello, world!</MudText>
+<MudText Typo="Typo.body1" Class="mb-4">Welcome to your new app powered by MudBlazor!</MudText>
 
-Welcome to your new app.
+<MudGrid>
+    <MudItem xs="12" md="6">
+        <MudCard>
+            <MudCardContent>
+                <MudText Typo="Typo.h6">Getting Started</MudText>
+                <MudText Typo="Typo.body2">
+                    Your application is now configured with MudBlazor, providing beautiful Material Design components.
+                </MudText>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+    
+    <MudItem xs="12" md="6">
+        <MudCard>
+            <MudCardContent>
+                <MudText Typo="Typo.h6">Features</MudText>
+                <MudStack Class="mt-2">
+                    <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
+                        <MudIcon Icon="Icons.Material.Filled.Check" Color="Color.Success" />
+                        <MudText Typo="Typo.body2">Material Design Components</MudText>
+                    </MudStack>
+                    <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
+                        <MudIcon Icon="Icons.Material.Filled.Check" Color="Color.Success" />
+                        <MudText Typo="Typo.body2">Blazor Server & WebAssembly Support</MudText>
+                    </MudStack>
+                    <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
+                        <MudIcon Icon="Icons.Material.Filled.Check" Color="Color.Success" />
+                        <MudText Typo="Typo.body2">Responsive Layout</MudText>
+                    </MudStack>
+                </MudStack>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+</MudGrid>
+
+<MudDivider Class="my-4" />
+
+<MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="Icons.Material.Filled.PlayArrow">
+    Get Started
+</MudButton>

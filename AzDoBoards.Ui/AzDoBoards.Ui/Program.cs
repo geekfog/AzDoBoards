@@ -4,8 +4,10 @@ using AzDoBoards.Utility;
 using Azure.Identity;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.Identity.Web;
+using MudBlazor.Services;
 using Serilog;
 using StackExchange.Redis;
+using AzDoBoards.Ui.Client.Services;
 
 namespace AzDoBoards.Ui
 {
@@ -100,6 +102,12 @@ namespace AzDoBoards.Ui
             builder.Services.AddRazorComponents()
                 .AddInteractiveServerComponents()
                 .AddInteractiveWebAssemblyComponents();
+
+            // Add MudBlazor services
+            builder.Services.AddMudServices();
+            
+            // Add custom services (needed for server-side rendering)
+            builder.Services.AddSingleton<ThemeService>();
 
             // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
             // Build Application

@@ -2,37 +2,87 @@
 
 <PageTitle>Weather</PageTitle>
 
-<h1>Weather</h1>
-
-<p>This component demonstrates showing data.</p>
+<MudText Typo="Typo.h3" GutterBottom="true">Weather Forecast</MudText>
+<MudText Typo="Typo.body1" Class="mb-4">This component demonstrates showing data with MudBlazor components.</MudText>
 
 @if (forecasts == null)
 {
-    <p><em>Loading...</em></p>
+    <MudCard>
+        <MudCardContent>
+            <MudStack AlignItems="AlignItems.Center" Spacing="3">
+                <MudProgressCircular Indeterminate="true" Color="Color.Primary" Size="Size.Large" />
+                <MudText Typo="Typo.h6">Loading weather data...</MudText>
+            </MudStack>
+        </MudCardContent>
+    </MudCard>
 }
 else
 {
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Date</th>
-                <th aria-label="Temperature in Celsius">Temp. (C)</th>
-                <th aria-label="Temperature in Fahrenheit">Temp. (F)</th>
-                <th>Summary</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var forecast in forecasts)
-            {
-                <tr>
-                    <td>@forecast.Date.ToShortDateString()</td>
-                    <td>@forecast.TemperatureC</td>
-                    <td>@forecast.TemperatureF</td>
-                    <td>@forecast.Summary</td>
-                </tr>
-            }
-        </tbody>
-    </table>
+    <MudDataGrid T="WeatherForecast" 
+                 Items="@forecasts" 
+                 Dense="true" 
+                 Hover="true" 
+                 ReadOnly="true"
+                 ColumnResizeMode="ResizeMode.Column">
+        <Columns>
+            <PropertyColumn Property="x => x.Date" 
+                          Title="Date" 
+                          Format="MM/dd/yyyy" />
+            <PropertyColumn Property="x => x.TemperatureC" 
+                          Title="Temp. (°C)" />
+            <PropertyColumn Property="x => x.TemperatureF" 
+                          Title="Temp. (°F)" />
+            <PropertyColumn Property="x => x.Summary" 
+                          Title="Summary" />
+            <TemplateColumn Title="Weather Icon" Sortable="false">
+                <CellTemplate>
+                    @{
+                        var icon = GetWeatherIcon(context.Item.Summary);
+                        var color = GetWeatherColor(context.Item.TemperatureC);
+                    }
+                    <MudIcon Icon="@icon" Color="@color" />
+                </CellTemplate>
+            </TemplateColumn>
+        </Columns>
+        <PagerContent>
+            <MudDataGridPager T="WeatherForecast" />
+        </PagerContent>
+    </MudDataGrid>
+    
+    <MudDivider Class="my-4" />
+    
+    <MudGrid>
+        <MudItem xs="12" md="4">
+            <MudCard>
+                <MudCardContent>
+                    <MudText Typo="Typo.h6">Average Temperature</MudText>
+                    <MudText Typo="Typo.h4" Color="Color.Primary">
+                        @($"{forecasts.Average(f => f.TemperatureC):F1}°C")
+                    </MudText>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+        <MudItem xs="12" md="4">
+            <MudCard>
+                <MudCardContent>
+                    <MudText Typo="Typo.h6">Hottest Day</MudText>
+                    <MudText Typo="Typo.h4" Color="Color.Error">
+                        @($"{forecasts.Max(f => f.TemperatureC)}°C")
+                    </MudText>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+        <MudItem xs="12" md="4">
+            <MudCard>
+                <MudCardContent>
+                    <MudText Typo="Typo.h6">Coldest Day</MudText>
+                    <MudText Typo="Typo.h4" Color="Color.Info">
+                        @($"{forecasts.Min(f => f.TemperatureC)}°C")
+                    </MudText>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+    </MudGrid>
 }
 
 @code {
@@ -41,7 +91,7 @@ else
     protected override async Task OnInitializedAsync()
     {
         // Simulate asynchronous loading to demonstrate a loading indicator
-        await Task.Delay(500);
+        await Task.Delay(1500);
 
         var startDate = DateOnly.FromDateTime(DateTime.Now);
         var summaries = new[] { "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching" };
@@ -51,6 +101,28 @@ else
             TemperatureC = Random.Shared.Next(-20, 55),
             Summary = summaries[Random.Shared.Next(summaries.Length)]
         }).ToArray();
+    }
+    
+    private string GetWeatherIcon(string? summary)
+    {
+        return summary switch
+        {
+            "Freezing" => Icons.Material.Filled.AcUnit,
+            "Bracing" or "Chilly" => Icons.Material.Filled.Cloud,
+            "Cool" or "Mild" => Icons.Material.Filled.WbCloudy,
+            "Warm" or "Balmy" => Icons.Material.Filled.WbSunny,
+            "Hot" or "Sweltering" or "Scorching" => Icons.Material.Filled.Whatshot,
+            _ => Icons.Material.Filled.Help
+        };
+    }
+    
+    private Color GetWeatherColor(int temperature)
+    {
+        if (temperature < 0) return Color.Info;
+        if (temperature < 10) return Color.Primary;
+        if (temperature < 20) return Color.Success;
+        if (temperature < 30) return Color.Warning;
+        return Color.Error;
     }
 
     private class WeatherForecast
