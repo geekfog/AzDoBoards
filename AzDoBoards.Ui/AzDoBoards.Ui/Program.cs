@@ -43,6 +43,9 @@ namespace AzDoBoards.Ui
                 .AddInteractiveServerComponents()
                 .AddInteractiveWebAssemblyComponents();
 
+            // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+            // Build Application
+            // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.
