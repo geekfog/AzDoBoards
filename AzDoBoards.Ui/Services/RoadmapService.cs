@@ -8,30 +8,34 @@ using Microsoft.AspNetCore.Components.Authorization;
 namespace AzDoBoards.Ui.Services;
 
 /// <summary>
-/// Service for managing roadmap data and operations
+/// JavaScript-free implementation of roadmap service for Blazor Server
 /// </summary>
-public class RoadmapService
+public class JavaScriptFreeRoadmapService : IRoadmapService
 {
     private readonly ISettingsRepository _settingsRepository;
     private readonly IServiceProvider _serviceProvider;
-    private readonly HierarchyService _hierarchyService;
-    private readonly ILogger<RoadmapService> _logger;
+    private readonly JavaScriptFreeHierarchyService _hierarchyService;
+    private readonly ILogger<JavaScriptFreeRoadmapService> _logger;
 
-    public RoadmapService(
+    public JavaScriptFreeRoadmapService(
         ISettingsRepository settingsRepository,
         IServiceProvider serviceProvider,
-        HierarchyService hierarchyService,
-        ILogger<RoadmapService> logger)
+        IHierarchyService hierarchyService,
+        ILogger<JavaScriptFreeRoadmapService> logger)
     {
         _settingsRepository = settingsRepository;
         _serviceProvider = serviceProvider;
-        _hierarchyService = hierarchyService;
+        _hierarchyService = (JavaScriptFreeHierarchyService)hierarchyService;
         _logger = logger;
     }
 
-    /// <summary>
-    /// Gets the roadmap hierarchy levels filtered for roadmap audience
-    /// </summary>
+    public async Task<(string ProcessId, string ProjectId)> GetConfigurationAsync()
+    {
+        var processId = await _hierarchyService.GetCurrentProcessIdAsync();
+        var projectId = await _hierarchyService.GetCurrentProjectIdAsync(processId);
+        return (processId, projectId);
+    }
+
     public async Task<List<HierarchyLevel>> GetRoadmapHierarchyLevelsAsync(string processId)
     {
         try
@@ -52,51 +56,14 @@ public class RoadmapService
         }
     }
 
-    /// <summary>
-    /// Gets the lowest level work item types for the roadmap
-    /// </summary>
-    public async Task<List<string>> GetLowestLevelWorkItemTypesAsync(string processId)
+    public async Task<(List<string> TopLevel, List<string> ParentLevel, List<string> LowestLevel)> GetWorkItemTypesAsync(string processId)
     {
-        var hierarchyLevels = await GetRoadmapHierarchyLevelsAsync(processId);
-        if (!hierarchyLevels.Any())
-            return new List<string>();
-
-        // The lowest level is the last level in the hierarchy
-        var lowestLevel = hierarchyLevels.LastOrDefault();
-        return lowestLevel?.WorkItemTypes ?? new List<string>();
+        var topLevel = await GetTopLevelWorkItemTypesAsync(processId);
+        var parentLevel = await GetParentLevelWorkItemTypesAsync(processId);
+        var lowestLevel = await GetLowestLevelWorkItemTypesAsync(processId);
+        return (topLevel, parentLevel, lowestLevel);
     }
 
-    /// <summary>
-    /// Gets the parent level work item types for swimlanes
-    /// </summary>
-    public async Task<List<string>> GetParentLevelWorkItemTypesAsync(string processId)
-    {
-        var hierarchyLevels = await GetRoadmapHierarchyLevelsAsync(processId);
-        if (hierarchyLevels.Count < 2)
-            return new List<string>();
-
-        // The parent level is the second-to-last level in the hierarchy
-        var parentLevel = hierarchyLevels[^2]; // C# 8.0 index from end syntax
-        return parentLevel?.WorkItemTypes ?? new List<string>();
-    }
-
-    /// <summary>
-    /// Gets the top level work item types for grouping
-    /// </summary>
-    public async Task<List<string>> GetTopLevelWorkItemTypesAsync(string processId)
-    {
-        var hierarchyLevels = await GetRoadmapHierarchyLevelsAsync(processId);
-        if (!hierarchyLevels.Any())
-            return new List<string>();
-
-        // The top level is the first level in the hierarchy
-        var topLevel = hierarchyLevels.FirstOrDefault();
-        return topLevel?.WorkItemTypes ?? new List<string>();
-    }
-
-    /// <summary>
-    /// Loads all work items for the roadmap
-    /// </summary>
     public async Task<List<WorkItem>> LoadRoadmapWorkItemsAsync(string projectId, string processId)
     {
         try
@@ -130,9 +97,6 @@ public class RoadmapService
         }
     }
 
-    /// <summary>
-    /// Builds the roadmap swimlane structure from work items
-    /// </summary>
     public async Task<List<RoadmapSwimLane>> BuildRoadmapSwimlanesAsync(List<WorkItem> workItems, string processId)
     {
         var swimlanes = new List<RoadmapSwimLane>();
@@ -233,9 +197,6 @@ public class RoadmapService
         }
     }
 
-    /// <summary>
-    /// Gets unscheduled work items (lowest level items without target dates)
-    /// </summary>
     public async Task<List<UnscheduledWorkItem>> GetUnscheduledWorkItemsAsync(List<WorkItem> workItems, string processId)
     {
         try
@@ -273,74 +234,6 @@ public class RoadmapService
         }
     }
 
-    /// <summary>
-    /// Calculates timeline positions for work items
-    /// </summary>
-    public List<RoadmapTimelineItem> CalculateTimelinePositions(
-        List<RoadmapTimelineItem> timelineItems, 
-        RoadmapConfiguration config)
-    {
-        try
-        {
-            var totalDays = (config.EndDate - config.StartDate).TotalDays;
-            var timelineWidth = 100.0; // Percentage based
-
-            foreach (var item in timelineItems.Where(ti => ti.TargetDate.HasValue))
-            {
-                var daysFromStart = (item.TargetDate!.Value - config.StartDate).TotalDays;
-                item.LeftPosition = (daysFromStart / totalDays) * timelineWidth;
-                
-                // Set default width based on time unit
-                item.Width = config.TimeUnit switch
-                {
-                    RoadmapTimeUnit.Day => 1.0,
-                    RoadmapTimeUnit.Week => 7.0 / totalDays * timelineWidth,
-                    RoadmapTimeUnit.Month => 30.0 / totalDays * timelineWidth,
-                    RoadmapTimeUnit.Quarter => 90.0 / totalDays * timelineWidth,
-                    _ => 7.0 / totalDays * timelineWidth
-                };
-
-                // Ensure minimum width for visibility
-                item.Width = Math.Max(item.Width, 0.5);
-            }
-
-            return timelineItems;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error calculating timeline positions");
-            return timelineItems;
-        }
-    }
-
-    /// <summary>
-    /// Updates the target date for a work item
-    /// </summary>
-    public Task<bool> UpdateWorkItemTargetDateAsync(int workItemId, DateTime? targetDate)
-    {
-        try
-        {
-            // This would integrate with Azure DevOps API to update the work item
-            // For now, we'll just log the action
-            _logger.LogInformation("Would update work item {WorkItemId} target date to {TargetDate}", 
-                workItemId, targetDate);
-            
-            // TODO: Implement actual Azure DevOps work item update
-            // var workItemService = _serviceProvider.GetRequiredService<WorkItemServices>();
-            // return await workItemService.UpdateWorkItemTargetDateAsync(workItemId, targetDate);
-            
-            return Task.FromResult(true); // Placeholder
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error updating work item {WorkItemId} target date", workItemId);
-            return Task.FromResult(false);
-        }
-    }
-
-    /// <summary>
-    /// Gets default roadmap configuration
-    /// </summary>
     public async Task<RoadmapConfiguration> GetDefaultConfigurationAsync()
     {
         try
@@ -378,9 +271,6 @@ public class RoadmapService
         }
     }
 
-    /// <summary>
-    /// Saves roadmap configuration
-    /// </summary>
     public async Task SaveConfigurationAsync(RoadmapConfiguration config)
     {
         try
@@ -398,7 +288,99 @@ public class RoadmapService
         }
     }
 
+    public async Task<bool> UpdateWorkItemTargetDateAsync(int workItemId, DateTime? targetDate)
+    {
+        try
+        {
+            // This would integrate with Azure DevOps API to update the work item
+            // For now, we'll just log the action
+            _logger.LogInformation("Would update work item {WorkItemId} target date to {TargetDate}", 
+                workItemId, targetDate);
+            
+            // TODO: Implement actual Azure DevOps work item update
+            // var workItemService = _serviceProvider.GetRequiredService<WorkItemServices>();
+            // return await workItemService.UpdateWorkItemTargetDateAsync(workItemId, targetDate);
+            
+            return true; // Placeholder
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating work item {WorkItemId} target date", workItemId);
+            return false;
+        }
+    }
+
+    public List<RoadmapTimelineItem> CalculateTimelinePositions(
+        List<RoadmapTimelineItem> timelineItems, 
+        RoadmapConfiguration config)
+    {
+        try
+        {
+            var totalDays = (config.EndDate - config.StartDate).TotalDays;
+            var timelineWidth = 100.0; // Percentage based
+
+            foreach (var item in timelineItems.Where(ti => ti.TargetDate.HasValue))
+            {
+                var daysFromStart = (item.TargetDate!.Value - config.StartDate).TotalDays;
+                item.LeftPosition = (daysFromStart / totalDays) * timelineWidth;
+                
+                // Set default width based on time unit
+                item.Width = config.TimeUnit switch
+                {
+                    RoadmapTimeUnit.Day => 1.0,
+                    RoadmapTimeUnit.Week => 7.0 / totalDays * timelineWidth,
+                    RoadmapTimeUnit.Month => 30.0 / totalDays * timelineWidth,
+                    RoadmapTimeUnit.Quarter => 90.0 / totalDays * timelineWidth,
+                    _ => 7.0 / totalDays * timelineWidth
+                };
+
+                // Ensure minimum width for visibility
+                item.Width = Math.Max(item.Width, 0.5);
+            }
+
+            return timelineItems;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error calculating timeline positions");
+            return timelineItems;
+        }
+    }
+
     #region Private Helper Methods
+
+    private async Task<List<string>> GetTopLevelWorkItemTypesAsync(string processId)
+    {
+        var hierarchyLevels = await GetRoadmapHierarchyLevelsAsync(processId);
+        if (!hierarchyLevels.Any())
+            return new List<string>();
+
+        // The top level is the first level in the hierarchy
+        var topLevel = hierarchyLevels.FirstOrDefault();
+        return topLevel?.WorkItemTypes ?? new List<string>();
+    }
+
+    private async Task<List<string>> GetParentLevelWorkItemTypesAsync(string processId)
+    {
+        var hierarchyLevels = await GetRoadmapHierarchyLevelsAsync(processId);
+        if (hierarchyLevels.Count < 2)
+            return new List<string>();
+
+        // The parent level is the second-to-last level in the hierarchy
+        var parentLevel = hierarchyLevels[^2]; // C# 8.0 index from end syntax
+        return parentLevel?.WorkItemTypes ?? new List<string>();
+    }
+
+    private async Task<List<string>> GetLowestLevelWorkItemTypesAsync(string processId)
+    {
+        var hierarchyLevels = await GetRoadmapHierarchyLevelsAsync(processId);
+        if (!hierarchyLevels.Any())
+            return new List<string>();
+
+        // The lowest level is the last level in the hierarchy
+        var lowestLevel = hierarchyLevels.LastOrDefault();
+        return lowestLevel?.WorkItemTypes ?? new List<string>();
+    }
 
     /// <summary>
     /// Gets actual work item relationships from Azure DevOps API

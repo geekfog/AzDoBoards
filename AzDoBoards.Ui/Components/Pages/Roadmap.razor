@@ -1,12 +1,13 @@
 @page "/roadmap"
+@rendermode InteractiveServer
 @using AzDoBoards.Client.Models
 @using AzDoBoards.Ui.Services
 @using AzDoBoards.Utility
 @using AzDoBoards.Utility.Models
 @using Microsoft.AspNetCore.Components.Authorization
 @using MudBlazor
-@inject RoadmapService RoadmapService
-@inject HierarchyService HierarchyService
+@inject IRoadmapService RoadmapService
+@inject IHierarchyService HierarchyService
 @inject ISnackbar Snackbar
 @inject ILogger<Roadmap> Logger
 @inject AuthenticationStateProvider AuthStateProvider
@@ -92,13 +93,13 @@
                 
                 @if (unscheduledItems?.Any() == true)
                 {
-                    <!-- Direct rendering for testing -->
+                    <!-- Pure Blazor interaction - no drag and drop -->
                     <div class="unscheduled-items-container">
                         @foreach (var item in unscheduledItems)
                         {
-                            <div class="unscheduled-item" 
+                            <div class="unscheduled-item @(selectedUnscheduledItem?.WorkItemId == item.WorkItemId ? "selected" : "")" 
                                  style="--item-color: @item.Color"
-                                 draggable="true">
+                                 @onclick="() => SelectUnscheduledItem(item)">
                                 <div class="unscheduled-item-header">
                                     <MudIcon Icon="@WorkItemHelper.GetWorkItemTypeSvgIcon(item.WorkItemType)" Size="Size.Small" Class="mr-2" />
                                     <span class="unscheduled-item-id">@item.WorkItemId: </span>
@@ -111,7 +112,11 @@
                                     {
                                         <span class="unscheduled-item-assigned">@item.AssignedTo</span>
                                     }
-                                    <MudIcon Icon="@Icons.Material.Filled.DragIndicator" Size="Size.Small" Class="ml-auto" />
+                                    <MudIconButton Icon="@Icons.Material.Filled.Schedule" 
+                                                 Size="Size.Small" 
+                                                 Class="ml-auto"
+                                                 OnClick="@(() => ShowScheduleDialog(item))"
+                                                 Variant="Variant.Text" />
                                 </div>
                                 @if (!string.IsNullOrEmpty(item.ParentTitle))
                                 {
@@ -171,33 +176,36 @@
                                 </div>
                                 
                                 <div class="swimlane-content">
-                                    <!-- Timeline Drop Zone -->
-                                    <MudDropContainer T="RoadmapTimelineItem" 
-                                                    Items="swimlane.TimelineItems" 
-                                                    ItemDropped="(item) => OnTimelineItemDropped(item, swimlane.WorkItemId)"
-                                                    Class="timeline-drop-zone">
-                                        <ChildContent>
-                                            <MudDropZone T="RoadmapTimelineItem" 
-                                                       Identifier="@($"timeline-{swimlane.WorkItemId}")" 
-                                                       Class="timeline-drop-zone">
-                                            </MudDropZone>
-                                        </ChildContent>
-                                        <ItemRenderer>
-                                            <div class="timeline-item" 
-                                                 style="--item-color: @context.Color; left: @(context.LeftPosition)%; width: @(context.Width)%; top: @(context.SwimLaneLevel * 36)px;"
-                                                 draggable="true"
-                                                 @onclick="() => ShowWorkItemDetails(context)">
-                                                <span class="flex-grow-1">@GetDisplayTitle(context.Title)</span>
-                                                @if (!string.IsNullOrEmpty(context.AssignedTo))
+                                    <!-- Timeline Items - click to edit, no drag and drop -->
+                                    <div class="timeline-items-container">
+                                        @foreach (var item in swimlane.TimelineItems)
+                                        {
+                                            <div class="timeline-item @(selectedTimelineItem?.WorkItemId == item.WorkItemId ? "selected" : "")" 
+                                                 style="--item-color: @item.Color; left: @(item.LeftPosition)%; width: @(item.Width)%; top: @(item.SwimLaneLevel * 36)px;"
+                                                 @onclick="() => ShowWorkItemDetails(item)">
+                                                <span class="flex-grow-1">@GetDisplayTitle(item.Title)</span>
+                                                @if (!string.IsNullOrEmpty(item.AssignedTo))
                                                 {
-                                                    <MudTooltip Text="@context.AssignedTo">
+                                                    <MudTooltip Text="@item.AssignedTo">
                                                         <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" Class="mr-1" />
                                                     </MudTooltip>
                                                 }
-                                                <MudIcon Icon="@Icons.Material.Filled.DragIndicator" Class="move-icon" Size="Size.Small" />
+                                                <MudIconButton Icon="@Icons.Material.Filled.Edit" 
+                                                             Class="move-icon" 
+                                                             Size="Size.Small" 
+                                                             OnClick="@(() => ShowWorkItemDetails(item))"
+                                                             Variant="Variant.Text" />
                                             </div>
-                                        </ItemRenderer>
-                                    </MudDropContainer>
+                                        }
+                                    </div>
+                                    
+                                    <!-- Drop zone indicator when item is selected -->
+                                    @if (selectedUnscheduledItem != null)
+                                    {
+                                        <div class="drop-zone-overlay" @onclick="@(() => ScheduleItemInSwimlane(swimlane.WorkItemId))">
+                                            <MudText>Click to schedule "@selectedUnscheduledItem.Title" here</MudText>
+                                        </div>
+                                    }
                                 </div>
                                 
                                 @if (!swimlane.IsCollapsed && swimlane.Children.Any())
@@ -212,32 +220,36 @@
                                                 </div>
                                                 
                                                 <div class="swimlane-content">
-                                                    <MudDropContainer T="RoadmapTimelineItem" 
-                                                                    Items="childSwimlane.TimelineItems" 
-                                                                    ItemDropped="(item) => OnTimelineItemDropped(item, childSwimlane.WorkItemId)"
-                                                                    Class="timeline-drop-zone">
-                                                        <ChildContent>
-                                                            <MudDropZone T="RoadmapTimelineItem" 
-                                                                       Identifier="@($"timeline-{childSwimlane.WorkItemId}")" 
-                                                                       Class="timeline-drop-zone">
-                                                            </MudDropZone>
-                                                        </ChildContent>
-                                                        <ItemRenderer>
-                                                            <div class="timeline-item" 
-                                                                 style="--item-color: @context.Color; left: @(context.LeftPosition)%; width: @(context.Width)%; top: @(context.SwimLaneLevel * 36)px;"
-                                                                 draggable="true"
-                                                                 @onclick="() => ShowWorkItemDetails(context)">
-                                                                <span class="flex-grow-1">@GetDisplayTitle(context.Title)</span>
-                                                                @if (!string.IsNullOrEmpty(context.AssignedTo))
+                                                    <!-- Timeline Items - click to edit -->
+                                                    <div class="timeline-items-container">
+                                                        @foreach (var item in childSwimlane.TimelineItems)
+                                                        {
+                                                            <div class="timeline-item @(selectedTimelineItem?.WorkItemId == item.WorkItemId ? "selected" : "")" 
+                                                                 style="--item-color: @item.Color; left: @(item.LeftPosition)%; width: @(item.Width)%; top: @(item.SwimLaneLevel * 36)px;"
+                                                                 @onclick="() => ShowWorkItemDetails(item)">
+                                                                <span class="flex-grow-1">@GetDisplayTitle(item.Title)</span>
+                                                                @if (!string.IsNullOrEmpty(item.AssignedTo))
                                                                 {
-                                                                    <MudTooltip Text="@context.AssignedTo">
+                                                                    <MudTooltip Text="@item.AssignedTo">
                                                                         <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" Class="mr-1" />
                                                                     </MudTooltip>
                                                                 }
-                                                                <MudIcon Icon="@Icons.Material.Filled.DragIndicator" Class="move-icon" Size="Size.Small" />
+                                                                <MudIconButton Icon="@Icons.Material.Filled.Edit" 
+                                                                             Class="move-icon" 
+                                                                             Size="Size.Small" 
+                                                                             OnClick="@(() => ShowWorkItemDetails(item))"
+                                                                             Variant="Variant.Text" />
                                                             </div>
-                                                        </ItemRenderer>
-                                                    </MudDropContainer>
+                                                        }
+                                                    </div>
+                                                    
+                                                    <!-- Drop zone indicator when item is selected -->
+                                                    @if (selectedUnscheduledItem != null)
+                                                    {
+                                                        <div class="drop-zone-overlay" @onclick="@(() => ScheduleItemInSwimlane(childSwimlane.WorkItemId))">
+                                                            <MudText>Click to schedule "@selectedUnscheduledItem.Title" here</MudText>
+                                                        </div>
+                                                    }
                                                 </div>
                                             </div>
                                         }
@@ -328,6 +340,38 @@
     </DialogActions>
 </MudDialog>
 
+<!-- Schedule Item Dialog -->
+<MudDialog @bind-Visible="showScheduleDialog" Options="dialogOptions">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Schedule" Class="mr-3" />
+            Schedule Work Item
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        @if (selectedUnscheduledItem != null)
+        {
+            <MudGrid>
+                <MudItem xs="12">
+                    <MudTextField Value="@selectedUnscheduledItem.Title" 
+                                Label="Work Item" 
+                                Variant="Variant.Outlined" 
+                                ReadOnly="true" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudDatePicker @bind-Date="scheduleTargetDate" 
+                                 Label="Target Date" 
+                                 Variant="Variant.Outlined" />
+                </MudItem>
+            </MudGrid>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="CloseScheduleDialog">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="ScheduleWorkItem">Schedule</MudButton>
+    </DialogActions>
+</MudDialog>
+
 @code {
     private bool isLoading = true;
     private bool isAuthenticated = false;
@@ -349,7 +393,13 @@
     // Dialog state
     private bool showWorkItemDialog = false;
     private RoadmapTimelineItem? selectedWorkItem = null;
+    private RoadmapTimelineItem? selectedTimelineItem = null;
     private DateTime? selectedWorkItemTargetDate = null;
+    
+    private bool showScheduleDialog = false;
+    private UnscheduledWorkItem? selectedUnscheduledItem = null;
+    private DateTime? scheduleTargetDate = null;
+    
     private DialogOptions dialogOptions = new() { MaxWidth = MaxWidth.Medium, FullWidth = true };
 
     protected override async Task OnInitializedAsync()
@@ -375,9 +425,10 @@
                 return;
             }
 
-            // Load current configuration
-            currentProcessId = await HierarchyService.GetCurrentProcessIdAsync();
-            currentProjectId = await HierarchyService.GetCurrentProjectIdAsync(currentProcessId);
+            // Load current configuration using client service
+            var configResponse = await RoadmapService.GetConfigurationAsync();
+            currentProcessId = configResponse.ProcessId;
+            currentProjectId = configResponse.ProjectId;
 
             Logger.LogInformation("ProcessId: {ProcessId}, ProjectId: {ProjectId}", currentProcessId, currentProjectId);
 
@@ -404,9 +455,10 @@
             hasConfiguration = true;
 
             // Load work item types for each level
-            topLevelWorkItemTypes = await RoadmapService.GetTopLevelWorkItemTypesAsync(currentProcessId);
-            parentLevelWorkItemTypes = await RoadmapService.GetParentLevelWorkItemTypesAsync(currentProcessId);
-            lowestLevelWorkItemTypes = await RoadmapService.GetLowestLevelWorkItemTypesAsync(currentProcessId);
+            var workItemTypes = await RoadmapService.GetWorkItemTypesAsync(currentProcessId);
+            topLevelWorkItemTypes = workItemTypes.TopLevel;
+            parentLevelWorkItemTypes = workItemTypes.ParentLevel;
+            lowestLevelWorkItemTypes = workItemTypes.LowestLevel;
 
             Logger.LogInformation("Work item types - Top: {TopLevel}, Parent: {ParentLevel}, Lowest: {LowestLevel}", 
                 string.Join(", ", topLevelWorkItemTypes), 
@@ -530,35 +582,66 @@
         return null;
     }
 
-    private void OnUnscheduledItemDropped(MudItemDropInfo<UnscheduledWorkItem> dropInfo)
+    // Pure Blazor interaction methods - no JavaScript
+    private void SelectUnscheduledItem(UnscheduledWorkItem item)
     {
-        // This would be called when an unscheduled item is dropped onto the timeline
-        // The actual drop zone handling would need to be implemented based on where it's dropped
-        Logger.LogInformation("Unscheduled item {WorkItemId} dropped", dropInfo.Item?.WorkItemId);
-        
-        // TODO: Calculate target date based on drop position and update the work item
-        if (dropInfo.Item != null)
+        selectedUnscheduledItem = selectedUnscheduledItem?.WorkItemId == item.WorkItemId ? null : item;
+        StateHasChanged();
+    }
+
+    private void ShowScheduleDialog(UnscheduledWorkItem item)
+    {
+        selectedUnscheduledItem = item;
+        scheduleTargetDate = DateTime.Today.AddDays(7); // Default to next week
+        showScheduleDialog = true;
+    }
+
+    private void CloseScheduleDialog()
+    {
+        showScheduleDialog = false;
+        selectedUnscheduledItem = null;
+        scheduleTargetDate = null;
+    }
+
+    private async Task ScheduleWorkItem()
+    {
+        if (selectedUnscheduledItem == null || !scheduleTargetDate.HasValue) return;
+
+        try
         {
-            Snackbar.Add($"Moved {dropInfo.Item.Title} to timeline", Severity.Success);
+            var success = await RoadmapService.UpdateWorkItemTargetDateAsync(
+                selectedUnscheduledItem.WorkItemId, scheduleTargetDate);
+            
+            if (success)
+            {
+                Snackbar.Add($"Scheduled {selectedUnscheduledItem.Title}", Severity.Success);
+                CloseScheduleDialog();
+                await LoadRoadmapDataAsync(); // Refresh data
+            }
+            else
+            {
+                Snackbar.Add("Failed to schedule work item", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error scheduling work item {WorkItemId}", selectedUnscheduledItem.WorkItemId);
+            Snackbar.Add("Error scheduling work item", Severity.Error);
         }
     }
 
-    private void OnTimelineItemDropped(MudItemDropInfo<RoadmapTimelineItem> dropInfo, int swimlaneId)
+    private async Task ScheduleItemInSwimlane(int swimlaneId)
     {
-        // This would be called when a timeline item is moved to a different position
-        Logger.LogInformation("Timeline item {WorkItemId} dropped in swimlane {SwimlaneId}", 
-            dropInfo.Item?.WorkItemId, swimlaneId);
-        
-        // TODO: Calculate new target date based on drop position and update the work item
-        if (dropInfo.Item != null)
-        {
-            Snackbar.Add($"Rescheduled {dropInfo.Item.Title}", Severity.Success);
-        }
+        if (selectedUnscheduledItem == null) return;
+
+        // For now, just show the schedule dialog
+        ShowScheduleDialog(selectedUnscheduledItem);
     }
 
     private void ShowWorkItemDetails(RoadmapTimelineItem item)
     {
         selectedWorkItem = item;
+        selectedTimelineItem = item;
         selectedWorkItemTargetDate = item.TargetDate;
         showWorkItemDialog = true;
     }
@@ -567,6 +650,7 @@
     {
         showWorkItemDialog = false;
         selectedWorkItem = null;
+        selectedTimelineItem = null;
         selectedWorkItemTargetDate = null;
     }
 

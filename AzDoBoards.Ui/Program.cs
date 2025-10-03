@@ -2,6 +2,7 @@ using AzDoBoards.Client;
 using AzDoBoards.Client.Services;
 using AzDoBoards.Data;
 using AzDoBoards.Ui.Components;
+using AzDoBoards.Ui.Services;
 using AzDoBoards.Utility;
 using Azure.Identity;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
@@ -83,8 +84,10 @@ public class Program
         builder.Services.AddScoped<WorkItemStateServices>(); // Register Work Item State Services (which depends on ConnectionFactory)
         builder.Services.AddScoped<WorkItemServices>(); // Register Work Items (which depends on ConnectionFactory)
         builder.Services.AddSingleton<IConnectionMultiplexer>(sp => ConnectionMultiplexer.Connect(redisConnectionString)); // Register Redis connection multiplexer
-        builder.Services.AddScoped<Services.HierarchyService>();
-        builder.Services.AddScoped<Services.RoadmapService>(); // Register Roadmap Service
+        
+        // Add the JavaScript-free services
+        builder.Services.AddScoped<IRoadmapService, JavaScriptFreeRoadmapService>();
+        builder.Services.AddScoped<IHierarchyService, JavaScriptFreeHierarchyService>();
 
         // Add Entra ID (Azure AD) Authentication
         builder.Services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
@@ -102,14 +105,6 @@ public class Program
                         {
                             context.ProtocolMessage.Prompt = promptValue?.ToString();
                         }
-                        
-                        // Optionally add domain_hint for work/school accounts
-                        // Uncomment the following lines if you want to hint that work accounts are preferred
-                        // if (!context.ProtocolMessage.Parameters.ContainsKey("domain_hint"))
-                        // {
-                        //     context.ProtocolMessage.DomainHint = "organizations";
-                        // }
-                        
                         return Task.CompletedTask;
                     },
                     OnAuthenticationFailed = context =>
