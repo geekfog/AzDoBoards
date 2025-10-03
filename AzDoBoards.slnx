@@ -1,4 +1,8 @@
 <Solution>
+  <Folder Name="/Solution Items/">
+    <File Path="Directory.Build.props" />
+    <File Path="README.md" />
+  </Folder>
   <Project Path="AzDoBoards.Ui/AzDoBoards.Ui.Client/AzDoBoards.Ui.Client.csproj" />
   <Project Path="AzDoBoards.Ui/AzDoBoards.Ui/AzDoBoards.Ui.csproj" />
 </Solution>
