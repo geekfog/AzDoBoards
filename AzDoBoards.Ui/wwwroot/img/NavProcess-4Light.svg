@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="100%" height="100%" viewBox="0 0 20 20" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;">
+    <g transform="matrix(1,0,0,1,-232.568,-26.8534)">
+        <g transform="matrix(2.07264,0,0,1.55447,-22.0616,2.00508)">
+            <g id="NavProcess-4Light" transform="matrix(1,0,0,1.99258,4.50447,-50.5545)">
+                <g id="Square" transform="matrix(1.05591,0,0,0.706564,17.0645,16.3197)">
+                    <rect x="95.921" y="24.165" width="9.139" height="9.139" style="fill:none;"/>
+                </g>
+                <g transform="matrix(0.158229,0,0,0.158453,122.659,30.0943)">
+                    <path d="M26.125,41.198L20.513,56.479L13.013,56.479L18.625,41.198L13.013,25.916L20.513,25.916L26.125,41.198ZM12.746,41.198L7.062,56.479L-0.414,56.479L5.27,41.198L-0.414,25.916L7.062,25.916L12.746,41.198ZM-15.938,26.012L-6.622,26.012L-1.058,41.293L-6.552,56.384L-14.351,56.384C-17.258,56.384 -19.619,54.53 -19.619,52.247L-19.619,29.957C-19.619,28.109 -18.071,26.541 -15.938,26.012Z" style="fill:none;stroke:white;stroke-opacity:0.09;stroke-width:7.19px;"/>
+                </g>
+                <g transform="matrix(0.158229,0,0,0.158453,122.659,30.0943)">
+                    <g transform="matrix(0.076656,0,0,0.149086,-13.1307,3.02415)">
+                        <path d="M512.101,256.051L438.887,153.551L341.055,153.551L414.269,256.051L341.055,358.551L438.887,358.551L512.101,256.051Z" style="fill-rule:nonzero;"/>
+                    </g>
+                    <g transform="matrix(0.0776337,0,0,0.149086,-16.5529,3.02415)">
+                        <path d="M377.402,256.051L304.188,153.551L207.886,153.551L281.1,256.051L207.886,358.551L304.188,358.551L377.402,256.051Z" style="fill-rule:nonzero;"/>
+                    </g>
+                    <g transform="matrix(1.94586,0,0,3.81736,-515.024,-409.448)">
+                        <path d="M256.486,114.074L261.274,114.074L264.133,118.077L261.31,122.03L257.302,122.03C255.808,122.03 254.595,121.544 254.595,120.946L254.595,115.107C254.595,114.623 255.39,114.212 256.486,114.074Z"/>
+                    </g>
+                </g>
+            </g>
+        </g>
+    </g>
+</svg>

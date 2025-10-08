@@ -1,12 +1,12 @@
 # AzDo Boards Project Management Tool
 
-***NOTE**: This is under heavy development. In short, it is incomplete. This is an idea that has been noodled for a while. Now this is being attempted for future efficiency of project work, to give back, to see if there is interest within the open source community, and potential business opportunities. The goal is to try different items to see what looks and feels right. AI is leveraged as a coding companion (right now, Claude Sonnet 4, Claude Sonnet 4.5, and GPT-5 are leveraged) as part of the experimentation. It is with interest to see where this goes, if anywhere. The goal is to make a usable product and remove this banner. Perhaps this could be commercially viable (but always open-source), similarly done and inspired by [IdentityServer](https://github.com/DuendeSoftware/products/tree/main/identity-server).*
+***NOTE**: This is under heavy development. In short, it is very incomplete. This is an idea that has been noodled for a while. Now this is being attempted for future efficiency of project work, to give back, to see if there is interest within the open source community, and potential business opportunities. The goal is to try different items to see what looks and feels right. AI is leveraged as a coding companion (right now, Claude Sonnet 4, Claude Sonnet 4.5, and GPT-5 are leveraged) as part of the experimentation. It is with interest to see where this goes, if anywhere. The goal is to make a usable product and remove this banner. Perhaps this could be commercially viable (but always open-source), similarly done and inspired by [IdentityServer](https://github.com/DuendeSoftware/products/tree/main/identity-server).*
 
 ## Overview
 
-<img src="Images/favicon-0512.png" alt="AzDo Boards Icon" style="zoom:25%; float:right;" />AzDo Boards (pronounced "As-Do Boards") is to be a tool to assist with project management within Azure DevOps Boards. The UI within Azure DevOps Boards is clunky for doing project management and quickly adding or updating information. 
+<img src="Images/favicon-0512.png" alt="AzDo Boards Icon" style="zoom:25%; float:right;" />AzDo Boards (pronounced "As Doe Boards") is to be a tool to assist with project management within Azure DevOps Boards. The UI within Azure DevOps Boards is clunky for doing project management and quickly adding or updating information. 
 
-This supports a custom-defined work item hierarchy based on work item types (e.g., Initiative > Epic > Feature > User Story / Bug / Research > Tasks). This helps with reporting and tracking.
+This supports a custom-defined work item hierarchy based on work item types (e.g., Initiative > Epic > Feature > User Story / Bug / Research > Tasks). This helps with reporting, tracking, and querying.
 
 ## Future Action Items
 
@@ -24,7 +24,7 @@ This supports a custom-defined work item hierarchy based on work item types (e.g
 
 # Development Technologies
 
-- Visual Studio 2026 Insider v18.0 or Visual Studio 2022 17.14.14+ Preview
+- Visual Studio 202618.0.0 Insiders [11018.127]+
   - [Mudblazor Component Library](https://mudblazor.com/docs/overview)
   - [Material UI](https://mui.com/material-ui/material-icons/)
   - *Microsoft TFS Client (to abstract Azure DevOps API calls) NuGet packages leveraged*
@@ -34,9 +34,9 @@ This supports a custom-defined work item hierarchy based on work item types (e.g
 - Redis Cache - one of the following:
   - [Azure Cache for Redis](https://azure.microsoft.com/en-us/pricing/details/cache/) (Microsoft-based basic tier for Development, higher tiers for non-Development environments)
   - [Memurai](https://www.memurai.com/get-memurai) (Free version of Redis Cache on Developer Machine - can also purchase Enterprise Edition)
-  - Redis for Windows ([tporadowski/redis](https://github.com/tporadowski/redis/releases)) - last update February 17, 2022
+  - Redis for Windows ([tporadowski/redis](https://github.com/tporadowski/redis/releases)) - last updated February 17, 2022
 - (Optional) Azure Storage Explorer ([Download](https://azure.microsoft.com/en-us/products/storage/storage-explorer))
-- [Snyk](https://app.snyk.io) Code Scanning Service
+- [Snyk](https://app.snyk.io) Code Scanning SaaS
 
 *At this time, the formatting of source code presumes use of 4K monitor(s) using 100% scale with DPI. This means lines of code or text may go quite wide, which could be harder to see if running lower resolution.*
 
@@ -137,5 +137,11 @@ An App Registration is required to allow this application to integrate with Azur
    Additional are automatically added based on the additional claims desired. For the examples given, email and profile are required for the claims to be received.
 
    To have the API permissions configured for all users up front so they don't have to approve during login, use the **Enterprise applications** blade (link to it is available via Manage > API permissions) to view and manage consented permissions for individual apps as well as the tenant's consent settings.
+
+# History
+
+| Version  | Dates       | Pre-Release | Notes                                                        |
+| -------- | ----------- | ----------- | ------------------------------------------------------------ |
+| 01.10.01 | 8/22/2025 - | Yes         | Start of application development. Started with Visual Studio 2022 Preview with .NET 10 SDK Preview, switched to Visual Studio 2026 18.0 Insider once available) |
 
 \~End\~

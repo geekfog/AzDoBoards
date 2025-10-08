@@ -1,44 +1,42 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<svg width="100%" height="100%" viewBox="0 0 62 62" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;">
-    <g transform="matrix(1,0,0,1,-9.00842,-5.69863)">
-        <g transform="matrix(6.34203,0,0,2.84525,124.422,-9.04615)">
-            <g id="Square-AzDoBoards" serif:id="Square AzDoBoards">
+<svg width="100%" height="100%" viewBox="0 0 52 52" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;">
+    <g transform="matrix(1,0,0,1,-5.75086,-4.64023)">
+        <g transform="matrix(12.1029,0,0,4.58945,237.443,-14.5917)">
+            <g id="Favicon" transform="matrix(0.52401,0,0,0.619954,-10.0077,-0.0925104)">
                 <g id="Square" transform="matrix(0.152698,0,0,0.335793,-17.9226,5.5573)">
                     <rect x="3.198" y="4.024" width="53.696" height="54.427" style="fill:none;"/>
                 </g>
                 <g id="AzDoBoards" transform="matrix(0.157678,0,0,0.351463,-21.4328,5.37463)">
-                    <g>
-                        <g transform="matrix(1,-0,-0,1,20.5134,-0.547383)">
-                            <use xlink:href="#_Image1" x="0" y="0" width="57px" height="50px"/>
-                        </g>
-                        <g transform="matrix(1,0,0,1,27.0134,5.62059)">
-                            <path d="M34.304,20.846C37.86,20.846 41.096,22.183 43.555,24.38L43.555,2.803C43.555,1.712 42.676,0.832 41.587,0.832L2.469,0.832C1.379,0.832 0.5,1.712 0.5,2.803L0.5,34.878C0.5,35.969 1.379,36.849 2.469,36.849L20.583,36.849C20.481,36.167 20.427,35.464 20.427,34.748C20.42,27.074 26.64,20.846 34.304,20.846Z" style="fill-rule:nonzero;"/>
-                        </g>
-                        <g transform="matrix(1,0,0,1,27.0134,5.62059)">
-                            <rect x="4.043" y="4.445" width="9.578" height="6.071" style="fill:white;fill-rule:nonzero;"/>
-                        </g>
-                        <g transform="matrix(1,0,0,1,27.0134,5.62059)">
-                            <rect x="17.211" y="4.445" width="9.579" height="6.071" style="fill:white;fill-opacity:0.71;fill-rule:nonzero;"/>
-                        </g>
-                        <g transform="matrix(1,0,0,1,27.0134,5.62059)">
-                            <rect x="4.043" y="14.065" width="9.578" height="6.071" style="fill:white;fill-opacity:0.71;fill-rule:nonzero;"/>
-                        </g>
-                        <g transform="matrix(1,0,0,1,27.0134,5.62059)">
-                            <rect x="4.043" y="23.684" width="9.578" height="5.982" style="fill:white;fill-rule:nonzero;"/>
-                        </g>
-                        <g transform="matrix(1,0,0,1,27.0134,5.62059)">
-                            <rect x="17.211" y="14.065" width="9.579" height="6.071" style="fill:white;fill-opacity:0.43;fill-rule:nonzero;"/>
-                        </g>
-                        <g transform="matrix(1,0,0,1,27.0134,5.62059)">
-                            <rect x="30.406" y="4.445" width="9.578" height="6.071" style="fill:white;fill-rule:nonzero;"/>
-                        </g>
-                        <g transform="matrix(1,0,0,1,27.0134,5.62059)">
-                            <path d="M43.553,34.876L43.553,24.385C41.101,22.189 37.858,20.852 34.302,20.852C26.638,20.852 20.418,27.073 20.418,34.754C20.418,35.47 20.473,36.166 20.575,36.855L41.585,36.855C42.675,36.848 43.553,35.968 43.553,34.876Z" style="fill-opacity:0.8;fill-rule:nonzero;"/>
-                        </g>
-                        <g transform="matrix(1,-0,-0,1,20.5134,-0.547383)">
-                            <use xlink:href="#_Image2" x="22.078" y="26.553" width="39px" height="34px"/>
-                        </g>
+                    <g transform="matrix(1,0,0,1,27.0134,5.62059)">
+                        <path d="M34.304,20.846C37.86,20.846 41.096,22.183 43.555,24.38L43.555,2.803C43.555,1.712 42.676,0.832 41.587,0.832L2.469,0.832C1.379,0.832 0.5,1.712 0.5,2.803L0.5,34.878C0.5,35.969 1.379,36.849 2.469,36.849L20.583,36.849C20.481,36.167 20.427,35.464 20.427,34.748C20.42,27.074 26.64,20.846 34.304,20.846Z" style="fill:none;fill-rule:nonzero;stroke:black;stroke-opacity:0.09;stroke-width:3px;"/>
+                    </g>
+                    <g transform="matrix(1,0,0,1,27.0134,5.62059)">
+                        <path d="M34.304,20.846C37.86,20.846 41.096,22.183 43.555,24.38L43.555,2.803C43.555,1.712 42.676,0.832 41.587,0.832L2.469,0.832C1.379,0.832 0.5,1.712 0.5,2.803L0.5,34.878C0.5,35.969 1.379,36.849 2.469,36.849L20.583,36.849C20.481,36.167 20.427,35.464 20.427,34.748C20.42,27.074 26.64,20.846 34.304,20.846Z" style="fill-rule:nonzero;"/>
+                    </g>
+                    <g transform="matrix(1,0,0,1,27.0134,5.62059)">
+                        <rect x="4.043" y="4.445" width="9.578" height="6.071" style="fill:white;fill-rule:nonzero;"/>
+                    </g>
+                    <g transform="matrix(1,0,0,1,27.0134,5.62059)">
+                        <rect x="17.211" y="4.445" width="9.579" height="6.071" style="fill:white;fill-opacity:0.71;fill-rule:nonzero;"/>
+                    </g>
+                    <g transform="matrix(1,0,0,1,27.0134,5.62059)">
+                        <rect x="4.043" y="14.065" width="9.578" height="6.071" style="fill:white;fill-opacity:0.71;fill-rule:nonzero;"/>
+                    </g>
+                    <g transform="matrix(1,0,0,1,27.0134,5.62059)">
+                        <rect x="4.043" y="23.684" width="9.578" height="5.982" style="fill:white;fill-rule:nonzero;"/>
+                    </g>
+                    <g transform="matrix(1,0,0,1,27.0134,5.62059)">
+                        <rect x="17.211" y="14.065" width="9.579" height="6.071" style="fill:white;fill-opacity:0.43;fill-rule:nonzero;"/>
+                    </g>
+                    <g transform="matrix(1,0,0,1,27.0134,5.62059)">
+                        <rect x="30.406" y="4.445" width="9.578" height="6.071" style="fill:white;fill-rule:nonzero;"/>
+                    </g>
+                    <g transform="matrix(1,0,0,1,27.0134,5.62059)">
+                        <path d="M43.553,34.876L43.553,24.385C41.101,22.189 37.858,20.852 34.302,20.852C26.638,20.852 20.418,27.073 20.418,34.754C20.418,35.47 20.473,36.166 20.575,36.855L41.585,36.855C42.675,36.848 43.553,35.968 43.553,34.876Z" style="fill-opacity:0.8;fill-rule:nonzero;"/>
+                    </g>
+                    <g transform="matrix(1,0,0,1,27.0134,5.62059)">
+                        <path d="M43.557,24.385L43.557,34.883C43.557,35.968 42.678,36.854 41.588,36.854L20.578,36.854C21.586,43.533 27.35,48.655 34.305,48.655C41.976,48.649 48.189,42.427 48.189,34.747C48.189,30.626 46.398,26.929 43.557,24.385Z" style="fill:none;fill-rule:nonzero;stroke:black;stroke-opacity:0.09;stroke-width:3px;"/>
                     </g>
                     <g transform="matrix(1,0,0,1,27.0134,5.62059)">
                         <path d="M43.557,24.385L43.557,34.883C43.557,35.968 42.678,36.854 41.588,36.854L20.578,36.854C21.586,43.533 27.35,48.655 34.305,48.655C41.976,48.649 48.189,42.427 48.189,34.747C48.189,30.626 46.398,26.929 43.557,24.385Z" style="fill-opacity:0.5;fill-rule:nonzero;"/>
@@ -50,8 +48,4 @@
             </g>
         </g>
     </g>
-    <defs>
-        <image id="_Image1" width="57px" height="50px" xlink:href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADkAAAAyCAYAAADm33NGAAAACXBIWXMAAA7EAAAOxAGVKw4bAAADjUlEQVRoge2abXPiMAyE1wF6bW/6///ntRyBkPg+2BtvFIcLlLzAdGc8JOB0/FSKZFt2GCHvvRvTbwk55/x/++S+NFDO9FsDsDfX7X0OujfgCKitkH72cwn5zGeDBOstaGewEZBQRWwbubZWXUoEamKr430t37dW3bZPJUCCbeLvW7m3oHMCq+UIUsd2js3Fe8TfAURI46IbALvYXuSTsEta1AKeAZwAVPLJfs57D+ec38ofoCUJ+QvAG4DXeG1B+cxcoiUt4BFAKWPqvJ+AuCsS5BYB6A3AbwDvsRF0KUiga0UC/o1jgvzWIHlba0m14hbBkq8IcB9IsLsZQMaqAnBAGC/fxbO0AoD33juFVNAXBMu9IwB+IFlvLdoheaK6LoPkmR2LTOKnNRV0bYCUQ4obDJIbmMBYmAes2/LBNUuzgOZ0IILaAFKgnysfQXbCAlywpF4XWK+bWtkZ2aC7UmuZul0jtV5v7Jcs9Wiwg2N9FHf8ln4gn0U/kM+iH8gHUmf9aPUskFwoAxnQZ4HkQlmt2cI+A2QV2xlpt65jzbVD6p5qThXC9scxXtOinWe22UeXU4M04DPSYHUnkasNH/scEbZBFHRwI2tJNQgWKREGe0LaU7WQupHWxL58Tq25KkuWAPYIkGqRS5Zk4+5chfTPqWCC0NKQewBfsaklCcmB6tYMdy24tGpi32wAspvLc2sP4A+ATwTIAwLkCcmKjfRXSN3mAJJrs63CXUsEsE8EULoqAW3e05W/FqQo9tXo2q2FzKwafTe1aYDuZqUbbnqvJYThqtaMOiBA2WCjEbW1gnPOZyrdLANYtcFGa5SXIAcnvN9QjQSpcGrBpldENffee46vp1ylOQc5BRxVopsLCdi+h6POAIzoo9KX19bhbXS7hxTOBplRgLeIkPriaom6zj10owimeVAT/mSylhyq4t5D+g4yyNjl0SQqjIsw12gp7HCHQTDRa7LXhN87sXFPMfBYK9oqrsdtRdgGAXAfGxN+diI9lRRS3bRC+K+zqlUjQGs5PXcCRJc4/Fv0hj1SZNX55eTSFEJQuioHT8vmToDkNOQVJbqrjDbITemqQB6SSxd+x2XMNUdcrDV5BEVTxyyuCshArzisNObkh3Vbe2hhcHYzhVpLxjkik7+1RO7Y2SV3pXTCnDseNoumPEBoj4lp66wSptbUR0GzRzbngqNGDfgeh3rnBlP9A+Wj6OLjFbbcAAAAAElFTkSuQmCC"/>
-        <image id="_Image2" width="39px" height="34px" xlink:href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACcAAAAiCAYAAADcbsCGAAAACXBIWXMAAA7EAAAOxAGVKw4bAAACd0lEQVRYhb2Y4XKkIBCEG3Xv/V/3stG5H0ubph1YTZ1L1dQaS+CjBxpIwYdKRJTsfSklenXSCv+zGJT3t4NlkLfCCViRaD6ROAB+Ao4xGWBYbA643AwGAZvkmWWTmAh4O5yAKdws7wKtkhuAEhG7ep+CKxVsxo+CTOWKn4UR8nw7HAFVOaqHCqZQBaLeJ5Uj3FKfCUO4DbZ6b4GTVUpAV07hAi8Fzy+InqNfKL5KCcVfVKjNvtsXTAPXcfPfQI7AFC7k/bf2FxFlhxOwST5yV78CSrhFoDytM17q6bzk3y/lDMzdnM9XALXuAuBRfwlKOCrncxRAO+c8BWqaU1b5ApwHUE3Xvm/Kkux/lF5HOaMzujeAah9uI14O7zgK32Y4wgfauZKOsAOWDVi3LoXxQ8DB59yPHjX+oJ3Iv4HTDZ++xsKN/3B8ynzO06GTWe3hDCAEysGyXUH32NSEs81aU+yr6wwgO1aw1UJB0YPzUShwNvdGkGyDqePzWzCFC7S536SRzSthbC8+0TOobwu+T5XTXK9JI+p9uuIcDGhXow6SbT0tXLnYD5ullKhep4c/NjbXBrLz/2j+ZWBPAF8ST1PukCGdc3TsrVbwTlUN3S/9XsC2GKrWF4C/AuhgcbjgiHqcH9x8sw5XtOacqZqls6eaDqQpu3IVkI2v9l3WocL1lKMyPs/SdPq9NbMSHv78fK9gmtbefTRbWL5Cd4c4feOvKe4dFHUDH6U1A1RfG4J14QSwd6IdHafcRtQvG6gR2BDOALNNvHcYBVr1/Df918NlOAHkt1lk7ajTb/b8Fuo0XAKpoKM2Drf4s1CX4ZpeL14br0Kx/AOzPHpH+l70SgAAAABJRU5ErkJggg=="/>
-    </defs>
 </svg>

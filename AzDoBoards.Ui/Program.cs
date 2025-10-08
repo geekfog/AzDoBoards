@@ -70,7 +70,6 @@ public class Program
         builder.Services.AddDataServices(storageConnectionString);
 
         // Add Dependency Injection
-        builder.Services.AddSingleton<CacheBuster>();
         builder.Services.AddHttpContextAccessor();
         var organizationUrl = builder.Configuration[Utility.Constants.AzureDevOps_ConfigOrganizationUrl] ?? string.Empty;
         builder.Services.AddScoped(sp =>

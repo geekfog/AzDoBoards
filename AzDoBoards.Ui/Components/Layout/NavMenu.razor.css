@@ -119,8 +119,8 @@
 }
 
 #navbarName img {
-    height: 34px;
-    width: unset;
+    height: unset;
+    width: 200px;
 }
 
 #gravatar {
