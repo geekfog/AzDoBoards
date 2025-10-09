@@ -564,7 +564,7 @@
         
         <div class="swimlane-label" style="@indentStyle">
             <MudStack Row AlignItems="AlignItems.Center" Spacing="1">
-                @if (swimlane.Children?.Any() == true || swimlane.TimelineItems?.Any() == true)
+                @if (swimlane.Children?.Any() == true)
                 {
                     <MudIconButton Icon="@(swimlane.IsCollapsed ? Icons.Material.Filled.ChevronRight : Icons.Material.Filled.ExpandMore)" 
                                  Size="Size.Small" 
