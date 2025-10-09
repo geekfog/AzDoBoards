@@ -164,20 +164,41 @@ public class JavaScriptFreeRoadmapService : IRoadmapService
                         TimelineItems = new List<RoadmapTimelineItem>()
                     };
 
-                    // STEP 5: Find timeline items (e.g., Features) that are children of this parent
-                    var timelineItemIds = parentChildMap.ContainsKey(parentItem.Id) ? parentChildMap[parentItem.Id] : new List<int>();
-                    var timelineItems = timelineItemIds
+                    // STEP 5: Find lowest level items (e.g., Features) that are children of this parent
+                    // Create a separate swimlane row for each lowest-level item
+                    var lowestItemIds = parentChildMap.ContainsKey(parentItem.Id) ? parentChildMap[parentItem.Id] : new List<int>();
+                    var lowestItems = lowestItemIds
                         .Where(id => workItemLookup.ContainsKey(id))
                         .Select(id => workItemLookup[id])
                         .Where(wi => lowestLevelTypes.Contains(wi.WorkItemType, StringComparer.OrdinalIgnoreCase))
-                        .Select(ConvertToTimelineItem)
+                        .OrderBy(wi => wi.Title)
                         .ToList();
 
-                    _logger.LogInformation("Parent item {ParentItemId} '{ParentItemTitle}' has {TimelineItemCount} timeline items: {ItemIds}",
-                        parentItem.Id, parentItem.Title, timelineItems.Count, 
-                        string.Join(", ", timelineItems.Select(ti => $"{ti.WorkItemId}:{ti.Title}")));
+                    _logger.LogInformation("Parent item {ParentItemId} '{ParentItemTitle}' has {LowestItemCount} lowest-level items: {ItemIds}",
+                        parentItem.Id, parentItem.Title, lowestItems.Count, 
+                        string.Join(", ", lowestItems.Select(li => $"{li.Id}:{li.Title}")));
 
-                    childSwimlane.TimelineItems = timelineItems;
+                    // Create a separate swimlane row for each lowest-level work item
+                    foreach (var lowestItem in lowestItems)
+                    {
+                        var lowestSwimlane = new RoadmapSwimLane
+                        {
+                            WorkItemId = lowestItem.Id,
+                            Title = lowestItem.Title,
+                            WorkItemType = lowestItem.WorkItemType,
+                            Color = lowestItem.Color,
+                            Level = 2,
+                            IsCollapsed = false,
+                            Children = new List<RoadmapSwimLane>(),
+                            TimelineItems = new List<RoadmapTimelineItem>
+                            {
+                                ConvertToTimelineItem(lowestItem)
+                            }
+                        };
+
+                        childSwimlane.Children.Add(lowestSwimlane);
+                    }
+
                     swimlane.Children.Add(childSwimlane);
                 }
 
@@ -468,12 +489,27 @@ public class JavaScriptFreeRoadmapService : IRoadmapService
 
     private RoadmapTimelineItem ConvertToTimelineItem(WorkItem workItem)
     {
+        // Try to extract StartDate from work item fields
+        DateTime? startDate = null;
+        if (workItem.Fields.TryGetValue("Microsoft.VSTS.Scheduling.StartDate", out var startDateObj))
+        {
+            if (startDateObj is DateTime sd)
+            {
+                startDate = sd;
+            }
+            else if (startDateObj is string startDateStr && DateTime.TryParse(startDateStr, out var parsedStartDate))
+            {
+                startDate = parsedStartDate;
+            }
+        }
+
         return new RoadmapTimelineItem
         {
             WorkItemId = workItem.Id,
             Title = workItem.Title,
             WorkItemType = workItem.WorkItemType,
             Color = workItem.Color,
+            StartDate = startDate,
             TargetDate = workItem.TargetDate,
             State = workItem.State,
             StateCategory = workItem.StateCategory,

@@ -129,7 +129,7 @@
 }
 
 .swimlane-label {
-    height: 50px;
+    height: 60px;
     display: flex;
     align-items: center;
     border-bottom: 1px solid var(--mud-palette-divider);
@@ -148,7 +148,7 @@
 }
 
 .swimlane-timeline-row {
-    height: 50px;
+    height: 60px;
     position: relative;
     border-bottom: 1px solid var(--mud-palette-divider);
     background: var(--mud-palette-surface);
@@ -161,7 +161,7 @@
 .timeline-item {
     position: absolute;
     top: 8px;
-    height: 34px;
+    height: 44px;
     border-radius: 4px;
     padding: 4px 8px;
     cursor: move;

@@ -604,16 +604,25 @@
                     var itemStyle = $"left: {position.Left}px; width: {position.Width}px; background-color: {item.Color};";
                     var itemClass = draggedWorkItemId == item.WorkItemId ? "timeline-item dragging" : "timeline-item";
                     
+                    // Format date range for display
+                    var startDate = item.StartDate ?? item.TargetDate.Value.AddDays(-90);
+                    var dateRange = $"{startDate:M/d/yyyy} - {item.TargetDate.Value:M/d/yyyy}";
+                    
                     <div class="@itemClass" 
                          style="@itemStyle" 
-                         title="@($"{item.Title} - {item.TargetDate:d}")"
+                         title="@($"{item.Title} - {dateRange}")"
                          draggable="true"
                          @ondragstart="@(() => OnDragStart(item.WorkItemId))"
                          @ondragend="@OnDragEnd"
                          @onclick="@(() => OpenScheduleDialog(item.WorkItemId))">
-                        <MudText Typo="Typo.caption" Style="color: white; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                            @item.WorkItemId - @item.Title
-                        </MudText>
+                        <MudStack Spacing="0" Style="padding: 2px 4px;">
+                            <MudText Typo="Typo.caption" Style="color: white; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500;">
+                                @item.WorkItemId - @item.Title
+                            </MudText>
+                            <MudText Typo="Typo.caption" Style="color: rgba(255,255,255,0.9); font-size: 0.65rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                @dateRange
+                            </MudText>
+                        </MudStack>
                     </div>
                 }
             }
