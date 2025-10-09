@@ -64,29 +64,33 @@
 }
 
 .timeline-header {
-    position: sticky;
-    top: 0;
     z-index: 100;
     background: var(--mud-palette-surface);
 }
 
 .timeline-header-content {
     display: flex;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: var(--mud-palette-surface);
 }
 
 .swimlane-labels-header {
     width: 350px;
     min-width: 350px;
+    flex-shrink: 0;
     border-right: 2px solid var(--mud-palette-divider);
     background: var(--mud-palette-surface);
-    display: flex;
-    flex-direction: column;
+    position: sticky;
+    left: 0;
+    z-index: 60;
 }
 
 .timeline-dates-scroll {
     flex: 1;
-    overflow-x: auto;
-    overflow-y: hidden;
+    overflow: hidden;
+    position: relative;
 }
 
 .timeline-dates {
@@ -114,6 +118,7 @@
 .swimlanes-scroll {
     flex: 1;
     overflow: auto;
+    position: relative;
 }
 
 .swimlanes-content {
@@ -124,8 +129,12 @@
 .swimlane-labels {
     width: 350px;
     min-width: 350px;
+    flex-shrink: 0;
     border-right: 2px solid var(--mud-palette-divider);
     background: var(--mud-palette-surface);
+    position: sticky;
+    left: 0;
+    z-index: 10;
 }
 
 .swimlane-label {
@@ -188,28 +197,24 @@
 
 /* Scrollbar styling */
 .unscheduled-items-scroll::-webkit-scrollbar,
-.swimlanes-scroll::-webkit-scrollbar,
-.timeline-dates-scroll::-webkit-scrollbar {
+.swimlanes-scroll::-webkit-scrollbar {
     width: 8px;
     height: 8px;
 }
 
 .unscheduled-items-scroll::-webkit-scrollbar-track,
-.swimlanes-scroll::-webkit-scrollbar-track,
-.timeline-dates-scroll::-webkit-scrollbar-track {
+.swimlanes-scroll::-webkit-scrollbar-track {
     background: var(--mud-palette-background);
 }
 
 .unscheduled-items-scroll::-webkit-scrollbar-thumb,
-.swimlanes-scroll::-webkit-scrollbar-thumb,
-.timeline-dates-scroll::-webkit-scrollbar-thumb {
+.swimlanes-scroll::-webkit-scrollbar-thumb {
     background: var(--mud-palette-divider);
     border-radius: 4px;
 }
 
 .unscheduled-items-scroll::-webkit-scrollbar-thumb:hover,
-.swimlanes-scroll::-webkit-scrollbar-thumb:hover,
-.timeline-dates-scroll::-webkit-scrollbar-thumb:hover {
+.swimlanes-scroll::-webkit-scrollbar-thumb:hover {
     background: var(--mud-palette-text-secondary);
 }
 
