@@ -456,7 +456,6 @@
 
     private string GetTimelineWidthStyle()
     {
-        var totalDays = (config.EndDate - config.StartDate).TotalDays;
         var pixelsPerDay = config.TimeUnit switch
         {
             RoadmapTimeUnit.Week => 10,
@@ -464,8 +463,12 @@
             RoadmapTimeUnit.Quarter => 1,
             _ => 3
         };
-        var width = totalDays * pixelsPerDay;
-        return $"min-width: {width}px; width: {width}px;";
+        
+        // Calculate width based on the actual period boundaries
+        var periods = GetTimelinePeriods();
+        var totalWidth = periods.Sum(p => p.Width);
+        
+        return $"min-width: {totalWidth}px; width: {totalWidth}px;";
     }
 
     private string GetPeriodStyle(TimelinePeriod period)
@@ -651,7 +654,6 @@
         if (!item.TargetDate.HasValue)
             return (0, 0);
 
-        var totalDays = (config.EndDate - config.StartDate).TotalDays;
         var pixelsPerDay = config.TimeUnit switch
         {
             RoadmapTimeUnit.Week => 10,
@@ -663,12 +665,26 @@
         var startDate = item.StartDate ?? item.TargetDate.Value.AddDays(-90);
         var endDate = item.TargetDate.Value;
 
-        var daysFromStart = (startDate - config.StartDate).TotalDays;
+        // Get the actual timeline start based on time unit alignment
+        var timelineStart = GetAlignedStartDate();
+        
+        var daysFromStart = (startDate - timelineStart).TotalDays;
         var duration = (endDate - startDate).TotalDays;
 
         var left = Math.Max(0, daysFromStart * pixelsPerDay);
         var width = Math.Max(20, duration * pixelsPerDay);
 
         return (left, width);
+    }
+    
+    private DateTime GetAlignedStartDate()
+    {
+        return config.TimeUnit switch
+        {
+            RoadmapTimeUnit.Week => config.StartDate,
+            RoadmapTimeUnit.Month => new DateTime(config.StartDate.Year, config.StartDate.Month, 1),
+            RoadmapTimeUnit.Quarter => new DateTime(config.StartDate.Year, ((config.StartDate.Month - 1) / 3) * 3 + 1, 1),
+            _ => config.StartDate
+        };
     }
 }
