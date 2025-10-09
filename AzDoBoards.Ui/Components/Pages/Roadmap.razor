@@ -113,11 +113,9 @@
 
             <div class="timeline-panel">
                 <MudPaper Class="timeline-header" Elevation="2">
-                    <div class="timeline-header-content">
-                        <div class="swimlane-labels-header">
-                            <MudStack Spacing="2" Class="pa-2">
-                                <MudText Typo="Typo.subtitle2" Style="font-weight: 600;">Work Items</MudText>
-                                <MudDivider />
+                    <div class="timeline-header-row">
+                        <div class="timeline-controls">
+                            <MudStack Row AlignItems="AlignItems.Center" Spacing="2" Class="pa-2">
                                 <MudButtonGroup Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small">
                                     <MudButton OnClick="@(() => ChangeTimeUnit(RoadmapTimeUnit.Week))" 
                                               Variant="@(config.TimeUnit == RoadmapTimeUnit.Week ? Variant.Filled : Variant.Outlined)">
@@ -132,32 +130,39 @@
                                         Quarter
                                     </MudButton>
                                 </MudButtonGroup>
-                                <MudDatePicker Label="Start Date" 
+                                <MudDatePicker Label="Start" 
                                              Date="config.StartDate" 
                                              DateChanged="@OnStartDateChanged"
                                              Variant="Variant.Outlined"
-                                             Margin="Margin.Dense" />
-                                <MudDatePicker Label="End Date" 
+                                             Margin="Margin.Dense"
+                                             Class="date-picker-compact" />
+                                <MudDatePicker Label="End" 
                                              Date="config.EndDate" 
                                              DateChanged="@OnEndDateChanged"
                                              Variant="Variant.Outlined"
-                                             Margin="Margin.Dense" />
+                                             Margin="Margin.Dense"
+                                             Class="date-picker-compact" />
                                 <MudIconButton Icon="@Icons.Material.Filled.Refresh" 
                                              Color="Color.Primary" 
                                              OnClick="RefreshDataAsync"
                                              Size="Size.Small" />
                             </MudStack>
                         </div>
+                    </div>
+                    <div class="timeline-header-content">
+                        <div class="swimlane-labels-header">
+                            <MudText Typo="Typo.subtitle2" Class="pa-2" Style="font-weight: 600;">Work Items</MudText>
+                        </div>
                         <div class="timeline-dates-scroll">
                             <div class="timeline-dates" style="@GetTimelineWidthStyle()">
                                 @foreach (var period in GetTimelinePeriods())
                                 {
                                     <div class="timeline-period" style="@GetPeriodStyle(period)">
-                                        <MudStack Spacing="0">
-                                            <MudText Typo="Typo.caption" Style="font-weight: 600;">@period.Label</MudText>
+                                        <MudStack Spacing="0" Class="pa-1">
+                                            <MudText Typo="Typo.caption" Style="font-weight: 600; text-align: center;">@period.Label</MudText>
                                             @if (!string.IsNullOrEmpty(period.SubLabel))
                                             {
-                                                <MudText Typo="Typo.caption" Style="font-size: 0.65rem; opacity: 0.8;">@period.SubLabel</MudText>
+                                                <MudText Typo="Typo.caption" Style="font-size: 0.65rem; opacity: 0.8; text-align: center;">@period.SubLabel</MudText>
                                             }
                                         </MudStack>
                                     </div>
@@ -283,8 +288,16 @@
             }
 
             allWorkItems = await RoadmapService.LoadRoadmapWorkItemsAsync(currentProjectId, currentProcessId);
+            
+            Logger.LogInformation("Loaded {Count} work items", allWorkItems?.Count ?? 0);
+            
             swimlanes = await RoadmapService.BuildRoadmapSwimlanesAsync(allWorkItems, currentProcessId);
+            
+            Logger.LogInformation("Built {Count} swimlanes", swimlanes?.Count ?? 0);
+            
             unscheduledItems = await RoadmapService.GetUnscheduledWorkItemsAsync(allWorkItems, currentProcessId);
+            
+            Logger.LogInformation("Found {Count} unscheduled items", unscheduledItems?.Count ?? 0);
         }
         catch (Exception ex)
         {
