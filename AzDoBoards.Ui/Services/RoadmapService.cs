@@ -292,16 +292,20 @@ public class JavaScriptFreeRoadmapService : IRoadmapService
     {
         try
         {
-            // This would integrate with Azure DevOps API to update the work item
-            // For now, we'll just log the action
-            _logger.LogInformation("Would update work item {WorkItemId} target date to {TargetDate}", 
-                workItemId, targetDate);
+            var workItemService = _serviceProvider.GetRequiredService<WorkItemServices>();
+            var success = await workItemService.UpdateWorkItemDatesAsync(workItemId, null, targetDate);
             
-            // TODO: Implement actual Azure DevOps work item update
-            // var workItemService = _serviceProvider.GetRequiredService<WorkItemServices>();
-            // return await workItemService.UpdateWorkItemTargetDateAsync(workItemId, targetDate);
-            
-            return true; // Placeholder
+            if (success)
+            {
+                _logger.LogInformation("Successfully updated work item {WorkItemId} target date to {TargetDate}", 
+                    workItemId, targetDate?.ToString("yyyy-MM-dd") ?? "null");
+                return true;
+            }
+            else
+            {
+                _logger.LogWarning("Failed to update work item {WorkItemId} target date", workItemId);
+                return false;
+            }
         }
         catch (Exception ex)
         {

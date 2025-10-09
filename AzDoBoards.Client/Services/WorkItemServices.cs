@@ -429,4 +429,60 @@ public class WorkItemServices(ConnectionFactory connectionFactory) : Base(connec
             return parentChildMap;
         }
     }
+
+    /// <summary>
+    /// Updates work item start and target dates in Azure DevOps
+    /// </summary>
+    /// <param name="workItemId">Work item ID to update</param>
+    /// <param name="startDate">Start date (optional)</param>
+    /// <param name="targetDate">Target date (optional)</param>
+    /// <returns>True if successful, false otherwise</returns>
+    public async Task<bool> UpdateWorkItemDatesAsync(int workItemId, DateTime? startDate, DateTime? targetDate)
+    {
+        try
+        {
+            var connection = await _connectionFactory.GetConnectionAsync();
+            var workItemClient = connection.GetClient<WorkItemTrackingHttpClient>();
+
+            var patchDocument = new Microsoft.VisualStudio.Services.WebApi.Patch.Json.JsonPatchDocument();
+
+            if (startDate.HasValue)
+            {
+                patchDocument.Add(new Microsoft.VisualStudio.Services.WebApi.Patch.Json.JsonPatchOperation()
+                {
+                    Operation = Microsoft.VisualStudio.Services.WebApi.Patch.Operation.Add,
+                    Path = "/fields/Microsoft.VSTS.Scheduling.StartDate",
+                    Value = startDate.Value.ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
+                });
+            }
+
+            if (targetDate.HasValue)
+            {
+                patchDocument.Add(new Microsoft.VisualStudio.Services.WebApi.Patch.Json.JsonPatchOperation()
+                {
+                    Operation = Microsoft.VisualStudio.Services.WebApi.Patch.Operation.Add,
+                    Path = "/fields/Microsoft.VSTS.Scheduling.TargetDate",
+                    Value = targetDate.Value.ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
+                });
+            }
+            else
+            {
+                // Remove target date if null
+                patchDocument.Add(new Microsoft.VisualStudio.Services.WebApi.Patch.Json.JsonPatchOperation()
+                {
+                    Operation = Microsoft.VisualStudio.Services.WebApi.Patch.Operation.Remove,
+                    Path = "/fields/Microsoft.VSTS.Scheduling.TargetDate"
+                });
+            }
+
+            var updatedWorkItem = await workItemClient.UpdateWorkItemAsync(patchDocument, workItemId);
+            
+            return updatedWorkItem != null;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error updating work item dates: {ex.Message}");
+            return false;
+        }
+    }
 }
