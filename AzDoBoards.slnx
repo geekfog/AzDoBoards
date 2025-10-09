@@ -1,16 +1,12 @@
 <Solution>
-  <Configurations>
-    <Configuration Solution="Debug|Any CPU" Project="Debug|Any CPU" />
-    <Configuration Solution="Release|Any CPU" Project="Release|Any CPU" />
-  </Configurations>
   <Folder Name="/Solution Items/">
     <File Path=".gitignore" />
     <File Path="Directory.Build.props" />
     <File Path="LICENSE.txt" />
     <File Path="README.md" />
   </Folder>
-  <Project Path="AzDoBoards.Ui\AzDoBoards.Ui.csproj" Type="Classic C#" />
-  <Project Path="AzDoBoards.Utility\AzDoBoards.Utility.csproj" Type="Classic C#" />
-  <Project Path="AzDoBoards.Client\AzDoBoards.Client.csproj" Type="Classic C#" />
-  <Project Path="AzDoBoards.Data\AzDoBoards.Data.csproj" Type="Classic C#" />
+  <Project Path="AzDoBoards.Ui\AzDoBoards.Ui.csproj" />
+  <Project Path="AzDoBoards.Utility\AzDoBoards.Utility.csproj" />
+  <Project Path="AzDoBoards.Client\AzDoBoards.Client.csproj" />
+  <Project Path="AzDoBoards.Data\AzDoBoards.Data.csproj" />
 </Solution>
