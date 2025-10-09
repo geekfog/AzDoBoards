@@ -1,13 +1,27 @@
+.roadmap-page-wrapper {
+    margin-left: -2rem;
+    margin-right: -1.5rem;
+    margin-top: -1rem;
+}
+
+.roadmap-title {
+    padding: 1rem 2rem 0.5rem 2rem;
+}
+
 .roadmap-container {
-    padding: 16px;
+    padding: 0 16px 16px 16px;
+    width: 100%;
     max-width: 100%;
-    height: calc(100vh - 120px);
+   /* height: calc(100vh - 180px);*/
 }
 
 .roadmap-layout {
     display: flex;
+    flex-wrap: nowrap;
     gap: 16px;
-    height: calc(100vh - 180px);
+    height: 100%;
+    min-height: 600px;
+    /*overflow: hidden;*/
 }
 
 /* Unscheduled Panel */
@@ -42,9 +56,11 @@
 /* Timeline Panel */
 .timeline-panel {
     flex: 1;
+    min-width: 600px;
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    border: 1px solid var(--mud-palette-divider);
 }
 
 .timeline-header {

@@ -157,7 +157,6 @@ main {
    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 .roadmap-container {
     display: grid;
-    grid-template-columns: 250px 1fr;
     grid-template-rows: auto 1fr;
     grid-template-areas: 
         "toolbar toolbar"
@@ -468,15 +467,8 @@ main {
 }
 
 /* Responsive Design */
-@media (max-width: 1200px) {
-    .roadmap-container {
-        grid-template-columns: 200px 1fr;
-    }
-}
-
 @media (max-width: 968px) {
     .roadmap-container {
-        grid-template-columns: 1fr;
         grid-template-rows: auto auto 1fr;
         grid-template-areas: 
             "toolbar"
