@@ -74,6 +74,7 @@
     top: 0;
     z-index: 50;
     background: var(--mud-palette-surface);
+    border-bottom: 2px solid var(--mud-palette-divider);
 }
 
 .swimlane-labels-header {
@@ -85,11 +86,13 @@
     position: sticky;
     left: 0;
     z-index: 60;
+    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1);
 }
 
 .timeline-dates-scroll {
     flex: 1;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: hidden;
     position: relative;
 }
 
@@ -117,7 +120,8 @@
 /* Swimlanes */
 .swimlanes-scroll {
     flex: 1;
-    overflow: auto;
+    overflow-y: auto;
+    overflow-x: auto;
     position: relative;
 }
 
@@ -135,6 +139,7 @@
     position: sticky;
     left: 0;
     z-index: 10;
+    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1);
 }
 
 .swimlane-label {
@@ -197,24 +202,32 @@
 
 /* Scrollbar styling */
 .unscheduled-items-scroll::-webkit-scrollbar,
-.swimlanes-scroll::-webkit-scrollbar {
+.swimlanes-scroll::-webkit-scrollbar,
+.timeline-dates-scroll::-webkit-scrollbar,
+.timeline-items-container::-webkit-scrollbar {
     width: 8px;
     height: 8px;
 }
 
 .unscheduled-items-scroll::-webkit-scrollbar-track,
-.swimlanes-scroll::-webkit-scrollbar-track {
+.swimlanes-scroll::-webkit-scrollbar-track,
+.timeline-dates-scroll::-webkit-scrollbar-track,
+.timeline-items-container::-webkit-scrollbar-track {
     background: var(--mud-palette-background);
 }
 
 .unscheduled-items-scroll::-webkit-scrollbar-thumb,
-.swimlanes-scroll::-webkit-scrollbar-thumb {
+.swimlanes-scroll::-webkit-scrollbar-thumb,
+.timeline-dates-scroll::-webkit-scrollbar-thumb,
+.timeline-items-container::-webkit-scrollbar-thumb {
     background: var(--mud-palette-divider);
     border-radius: 4px;
 }
 
 .unscheduled-items-scroll::-webkit-scrollbar-thumb:hover,
-.swimlanes-scroll::-webkit-scrollbar-thumb:hover {
+.swimlanes-scroll::-webkit-scrollbar-thumb:hover,
+.timeline-dates-scroll::-webkit-scrollbar-thumb:hover,
+.timeline-items-container::-webkit-scrollbar-thumb:hover {
     background: var(--mud-palette-text-secondary);
 }
 
