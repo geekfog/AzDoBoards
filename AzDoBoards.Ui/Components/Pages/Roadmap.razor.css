@@ -38,7 +38,7 @@
     flex: 1;
     overflow-y: auto;
     padding: 8px;
-    background-color: var(--mud-palette-background);
+    background-color: var(--mud-palette-surface);
 }
 
 .unscheduled-work-item {
