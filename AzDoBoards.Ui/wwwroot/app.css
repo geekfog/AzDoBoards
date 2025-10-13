@@ -153,12 +153,19 @@ main {
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   MudBlazor Overrides
+   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+.date-picker-compact {
+    flex: unset;
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    Roadmap Page Styles
    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 .roadmap-container {
     display: grid;
     grid-template-rows: auto 1fr;
-    grid-template-areas: 
+    grid-template-areas:
         "toolbar toolbar"
         "unscheduled timeline";
     height: calc(100vh - 120px);
