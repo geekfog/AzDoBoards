@@ -1,0 +1,691 @@
+@page "/roadmapold2"
+@using Microsoft.AspNetCore.Components.Authorization
+@using AzDoBoards.Client.Models
+@using AzDoBoards.Ui.Services
+@using AzDoBoards.Utility
+@using AzDoBoards.Utility.Models
+@using MudBlazor
+@inject IRoadmapService RoadmapService
+@inject ISnackbar Snackbar
+@inject ILogger<Roadmap> Logger
+
+<PageTitle>Roadmap</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Roadmap</MudText>
+
+
+<MudContainer MaxWidth="MaxWidth.False" Class="roadmap-container">
+
+    @if (isLoading)
+    {
+        <MudStack Row AlignItems="AlignItems.Center" Class="my-4">
+            <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+            <MudText Typo="Typo.body2" Class="ml-2">Loading roadmap data...</MudText>
+        </MudStack>
+    }
+    else if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <MudAlert Severity="Severity.Error" Class="my-4">
+            @errorMessage
+            <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="RefreshDataAsync" Class="ml-2">
+                Try Again
+            </MudButton>
+        </MudAlert>
+    }
+    else if (swimlanes?.Any() != true && unscheduledItems?.Any() != true)
+    {
+        <MudAlert Severity="Severity.Info" Class="my-4">
+            <MudStack>
+                <MudText>
+                    <MudIcon Icon="@Icons.Material.Filled.Info" Class="mr-2" />
+                    No roadmap items found
+                </MudText>
+                <MudText Typo="Typo.body2" Class="mt-2">
+                    Make sure you have configured your work item hierarchy with Roadmap audience in Settings.
+                </MudText>
+                <MudButton Variant="Variant.Outlined" 
+                          Color="Color.Primary" 
+                          StartIcon="@Icons.Material.Filled.Settings"
+                          Href="/settings"
+                          Class="mt-2 align-self-start">
+                    Go to Settings
+                </MudButton>
+            </MudStack>
+        </MudAlert>
+    }
+    else
+    {
+        <div class="roadmap-layout">
+            <MudPaper Class="unscheduled-panel" Elevation="2">
+                <MudText Typo="Typo.h6" Class="pa-3">
+                    <MudIcon Icon="@Icons.Material.Filled.Schedule" Class="mr-2" />
+                    Unscheduled Items (@(unscheduledItems?.Count ?? 0))
+                </MudText>
+                <MudDivider />
+                
+                <div class="unscheduled-items-scroll" 
+                     ondragover="event.preventDefault();" 
+                     @ondrop="@(() => HandleUnscheduleDrop())">
+                    @if (unscheduledItems?.Any() == true)
+                    {
+                        @foreach (var item in unscheduledItems)
+                        {
+                            <div class="unscheduled-work-item pa-2 mb-2" 
+                                 style="@GetUnscheduledItemStyle(item)"
+                                 draggable="true"
+                                 @ondragstart="@(() => OnDragStart(item.WorkItemId))"
+                                 @ondragend="@OnDragEnd">
+                                <MudStack Spacing="1">
+                                    <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                        <MudStack Row AlignItems="AlignItems.Center" Spacing="1">
+                                            <MudIcon Icon="@WorkItemHelper.GetWorkItemTypeSvgIcon(item.WorkItemType)" Size="Size.Small" />
+                                            <MudText Typo="Typo.caption" Style="font-weight: 600; color: white;">@item.WorkItemId</MudText>
+                                        </MudStack>
+                                        <MudIconButton Icon="@Icons.Material.Filled.Edit" 
+                                                     Size="Size.Small" 
+                                                     OnClick="@(() => OpenScheduleDialog(item.WorkItemId))"
+                                                     Style="color: white;" />
+                                    </MudStack>
+                                    <MudText Typo="Typo.body2" Style="font-weight: 500; color: white;">@item.Title</MudText>
+                                    @if (!string.IsNullOrEmpty(item.ParentTitle))
+                                    {
+                                        <MudText Typo="Typo.caption" Style="color: rgba(255,255,255,0.8);">
+                                            Parent: @item.ParentTitle
+                                        </MudText>
+                                    }
+                                    @if (!string.IsNullOrEmpty(item.AssignedTo))
+                                    {
+                                        <MudText Typo="Typo.caption" Style="color: rgba(255,255,255,0.8);">
+                                            <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" />
+                                            @item.AssignedTo
+                                        </MudText>
+                                    }
+                                </MudStack>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <MudAlert Severity="Severity.Success" Class="ma-3">
+                            All roadmap items are scheduled!
+                        </MudAlert>
+                    }
+                </div>
+            </MudPaper>
+
+            <div class="timeline-panel">
+                <MudPaper Class="timeline-header" Elevation="2">
+                    <div class="timeline-header-row">
+                        <div class="timeline-controls">
+                            <MudStack Row AlignItems="AlignItems.Center" Spacing="2" Class="pa-2">
+                                <MudButtonGroup Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small">
+                                    <MudButton OnClick="@(() => ChangeTimeUnit(RoadmapTimeUnit.Week))" 
+                                              Variant="@(config.TimeUnit == RoadmapTimeUnit.Week ? Variant.Filled : Variant.Outlined)">
+                                        Week
+                                    </MudButton>
+                                    <MudButton OnClick="@(() => ChangeTimeUnit(RoadmapTimeUnit.Month))" 
+                                              Variant="@(config.TimeUnit == RoadmapTimeUnit.Month ? Variant.Filled : Variant.Outlined)">
+                                        Month
+                                    </MudButton>
+                                    <MudButton OnClick="@(() => ChangeTimeUnit(RoadmapTimeUnit.Quarter))" 
+                                              Variant="@(config.TimeUnit == RoadmapTimeUnit.Quarter ? Variant.Filled : Variant.Outlined)">
+                                        Quarter
+                                    </MudButton>
+                                </MudButtonGroup>
+                                <MudDatePicker Label="Start" 
+                                             Date="config.StartDate" 
+                                             DateChanged="@OnStartDateChanged"
+                                             Variant="Variant.Outlined"
+                                             Margin="Margin.Dense"
+                                             Class="date-picker-compact" />
+                                <MudDatePicker Label="End" 
+                                             Date="config.EndDate" 
+                                             DateChanged="@OnEndDateChanged"
+                                             Variant="Variant.Outlined"
+                                             Margin="Margin.Dense"
+                                             Class="date-picker-compact" />
+                                <MudIconButton Icon="@Icons.Material.Filled.Refresh" 
+                                             Color="Color.Primary" 
+                                             OnClick="RefreshDataAsync"
+                                             Size="Size.Small" />
+                            </MudStack>
+                        </div>
+                    </div>
+                </MudPaper>
+
+                <div class="swimlanes-scroll">
+                    <div class="timeline-header-content">
+                        <div class="swimlane-labels-header">
+                            <MudText Typo="Typo.subtitle2" Class="pa-2" Style="font-weight: 600;">Work Items</MudText>
+                        </div>
+                        <div class="timeline-dates-scroll">
+                            <div class="timeline-dates" style="@GetTimelineContentWidthStyle()">
+                                @foreach (var period in GetTimelinePeriods())
+                                {
+                                    <div class="timeline-period" style="@GetPeriodStyle(period)">
+                                        <MudStack Spacing="0" Class="pa-1">
+                                            <MudText Typo="Typo.caption" Style="font-weight: 600; text-align: center;">@period.Label</MudText>
+                                            @if (!string.IsNullOrEmpty(period.SubLabel))
+                                            {
+                                                <MudText Typo="Typo.caption" Style="font-size: 0.65rem; opacity: 0.8; text-align: center;">@period.SubLabel</MudText>
+                                            }
+                                        </MudStack>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="swimlanes-content">
+                        <div class="swimlane-labels">
+                            @{
+                                var swimLanesList = swimlanes ?? new List<RoadmapSwimLane>();
+                            }
+                            @foreach (var swimlane in swimLanesList)
+                            {
+                                @RenderSwimLaneLabel(swimlane, 0)
+                            }
+                        </div>
+                        <div class="timeline-items-container" 
+                             style="@GetTimelineContentWidthStyle()"
+                             ondragover="event.preventDefault();"
+                             @ondrop="@HandleTimelineDrop">
+                            @foreach (var swimlane in swimLanesList)
+                            {
+                                @RenderSwimLaneTimeline(swimlane, 0)
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</MudContainer>
+
+<MudDialog @bind-Visible="scheduleDialogVisible" Options="dialogOptions">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Schedule" Class="mr-2" />
+            Schedule Work Item @selectedWorkItemId
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        @if (selectedWorkItem != null)
+        {
+            <MudStack Spacing="3">
+                <MudText Typo="Typo.body1" Style="font-weight: 600;">@selectedWorkItem.Title</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    Type: @selectedWorkItem.WorkItemType | State: @selectedWorkItem.State
+                </MudText>
+                <MudDivider />
+                <MudDatePicker Label="Start Date" 
+                             Date="scheduleStartDate"
+                             DateChanged="@((DateTime? d) => scheduleStartDate = d)"
+                             Clearable="true" />
+                <MudDatePicker Label="Target Date" 
+                             Date="scheduleTargetDate"
+                             DateChanged="@((DateTime? d) => scheduleTargetDate = d)"
+                             Clearable="false"
+                             Required="true" />
+                @if (scheduleStartDate.HasValue && scheduleTargetDate.HasValue && scheduleStartDate.Value > scheduleTargetDate.Value)
+                {
+                    <MudAlert Severity="Severity.Warning">Start date cannot be after target date</MudAlert>
+                }
+            </MudStack>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="CloseScheduleDialog">Cancel</MudButton>
+        <MudButton Color="Color.Primary" 
+                   Variant="Variant.Filled" 
+                   OnClick="SaveSchedule"
+                   Disabled="@(!scheduleTargetDate.HasValue || (scheduleStartDate.HasValue && scheduleStartDate.Value > scheduleTargetDate.Value))">
+            Save Schedule
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private bool isLoading = true;
+    private string errorMessage = string.Empty;
+    private RoadmapConfiguration config = new();
+    private List<RoadmapSwimLane>? swimlanes;
+    private List<UnscheduledWorkItem>? unscheduledItems;
+    private List<WorkItem>? allWorkItems;
+    private string currentProcessId = string.Empty;
+    private string currentProjectId = string.Empty;
+
+    // Drag and drop state
+    private int? draggedWorkItemId;
+    private DateTime? dropTargetDate;
+
+    // Schedule dialog state
+    private bool scheduleDialogVisible = false;
+    private int selectedWorkItemId = 0;
+    private WorkItem? selectedWorkItem;
+    private DateTime? scheduleStartDate;
+    private DateTime? scheduleTargetDate;
+
+    private DialogOptions dialogOptions = new() { MaxWidth = MaxWidth.Small, FullWidth = true };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadRoadmapDataAsync();
+    }
+
+    private async Task LoadRoadmapDataAsync()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = string.Empty;
+            StateHasChanged();
+
+            config = await RoadmapService.GetDefaultConfigurationAsync();
+            (currentProcessId, currentProjectId) = await RoadmapService.GetConfigurationAsync();
+
+            if (string.IsNullOrEmpty(currentProcessId) || string.IsNullOrEmpty(currentProjectId))
+            {
+                errorMessage = "Please configure your process and project in Settings first.";
+                return;
+            }
+
+            allWorkItems = await RoadmapService.LoadRoadmapWorkItemsAsync(currentProjectId, currentProcessId);
+            
+            Logger.LogInformation("Loaded {Count} work items", allWorkItems?.Count ?? 0);
+            
+            swimlanes = await RoadmapService.BuildRoadmapSwimlanesAsync(allWorkItems, currentProcessId);
+            
+            Logger.LogInformation("Built {Count} swimlanes", swimlanes?.Count ?? 0);
+            
+            unscheduledItems = await RoadmapService.GetUnscheduledWorkItemsAsync(allWorkItems, currentProcessId);
+            
+            Logger.LogInformation("Found {Count} unscheduled items", unscheduledItems?.Count ?? 0);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading roadmap data");
+            errorMessage = $"Error loading roadmap: {ex.Message}";
+            Snackbar.Add(errorMessage, Severity.Error);
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task RefreshDataAsync()
+    {
+        await LoadRoadmapDataAsync();
+        Snackbar.Add("Roadmap refreshed", Severity.Success);
+    }
+
+    private async Task ChangeTimeUnit(RoadmapTimeUnit newUnit)
+    {
+        config.TimeUnit = newUnit;
+        await RoadmapService.SaveConfigurationAsync(config);
+        StateHasChanged();
+    }
+
+    private async Task OnStartDateChanged(DateTime? newDate)
+    {
+        if (newDate.HasValue)
+        {
+            config.StartDate = newDate.Value;
+            await RoadmapService.SaveConfigurationAsync(config);
+            StateHasChanged();
+        }
+    }
+
+    private async Task OnEndDateChanged(DateTime? newDate)
+    {
+        if (newDate.HasValue)
+        {
+            config.EndDate = newDate.Value;
+            await RoadmapService.SaveConfigurationAsync(config);
+            StateHasChanged();
+        }
+    }
+
+    // Drag and Drop handlers
+    private void OnDragStart(int workItemId)
+    {
+        draggedWorkItemId = workItemId;
+    }
+
+    private void OnDragEnd()
+    {
+        draggedWorkItemId = null;
+        dropTargetDate = null;
+    }
+
+    private async Task HandleTimelineDrop()
+    {
+        if (draggedWorkItemId.HasValue && dropTargetDate.HasValue)
+        {
+            await UpdateWorkItemSchedule(draggedWorkItemId.Value, null, dropTargetDate.Value);
+        }
+        OnDragEnd();
+    }
+
+    private async Task HandleUnscheduleDrop()
+    {
+        if (draggedWorkItemId.HasValue)
+        {
+            await UpdateWorkItemSchedule(draggedWorkItemId.Value, null, null);
+        }
+        OnDragEnd();
+    }
+
+    // Schedule Dialog handlers
+    private void OpenScheduleDialog(int workItemId)
+    {
+        selectedWorkItemId = workItemId;
+        selectedWorkItem = allWorkItems?.FirstOrDefault(wi => wi.Id == workItemId);
+        
+        if (selectedWorkItem != null)
+        {
+            scheduleStartDate = selectedWorkItem.Fields.TryGetValue("Microsoft.VSTS.Scheduling.StartDate", out var startDateObj) && startDateObj is DateTime startDate
+                ? startDate
+                : null;
+            scheduleTargetDate = selectedWorkItem.TargetDate;
+            scheduleDialogVisible = true;
+        }
+    }
+
+    private void CloseScheduleDialog()
+    {
+        scheduleDialogVisible = false;
+        selectedWorkItemId = 0;
+        selectedWorkItem = null;
+        scheduleStartDate = null;
+        scheduleTargetDate = null;
+    }
+
+    private async Task SaveSchedule()
+    {
+        if (selectedWorkItemId > 0 && scheduleTargetDate.HasValue)
+        {
+            await UpdateWorkItemSchedule(selectedWorkItemId, scheduleStartDate, scheduleTargetDate.Value);
+            CloseScheduleDialog();
+        }
+    }
+
+    private async Task UpdateWorkItemSchedule(int workItemId, DateTime? startDate, DateTime? targetDate)
+    {
+        try
+        {
+            var success = await RoadmapService.UpdateWorkItemTargetDateAsync(workItemId, targetDate);
+            
+            if (success)
+            {
+                // Update local data
+                var workItem = allWorkItems?.FirstOrDefault(wi => wi.Id == workItemId);
+                if (workItem != null)
+                {
+                    workItem.TargetDate = targetDate;
+                    if (startDate.HasValue)
+                    {
+                        workItem.Fields["Microsoft.VSTS.Scheduling.StartDate"] = startDate.Value;
+                    }
+                }
+
+                // Rebuild swimlanes and unscheduled items
+                await LoadRoadmapDataAsync();
+                
+                var action = targetDate.HasValue ? "scheduled" : "unscheduled";
+                Snackbar.Add($"Work item {workItemId} {action} successfully", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add($"Failed to update work item {workItemId}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error updating work item schedule");
+            Snackbar.Add($"Error updating work item: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private string GetUnscheduledItemStyle(UnscheduledWorkItem item)
+    {
+        var color = !string.IsNullOrEmpty(item.Color) ? item.Color : "#6C757D";
+        return $"background-color: {color}; border-radius: 4px; cursor: move;";
+    }
+
+    private string GetTimelineContentWidthStyle()
+    {
+        var pixelsPerDay = config.TimeUnit switch
+        {
+            RoadmapTimeUnit.Week => 10,
+            RoadmapTimeUnit.Month => 3,
+            RoadmapTimeUnit.Quarter => 1,
+            _ => 3
+        };
+        
+        // Calculate width based on the actual period boundaries
+        var periods = GetTimelinePeriods();
+        var totalWidth = periods.Sum(p => p.Width);
+        
+        return $"min-width: {totalWidth}px; width: {totalWidth}px;";
+    }
+
+    private string GetPeriodStyle(TimelinePeriod period)
+    {
+        return $"width: {period.Width}px; min-width: {period.Width}px;";
+    }
+
+    private List<TimelinePeriod> GetTimelinePeriods()
+    {
+        var periods = new List<TimelinePeriod>();
+        var pixelsPerDay = config.TimeUnit switch
+        {
+            RoadmapTimeUnit.Week => 10,
+            RoadmapTimeUnit.Month => 3,
+            RoadmapTimeUnit.Quarter => 1,
+            _ => 3
+        };
+
+        if (config.TimeUnit == RoadmapTimeUnit.Week)
+        {
+            var current = config.StartDate;
+            while (current <= config.EndDate)
+            {
+                var weekStart = current;
+                var weekEnd = current.AddDays(6);
+                if (weekEnd > config.EndDate) weekEnd = config.EndDate;
+                
+                var weekNumber = System.Globalization.ISOWeek.GetWeekOfYear(weekStart);
+                var daysInWeek = (weekEnd - weekStart).Days + 1;
+                
+                periods.Add(new TimelinePeriod
+                {
+                    Label = $"Week {weekNumber}",
+                    SubLabel = $"{weekStart:MMM d} - {weekEnd:MMM d}",
+                    Width = daysInWeek * pixelsPerDay,
+                    StartDate = weekStart,
+                    EndDate = weekEnd
+                });
+                current = weekEnd.AddDays(1);
+            }
+        }
+        else if (config.TimeUnit == RoadmapTimeUnit.Month)
+        {
+            var current = new DateTime(config.StartDate.Year, config.StartDate.Month, 1);
+            while (current <= config.EndDate)
+            {
+                var daysInMonth = DateTime.DaysInMonth(current.Year, current.Month);
+                periods.Add(new TimelinePeriod
+                {
+                    Label = current.ToString("MMM yyyy"),
+                    SubLabel = $"{daysInMonth} days",
+                    Width = daysInMonth * pixelsPerDay,
+                    StartDate = current,
+                    EndDate = current.AddMonths(1).AddDays(-1)
+                });
+                current = current.AddMonths(1);
+            }
+        }
+        else if (config.TimeUnit == RoadmapTimeUnit.Quarter)
+        {
+            var current = new DateTime(config.StartDate.Year, ((config.StartDate.Month - 1) / 3) * 3 + 1, 1);
+            while (current <= config.EndDate)
+            {
+                var quarter = (current.Month - 1) / 3 + 1;
+                var endOfQuarter = current.AddMonths(3).AddDays(-1);
+                var daysInQuarter = (endOfQuarter - current).Days + 1;
+                
+                periods.Add(new TimelinePeriod
+                {
+                    Label = $"Q{quarter} {current.Year}",
+                    SubLabel = $"{current:MMM} - {endOfQuarter:MMM}",
+                    Width = daysInQuarter * pixelsPerDay,
+                    StartDate = current,
+                    EndDate = endOfQuarter
+                });
+                current = current.AddMonths(3);
+            }
+        }
+
+        return periods;
+    }
+
+    private class TimelinePeriod
+    {
+        public string Label { get; set; } = string.Empty;
+        public string SubLabel { get; set; } = string.Empty;
+        public double Width { get; set; }
+        public DateTime StartDate { get; set; }
+        public DateTime EndDate { get; set; }
+    }
+
+    private RenderFragment RenderSwimLaneLabel(RoadmapSwimLane swimlane, int level) => __builder =>
+    {
+        var indentStyle = $"padding-left: {level * 20 + 8}px;";
+        var backgroundColor = !string.IsNullOrEmpty(swimlane.Color) ? swimlane.Color : "#6C757D";
+        
+        <div class="swimlane-label" style="@indentStyle">
+            <MudStack Row AlignItems="AlignItems.Center" Spacing="1">
+                @if (swimlane.Children?.Any() == true)
+                {
+                    <MudIconButton Icon="@(swimlane.IsCollapsed ? Icons.Material.Filled.ChevronRight : Icons.Material.Filled.ExpandMore)" 
+                                 Size="Size.Small" 
+                                 OnClick="@(() => ToggleCollapse(swimlane))" />
+                }
+                else
+                {
+                    <div style="width: 24px;"></div>
+                }
+                <MudIcon Icon="@WorkItemHelper.GetWorkItemTypeSvgIcon(swimlane.WorkItemType)" 
+                         Size="Size.Small" 
+                         Style="@($"color: {backgroundColor};")" />
+                <MudText Typo="Typo.body2" Style="font-weight: 500;">@swimlane.WorkItemId - @swimlane.Title</MudText>
+            </MudStack>
+        </div>
+
+        @if (!swimlane.IsCollapsed)
+        {
+            @if (swimlane.Children?.Any() == true)
+            {
+                @foreach (var child in swimlane.Children)
+                {
+                    @RenderSwimLaneLabel(child, level + 1)
+                }
+            }
+        }
+    };
+
+    private RenderFragment RenderSwimLaneTimeline(RoadmapSwimLane swimlane, int level) => __builder =>
+    {
+        <div class="swimlane-timeline-row">
+            @if (swimlane.TimelineItems?.Any() == true)
+            {
+                @foreach (var item in swimlane.TimelineItems.Where(ti => ti.TargetDate.HasValue))
+                {
+                    var position = CalculateItemPosition(item);
+                    var itemStyle = $"left: {position.Left}px; width: {position.Width}px; background-color: {item.Color};";
+                    var itemClass = draggedWorkItemId == item.WorkItemId ? "timeline-item dragging" : "timeline-item";
+                    
+                    // Format date range for display
+                    var startDate = item.StartDate ?? item.TargetDate.Value.AddDays(-90);
+                    var dateRange = $"{startDate:M/d/yyyy} - {item.TargetDate.Value:M/d/yyyy}";
+                    
+                    <div class="@itemClass" 
+                         style="@itemStyle" 
+                         title="@($"{item.Title} - {dateRange}")"
+                         draggable="true"
+                         @ondragstart="@(() => OnDragStart(item.WorkItemId))"
+                         @ondragend="@OnDragEnd"
+                         @onclick="@(() => OpenScheduleDialog(item.WorkItemId))">
+                        <MudStack Spacing="0" Style="padding: 2px 4px;">
+                            <MudText Typo="Typo.caption" Style="color: white; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500;">
+                                @item.WorkItemId - @item.Title
+                            </MudText>
+                            <MudText Typo="Typo.caption" Style="color: rgba(255,255,255,0.9); font-size: 0.65rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                @dateRange
+                            </MudText>
+                        </MudStack>
+                    </div>
+                }
+            }
+        </div>
+
+        @if (!swimlane.IsCollapsed)
+        {
+            @if (swimlane.Children?.Any() == true)
+            {
+                @foreach (var child in swimlane.Children)
+                {
+                    @RenderSwimLaneTimeline(child, level + 1)
+                }
+            }
+        }
+    };
+
+    private void ToggleCollapse(RoadmapSwimLane swimlane)
+    {
+        swimlane.IsCollapsed = !swimlane.IsCollapsed;
+        StateHasChanged();
+    }
+
+    private (double Left, double Width) CalculateItemPosition(RoadmapTimelineItem item)
+    {
+        if (!item.TargetDate.HasValue)
+            return (0, 0);
+
+        var pixelsPerDay = config.TimeUnit switch
+        {
+            RoadmapTimeUnit.Week => 10,
+            RoadmapTimeUnit.Month => 3,
+            RoadmapTimeUnit.Quarter => 1,
+            _ => 3
+        };
+
+        var startDate = item.StartDate ?? item.TargetDate.Value.AddDays(-90);
+        var endDate = item.TargetDate.Value;
+
+        // Get the actual timeline start based on time unit alignment
+        var timelineStart = GetAlignedStartDate();
+        
+        var daysFromStart = (startDate - timelineStart).TotalDays;
+        var duration = (endDate - startDate).TotalDays;
+
+        var left = Math.Max(0, daysFromStart * pixelsPerDay);
+        var width = Math.Max(20, duration * pixelsPerDay);
+
+        return (left, width);
+    }
+    
+    private DateTime GetAlignedStartDate()
+    {
+        return config.TimeUnit switch
+        {
+            RoadmapTimeUnit.Week => config.StartDate,
+            RoadmapTimeUnit.Month => new DateTime(config.StartDate.Year, config.StartDate.Month, 1),
+            RoadmapTimeUnit.Quarter => new DateTime(config.StartDate.Year, ((config.StartDate.Month - 1) / 3) * 3 + 1, 1),
+            _ => config.StartDate
+        };
+    }
+}
