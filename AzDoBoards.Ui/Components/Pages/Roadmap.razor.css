@@ -94,6 +94,7 @@
     overflow-x: hidden;
     overflow-y: hidden;
     position: relative;
+    min-width: 0; /* Allow shrinking below content width */
 }
 
 .timeline-dates {
@@ -156,9 +157,9 @@
 }
 
 .timeline-items-container {
-    flex: 1;
     position: relative;
     background: var(--mud-palette-background);
+    /* Remove flex: 1 to use explicit width from style attribute */
 }
 
 .swimlane-timeline-row {

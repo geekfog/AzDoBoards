@@ -159,7 +159,7 @@
                             <MudText Typo="Typo.subtitle2" Class="pa-2" Style="font-weight: 600;">Work Items</MudText>
                         </div>
                         <div class="timeline-dates-scroll">
-                            <div class="timeline-dates" style="@GetTimelineWidthStyle()">
+                            <div class="timeline-dates" style="@GetTimelineContentWidthStyle()">
                                 @foreach (var period in GetTimelinePeriods())
                                 {
                                     <div class="timeline-period" style="@GetPeriodStyle(period)">
@@ -187,7 +187,7 @@
                             }
                         </div>
                         <div class="timeline-items-container" 
-                             style="@GetTimelineWidthStyle()"
+                             style="@GetTimelineContentWidthStyle()"
                              ondragover="event.preventDefault();"
                              @ondrop="@HandleTimelineDrop">
                             @foreach (var swimlane in swimLanesList)
@@ -455,7 +455,7 @@
         return $"background-color: {color}; border-radius: 4px; cursor: move;";
     }
 
-    private string GetTimelineWidthStyle()
+    private string GetTimelineContentWidthStyle()
     {
         var pixelsPerDay = config.TimeUnit switch
         {
