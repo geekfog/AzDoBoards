@@ -22,7 +22,6 @@
             <div class="nav-item px-3"><NavLink class="nav-link" href="" Match="NavLinkMatch.All"><img src="@Icon("NavDashboard")" class="nav-icon" alt="" role="presentation" /> Dashboard      </NavLink></div>
             <div class="nav-item px-3"><NavLink class="nav-link" href="roadmap">                  <img src="@Icon("NavRoadmap")"   class="nav-icon" alt="" role="presentation" /> Roadmap        </NavLink></div>
             <div class="nav-item px-3"><NavLink class="nav-link" href="roadmapold2">              <img src="@Icon("NavRoadmap")"   class="nav-icon" alt="" role="presentation" /> Roadmap (Old2) </NavLink></div>
-            <div class="nav-item px-3"><NavLink class="nav-link" href="roadmapold">               <img src="@Icon("NavRoadmap")"   class="nav-icon" alt="" role="presentation" /> Roadmap (Old)  </NavLink></div>
             <div class="nav-item px-3"><NavLink class="nav-link" href="items">                    <img src="@Icon("NavItems")"     class="nav-icon" alt="" role="presentation" /> Work Items     </NavLink></div>
             <div class="nav-item px-3"><NavLink class="nav-link" href="settings">                 <img src="@Icon("NavSettings")"  class="nav-icon" alt="" role="presentation" /> Settings       </NavLink></div>
             <div class="nav-item px-3"><NavLink class="nav-link" href="process">                  <img src="@Icon("NavProcess")"   class="nav-icon" alt="" role="presentation" /> Processes      </NavLink></div>
@@ -39,7 +38,7 @@
                             }
                             else
                             {
-                                <span>@Initials</span>
+                                <span>@(Initials?.ToUpper())</span>
                             }
                         </MudAvatar>
                         <span>@Name</span>
@@ -89,10 +88,13 @@
         Name = user?.Claims.FirstOrDefault(c => c.Type == "name")?.Value ?? "(Unknown)";
         var givenName = user?.Claims.FirstOrDefault(c => c.Type == ClaimTypes.GivenName)?.Value;
         var surname = user?.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Surname)?.Value;
-      
+
         if (!string.IsNullOrEmpty(GravatarUrl)) return;
 
-        Initials = !string.IsNullOrEmpty(givenName) || !string.IsNullOrEmpty(surname) ? $"{givenName[0]}{surname[0]}".Trim().ToUpper() : "?";
+        Initials = string.Empty;
+        if (!string.IsNullOrEmpty(givenName)) Initials += givenName[0];
+        if (!string.IsNullOrEmpty(surname)) Initials += surname[0];
+        if (string.IsNullOrEmpty(Initials)) Initials = "?";
     }
 
     private async Task HandleSignOut()

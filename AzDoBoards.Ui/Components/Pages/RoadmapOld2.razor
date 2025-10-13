@@ -294,13 +294,19 @@
             
             Logger.LogInformation("Loaded {Count} work items", allWorkItems?.Count ?? 0);
             
-            swimlanes = await RoadmapService.BuildRoadmapSwimlanesAsync(allWorkItems, currentProcessId);
+            if (allWorkItems?.Count > 0)
+            {
+                swimlanes = await RoadmapService.BuildRoadmapSwimlanesAsync(allWorkItems, currentProcessId);
+                Logger.LogInformation("Built {Count} swimlanes", swimlanes?.Count ?? 0);
             
-            Logger.LogInformation("Built {Count} swimlanes", swimlanes?.Count ?? 0);
-            
-            unscheduledItems = await RoadmapService.GetUnscheduledWorkItemsAsync(allWorkItems, currentProcessId);
-            
-            Logger.LogInformation("Found {Count} unscheduled items", unscheduledItems?.Count ?? 0);
+                unscheduledItems = await RoadmapService.GetUnscheduledWorkItemsAsync(allWorkItems, currentProcessId);
+                Logger.LogInformation("Found {Count} unscheduled items", unscheduledItems?.Count ?? 0);
+            }
+            else
+            {
+                swimlanes = new List<RoadmapSwimLane>();
+                unscheduledItems = new List<UnscheduledWorkItem>();
+            }
         }
         catch (Exception ex)
         {
@@ -604,6 +610,8 @@
             {
                 @foreach (var item in swimlane.TimelineItems.Where(ti => ti.TargetDate.HasValue))
                 {
+                    if (item.TargetDate == null) continue;
+
                     var position = CalculateItemPosition(item);
                     var itemStyle = $"left: {position.Left}px; width: {position.Width}px; background-color: {item.Color};";
                     var itemClass = draggedWorkItemId == item.WorkItemId ? "timeline-item dragging" : "timeline-item";

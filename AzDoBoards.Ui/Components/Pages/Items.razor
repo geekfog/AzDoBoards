@@ -166,9 +166,7 @@
                                     <CellTemplate>
                                         @if (!string.IsNullOrEmpty(context.Item.AssignedToEmail))
                                         {
-                                            <MudLink Href="@($"mailto:{context.Item.AssignedToEmail}")" 
-                                                   Color="Color.Primary"
-                                                   Title="@context.Item.AssignedToEmail">
+                                            <MudLink Href="@($"mailto:{context.Item.AssignedToEmail}")" Color="Color.Primary">
                                                 @context.Item.AssignedToDisplayName
                                             </MudLink>
                                         }
