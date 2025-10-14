@@ -86,7 +86,7 @@
     background: var(--mud-palette-surface);
     position: sticky;
     left: 0;
-    z-index: 60;
+    z-index: 70;
     box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1);
 }
 
@@ -133,7 +133,7 @@
     background: var(--mud-palette-surface);
     position: sticky;
     left: 0;
-    z-index: 10;
+    z-index: 20;
     box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1);
 }
 
@@ -178,12 +178,13 @@
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
     overflow: hidden;
     user-select: none;
+    z-index: 5;
 }
 
 .timeline-item:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
-    z-index: 10;
+    z-index: 15;
 }
 
 .timeline-item.dragging {
