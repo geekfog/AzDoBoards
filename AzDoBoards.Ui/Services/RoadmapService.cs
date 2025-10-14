@@ -336,6 +336,58 @@ public class JavaScriptFreeRoadmapService : IRoadmapService
         }
     }
 
+    public async Task<bool> UpdateWorkItemStateAsync(int workItemId, string newState)
+    {
+        try
+        {
+            var workItemService = _serviceProvider.GetRequiredService<WorkItemServices>();
+            var success = await workItemService.UpdateWorkItemStateAsync(workItemId, newState);
+            
+            if (success)
+            {
+                _logger.LogInformation("Successfully updated work item {WorkItemId} state to {State}", 
+                    workItemId, newState);
+                return true;
+            }
+            else
+            {
+                _logger.LogWarning("Failed to update work item {WorkItemId} state", workItemId);
+                return false;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating work item {WorkItemId} state", workItemId);
+            return false;
+        }
+    }
+
+    public async Task<List<string>> GetAvailableStatesForWorkItemTypeAsync(string workItemType, string processId)
+    {
+        try
+        {
+            if (!Guid.TryParse(processId, out var processGuid))
+                return [];
+
+            var stateService = _serviceProvider.GetRequiredService<WorkItemStateServices>();
+            var stateGroups = await stateService.GetWorkItemStatesForProcessAsync(processGuid);
+            
+            var availableStates = stateGroups
+                .SelectMany(group => group.States)
+                .Where(state => state.WorkItemTypes.Contains(workItemType, StringComparer.OrdinalIgnoreCase))
+                .OrderBy(state => state.Order)
+                .Select(state => state.Name)
+                .ToList();
+
+            return availableStates;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting available states for work item type {WorkItemType}", workItemType);
+            return [];
+        }
+    }
+
     public List<TimelineItem> CalculateTimelinePositions(List<TimelineItem> timelineItems, Config config)
     {
         try

@@ -485,4 +485,37 @@ public class WorkItemServices(ConnectionFactory connectionFactory) : Base(connec
             return false;
         }
     }
+
+    /// <summary>
+    /// Updates work item state in Azure DevOps
+    /// </summary>
+    /// <param name="workItemId">Work item ID to update</param>
+    /// <param name="newState">New state value</param>
+    /// <returns>True if successful, false otherwise</returns>
+    public async Task<bool> UpdateWorkItemStateAsync(int workItemId, string newState)
+    {
+        try
+        {
+            var connection = await _connectionFactory.GetConnectionAsync();
+            var workItemClient = connection.GetClient<WorkItemTrackingHttpClient>();
+
+            var patchDocument = new Microsoft.VisualStudio.Services.WebApi.Patch.Json.JsonPatchDocument();
+
+            patchDocument.Add(new Microsoft.VisualStudio.Services.WebApi.Patch.Json.JsonPatchOperation()
+            {
+                Operation = Microsoft.VisualStudio.Services.WebApi.Patch.Operation.Add,
+                Path = "/fields/System.State",
+                Value = newState
+            });
+
+            var updatedWorkItem = await workItemClient.UpdateWorkItemAsync(patchDocument, workItemId);
+            
+            return updatedWorkItem != null;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error updating work item state: {ex.Message}");
+            return false;
+        }
+    }
 }

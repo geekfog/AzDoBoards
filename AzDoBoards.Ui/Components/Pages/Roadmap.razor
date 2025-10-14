@@ -70,7 +70,7 @@
                                             <MudIcon Icon="@WorkItemHelper.GetWorkItemTypeSvgIcon(item.WorkItemType)" Size="Size.Small" />
                                             <MudText Typo="Typo.caption" Style="font-weight: 600; color: white;">@item.WorkItemId</MudText>
                                         </MudStack>
-                                        <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" OnClick="@(() => OpenScheduleDialog(item.WorkItemId))" Style="color: white;" />
+                                        <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" OnClick="@(async () => await OpenScheduleDialog(item.WorkItemId))" Style="color: white;" />
                                     </MudStack>
                                     <MudText Typo="Typo.body2" Style="font-weight: 500; color: white;">@item.Title</MudText>
                                     @if (!string.IsNullOrEmpty(item.ParentTitle))
@@ -179,13 +179,18 @@
                 <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
                     <MudIcon Icon="@WorkItemHelper.GetWorkItemTypeSvgIcon(selectedWorkItem.WorkItemType)" Size="Size.Small" />
                     <MudText Typo="Typo.body1">@selectedWorkItemId - <span style="font-weight: 600;">@selectedWorkItem.Title</span></MudText>
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">
-                        @selectedWorkItem.State
-                    </MudText>
                 </MudStack>
                 <MudDivider />
-                <MudDatePicker Label="Start Date" Date="scheduleStartDate" DateChanged="@((DateTime? d) => scheduleStartDate = d)" Clearable="true" />
-                <MudDatePicker Label="Target Date" Date="scheduleTargetDate" DateChanged="@((DateTime? d) => scheduleTargetDate = d)" Clearable="true" /> @* Required="true" *@
+                <MudStack Row AlignItems="AlignItems.Center" Spacing="3">
+                    <MudSelect T="string" Label="State" @bind-Value="selectedWorkItemState" Variant="Variant.Outlined" AnchorOrigin="Origin.BottomLeft" Style="min-width: 150px; max-width: 200px;">
+                        @foreach (var state in availableStates)
+                        {
+                            <MudSelectItem T="string" Value="@state">@state</MudSelectItem>
+                        }
+                    </MudSelect>
+                    <MudDatePicker Label="Start Date" Date="scheduleStartDate" DateChanged="@((DateTime? d) => scheduleStartDate = d)" Clearable="true" />
+                    <MudDatePicker Label="Target Date" Date="scheduleTargetDate" DateChanged="@((DateTime? d) => scheduleTargetDate = d)" Clearable="true" /> @* Required="true" *@
+                </MudStack>
                 @if (scheduleStartDate.HasValue && scheduleTargetDate.HasValue && scheduleStartDate.Value > scheduleTargetDate.Value)
                 {
                     <MudAlert Severity="Severity.Warning">Start date cannot be after target date</MudAlert>
@@ -221,6 +226,8 @@
     private WorkItem? selectedWorkItem;
     private DateTime? scheduleStartDate;
     private DateTime? scheduleTargetDate;
+    private string? selectedWorkItemState;
+    private List<string> availableStates = new();
 
     private DialogOptions dialogOptions = new() { MaxWidth = MaxWidth.Small, FullWidth = true };
 
@@ -332,7 +339,7 @@
     }
 
     // Schedule Dialog handlers
-    private void OpenScheduleDialog(int workItemId)
+    private async Task OpenScheduleDialog(int workItemId)
     {
         selectedWorkItemId = workItemId;
         selectedWorkItem = allWorkItems?.FirstOrDefault(wi => wi.Id == workItemId);
@@ -343,6 +350,11 @@
                 ? startDate
                 : null;
             scheduleTargetDate = selectedWorkItem.TargetDate;
+            selectedWorkItemState = selectedWorkItem.State;
+            
+            // Load available states for the work item type
+            availableStates = await RoadmapService.GetAvailableStatesForWorkItemTypeAsync(selectedWorkItem.WorkItemType, currentProcessId);
+
             scheduleDialogVisible = true;
         }
     }
@@ -354,13 +366,21 @@
         selectedWorkItem = null;
         scheduleStartDate = null;
         scheduleTargetDate = null;
+        selectedWorkItemState = null;
+        availableStates.Clear();
     }
 
     private async Task SaveSchedule()
     {
         if (selectedWorkItemId <= 0 || !scheduleTargetDate.HasValue) return;
 
+        // Update dates
         await UpdateWorkItemSchedule(selectedWorkItemId, scheduleStartDate, scheduleTargetDate.Value);
+        
+        // Update state if it changed
+        if (!string.IsNullOrEmpty(selectedWorkItemState) && selectedWorkItem != null && selectedWorkItemState != selectedWorkItem.State)
+            await UpdateWorkItemState(selectedWorkItemId, selectedWorkItemState);
+        
         CloseScheduleDialog();
     }
 
@@ -398,6 +418,35 @@
         {
             Logger.LogError(ex, "Error updating work item schedule");
             Snackbar.Add($"Error updating work item: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task UpdateWorkItemState(int workItemId, string newState)
+    {
+        try
+        {
+            var success = await RoadmapService.UpdateWorkItemStateAsync(workItemId, newState);
+            
+            if (success)
+            {
+                // Update local data
+                var workItem = allWorkItems?.FirstOrDefault(wi => wi.Id == workItemId);
+                if (workItem != null)
+                {
+                    workItem.State = newState;
+                }
+
+                Snackbar.Add($"Work item {workItemId} state updated to {newState}", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add($"Failed to update work item {workItemId} state", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error updating work item state");
+            Snackbar.Add($"Error updating work item state: {ex.Message}", Severity.Error);
         }
     }
 
@@ -548,7 +597,7 @@
                     var itemClass = draggedWorkItemId == item.WorkItemId ? "timeline-item dragging" : "timeline-item";
                     var dateRange = GetDateRangeDisplay(item);
                     
-                    <div class="@itemClass" style="@itemStyle" title="@($"{item.Title} - {dateRange}")" draggable="true" @ondragstart="@(() => OnDragStart(item.WorkItemId))" @ondragend="@OnDragEnd" @onclick="@(() => OpenScheduleDialog(item.WorkItemId))">
+                    <div class="@itemClass" style="@itemStyle" title="@($"{item.Title} - {dateRange}")" draggable="true" @ondragstart="@(() => OnDragStart(item.WorkItemId))" @ondragend="@OnDragEnd" @onclick="@(async () => await OpenScheduleDialog(item.WorkItemId))">
                         <MudStack Spacing="0" Style="padding: 2px 4px;">
                             <MudText Typo="Typo.caption" Style="color: white; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500;">
                                 @item.WorkItemId - @item.Title

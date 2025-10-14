@@ -18,5 +18,7 @@ public interface IRoadmapService
     Task<Config> GetDefaultConfigurationAsync();
     Task SaveConfigurationAsync(Config config);
     Task<bool> UpdateWorkItemTargetDateAsync(int workItemId, DateTime? targetDate);
+    Task<bool> UpdateWorkItemStateAsync(int workItemId, string newState);
+    Task<List<string>> GetAvailableStatesForWorkItemTypeAsync(string workItemType, string processId);
     List<TimelineItem> CalculateTimelinePositions(List<TimelineItem> timelineItems, Config config);
 }
