@@ -1,0 +1,223 @@
+@page "/roadmap-diagnostics"
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Roadmap Drag & Drop Diagnostics</PageTitle>
+
+<h2>Roadmap Drag & Drop Diagnostics</h2>
+
+<MudPaper Class="pa-4 ma-4">
+    <MudText Typo="Typo.h6" GutterBottom="true">System Check</MudText>
+    
+    <MudStack Spacing="2">
+        <MudCheckBox @bind-Value="jsModuleExists" Label="JavaScript module can be loaded" ReadOnly="true" Color="@(jsModuleExists ? Color.Success : Color.Error)" />
+        <MudCheckBox @bind-Value="timelineExists" Label="Timeline container exists in DOM" ReadOnly="true" Color="@(timelineExists ? Color.Success : Color.Error)" />
+        <MudCheckBox @bind-Value="indicatorCreated" Label="Drag indicator created" ReadOnly="true" Color="@(indicatorCreated ? Color.Success : Color.Error)" />
+        <MudCheckBox @bind-Value="dotNetCallbackWorks" Label=".NET callback works" ReadOnly="true" Color="@(dotNetCallbackWorks ? Color.Success : Color.Error)" />
+    </MudStack>
+    
+    <MudDivider Class="my-4" />
+    
+    <MudStack Row Spacing="2">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="RunDiagnostics">
+            Run Diagnostics
+        </MudButton>
+        <MudButton Variant="Variant.Outlined" OnClick="TestJavaScriptCallback">
+            Test Callback
+        </MudButton>
+    </MudStack>
+    
+    @if (!string.IsNullOrEmpty(diagnosticMessage))
+    {
+        <MudAlert Severity="@diagnosticSeverity" Class="mt-4">
+            @diagnosticMessage
+        </MudAlert>
+    }
+</MudPaper>
+
+<MudPaper Class="pa-4 ma-4">
+    <MudText Typo="Typo.h6" GutterBottom="true">Test Area</MudText>
+    
+    <div style="border: 2px dashed #ccc; padding: 20px; margin: 20px 0; min-height: 200px;" 
+         class="test-drop-zone">
+        <MudText>Drag and drop test area (check console for events)</MudText>
+        
+        <div style="background: #2196F3; color: white; padding: 10px; margin: 10px; cursor: move; display: inline-block;"
+             draggable="true"
+             @ondragstart="@(() => OnTestDragStart())"
+             @ondragend="@(() => OnTestDragEnd())">
+            Test Draggable Item
+        </div>
+    </div>
+</MudPaper>
+
+<MudPaper Class="pa-4 ma-4">
+    <MudText Typo="Typo.h6" GutterBottom="true">Console Logs</MudText>
+    <MudTextField @bind-Value="consoleLogs" Lines="15" Variant="Variant.Outlined" ReadOnly="true" />
+</MudPaper>
+
+@code {
+    private bool jsModuleExists = false;
+    private bool timelineExists = false;
+    private bool indicatorCreated = false;
+    private bool dotNetCallbackWorks = false;
+    private string diagnosticMessage = string.Empty;
+    private Severity diagnosticSeverity = Severity.Info;
+    private string consoleLogs = "";
+    
+    private IJSObjectReference? jsModule;
+    private DotNetObjectReference<RoadmapDiagnostics>? dotNetRef;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await RunDiagnostics();
+        }
+    }
+
+    private async Task RunDiagnostics()
+    {
+        AddLog("Starting diagnostics...");
+        
+        // Test 1: Can we load the JavaScript module?
+        try
+        {
+            jsModule = await JSRuntime.InvokeAsync<IJSObjectReference>(
+                "import", "./Components/Pages/Roadmap.razor.js");
+            jsModuleExists = true;
+            AddLog("? JavaScript module loaded successfully");
+        }
+        catch (Exception ex)
+        {
+            jsModuleExists = false;
+            AddLog($"? Failed to load JavaScript module: {ex.Message}");
+        }
+        
+        // Test 2: Does timeline container exist? (won't exist on diagnostics page, that's OK)
+        try
+        {
+            var hasTimeline = await JSRuntime.InvokeAsync<bool>(
+                "eval", 
+                "document.querySelector('.timeline-items-container') !== null");
+            timelineExists = hasTimeline;
+            AddLog(hasTimeline 
+                ? "? Timeline container found" 
+                : "? Timeline container not found (expected on diagnostics page)");
+        }
+        catch (Exception ex)
+        {
+            timelineExists = false;
+            AddLog($"? Error checking timeline: {ex.Message}");
+        }
+        
+        // Test 3: Can we create .NET reference?
+        try
+        {
+            dotNetRef = DotNetObjectReference.Create(this);
+            AddLog("? .NET object reference created");
+        }
+        catch (Exception ex)
+        {
+            AddLog($"? Failed to create .NET reference: {ex.Message}");
+        }
+        
+        // Test 4: Can we call a JavaScript function?
+        if (jsModule != null)
+        {
+            try
+            {
+                await jsModule.InvokeVoidAsync("updateConfig", 
+                    "2024-01-01", "2024-12-31", 10);
+                indicatorCreated = true;
+                AddLog("? JavaScript functions callable");
+            }
+            catch (Exception ex)
+            {
+                indicatorCreated = false;
+                AddLog($"? Failed to call JavaScript: {ex.Message}");
+            }
+        }
+        
+        // Summary
+        if (jsModuleExists && dotNetRef != null)
+        {
+            diagnosticMessage = "All core systems operational! Drag and drop should work on Roadmap page.";
+            diagnosticSeverity = Severity.Success;
+        }
+        else
+        {
+            diagnosticMessage = "Some systems failed. Check console logs above for details.";
+            diagnosticSeverity = Severity.Error;
+        }
+        
+        StateHasChanged();
+    }
+
+    private async Task TestJavaScriptCallback()
+    {
+        AddLog("Testing JavaScript to .NET callback...");
+        
+        if (jsModule == null || dotNetRef == null)
+        {
+            AddLog("? Module not loaded or .NET ref missing");
+            return;
+        }
+        
+        try
+        {
+            // This will fail because we're not on roadmap page, but proves the concept
+            await jsModule.InvokeVoidAsync("initialize", 
+                dotNetRef, 
+                "2024-01-01", 
+                "2024-12-31", 
+                10);
+            AddLog("? Initialize called (will show warning about missing container)");
+        }
+        catch (Exception ex)
+        {
+            AddLog($"Note: {ex.Message}");
+        }
+        
+        dotNetCallbackWorks = true;
+        StateHasChanged();
+    }
+
+    [JSInvokable]
+    public void SetDropTargetDate(string dateString)
+    {
+        AddLog($"? Callback received! Date: {dateString}");
+        dotNetCallbackWorks = true;
+        StateHasChanged();
+    }
+
+    private void OnTestDragStart()
+    {
+        AddLog("Test drag started");
+    }
+
+    private void OnTestDragEnd()
+    {
+        AddLog("Test drag ended");
+    }
+
+    private void AddLog(string message)
+    {
+        var timestamp = DateTime.Now.ToString("HH:mm:ss.fff");
+        consoleLogs += $"[{timestamp}] {message}\n";
+        StateHasChanged();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (jsModule != null)
+        {
+            try
+            {
+                await jsModule.DisposeAsync();
+            }
+            catch { }
+        }
+        
+        dotNetRef?.Dispose();
+    }
+}

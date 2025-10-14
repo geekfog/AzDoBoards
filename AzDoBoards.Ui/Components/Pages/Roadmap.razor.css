@@ -53,6 +53,11 @@
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
 }
 
+.unscheduled-work-item:active {
+    cursor: grabbing;
+    opacity: 0.7;
+}
+
 /* Timeline Panel */
 .timeline-panel {
     flex: 1;
@@ -189,6 +194,10 @@
     z-index: 15;
 }
 
+.timeline-item:active {
+    cursor: grabbing;
+}
+
 .timeline-item.dragging {
     opacity: 0.5;
 }
@@ -196,6 +205,27 @@
 .timeline-item-drop-target {
     border: 2px dashed var(--mud-palette-primary);
     background-color: var(--mud-palette-primary-hover);
+}
+
+/* Drag and Drop Visual Feedback */
+.timeline-items-container {
+    position: relative;
+}
+
+/* Drag indicator styles are handled by JavaScript for performance */
+#roadmap-drag-indicator {
+    pointer-events: none;
+}
+
+/* Drop zone highlighting */
+.timeline-items-container.drag-over {
+    background-color: rgba(76, 175, 80, 0.05);
+}
+
+/* Enhance drag feedback */
+.unscheduled-work-item.dragging {
+    opacity: 0.5;
+    transform: scale(0.95);
 }
 
 /* Scrollbar styling */

@@ -8,13 +8,14 @@
 @inject IRoadmapService RoadmapService
 @inject ISnackbar Snackbar
 @inject ILogger<Roadmap> Logger
+@inject IJSRuntime JSRuntime
+@implements IAsyncDisposable
 
 <PageTitle>Roadmap</PageTitle>
 
 <h1>Roadmap</h1>
 
 <MudContainer MaxWidth="MaxWidth.False" Class="roadmap-container">
-
     @if (isLoading)
     {
         <MudStack Row AlignItems="AlignItems.Center" Class="my-4">
@@ -220,6 +221,11 @@
     private int? draggedWorkItemId;
     private DateTime? dropTargetDate;
 
+    // JavaScript interop
+    private IJSObjectReference? jsModule;
+    private DotNetObjectReference<Roadmap>? dotNetRef;
+    private bool jsModuleInitialized = false;
+
     // Schedule dialog state
     private bool scheduleDialogVisible = false;
     private int selectedWorkItemId = 0;
@@ -234,6 +240,103 @@
     protected override async Task OnInitializedAsync()
     {
         await LoadRoadmapDataAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Wait a bit for the DOM to settle
+            await Task.Delay(100);
+        }
+        
+        if (!isLoading && !jsModuleInitialized && (swimlanes?.Any() == true || unscheduledItems?.Any() == true))
+        {
+            await InitializeJavaScriptModule();
+        }
+    }
+
+    private async Task InitializeJavaScriptModule()
+    {
+        try
+        {
+            Logger.LogInformation("Initializing JavaScript module for drag and drop");
+            
+            // Import the JavaScript module
+            jsModule = await JSRuntime.InvokeAsync<IJSObjectReference>(
+                "import", "./Components/Pages/Roadmap.razor.js");
+
+            Logger.LogInformation("JavaScript module imported successfully");
+
+            // Create .NET reference for callbacks
+            dotNetRef = DotNetObjectReference.Create(this);
+
+            // Initialize the drag and drop system with aligned start date
+            var pixelsPerDay = GetPixelsPerDay();
+            var alignedStartDate = GetAlignedStartDate();
+            
+            Logger.LogInformation("Initializing drag system with dates: {StartDate} to {EndDate}, pixels per day: {PixelsPerDay}", 
+                alignedStartDate, config.EndDate, pixelsPerDay);
+            
+            await jsModule.InvokeVoidAsync("initialize", 
+                dotNetRef, 
+                alignedStartDate.ToString("yyyy-MM-dd"), 
+                config.EndDate.ToString("yyyy-MM-dd"), 
+                pixelsPerDay);
+            
+            jsModuleInitialized = true;
+            Logger.LogInformation("JavaScript module initialized successfully");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error initializing JavaScript module");
+            jsModuleInitialized = false;
+        }
+    }
+
+    private async Task UpdateJavaScriptConfig()
+    {
+        if (jsModule != null && jsModuleInitialized)
+        {
+            try
+            {
+                var pixelsPerDay = GetPixelsPerDay();
+                var alignedStartDate = GetAlignedStartDate();
+                
+                Logger.LogInformation("Updating JS config: {StartDate} to {EndDate}, pixels: {PixelsPerDay}", 
+                    alignedStartDate, config.EndDate, pixelsPerDay);
+                
+                await jsModule.InvokeVoidAsync("updateConfig",
+                    alignedStartDate.ToString("yyyy-MM-dd"),
+                    config.EndDate.ToString("yyyy-MM-dd"),
+                    pixelsPerDay);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error updating JavaScript config");
+            }
+        }
+    }
+
+    [JSInvokable]
+    public void SetDropTargetDate(string dateString)
+    {
+        try
+        {
+            if (DateTime.TryParse(dateString, out var date))
+            {
+                dropTargetDate = date.Date; // Normalize to date only
+                Logger.LogInformation("Drop target date set to: {Date}", dropTargetDate);
+            }
+            else
+            {
+                Logger.LogWarning("Failed to parse drop target date: {DateString}", dateString);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error setting drop target date");
+        }
     }
 
     private async Task LoadRoadmapDataAsync()
@@ -282,6 +385,15 @@
     private async Task RefreshDataAsync()
     {
         await LoadRoadmapDataAsync();
+        
+        // Reinitialize JavaScript module after data refresh
+        if (jsModuleInitialized)
+        {
+            jsModuleInitialized = false;
+            await Task.Delay(100); // Wait for render
+            await InitializeJavaScriptModule();
+        }
+        
         Snackbar.Add("Roadmap refreshed", Severity.Success);
     }
 
@@ -289,6 +401,7 @@
     {
         config.TimeUnit = newUnit;
         await RoadmapService.SaveConfigurationAsync(config);
+        await UpdateJavaScriptConfig();
         StateHasChanged();
     }
 
@@ -298,6 +411,7 @@
 
         config.StartDate = newDate.Value;
         await RoadmapService.SaveConfigurationAsync(config);
+        await UpdateJavaScriptConfig();
         StateHasChanged();
     }
 
@@ -307,6 +421,7 @@
 
         config.EndDate = newDate.Value;
         await RoadmapService.SaveConfigurationAsync(config);
+        await UpdateJavaScriptConfig();
         StateHasChanged();
     }
 
@@ -314,39 +429,57 @@
     private void OnDragStart(int workItemId)
     {
         draggedWorkItemId = workItemId;
+        Logger.LogInformation("Drag started for work item {WorkItemId}", workItemId);
     }
 
     private void OnDragEnd()
     {
+        Logger.LogInformation("Drag ended");
         draggedWorkItemId = null;
         dropTargetDate = null;
     }
 
     private async Task HandleTimelineDrop()
     {
-        if (!draggedWorkItemId.HasValue || !dropTargetDate.HasValue)
+        Logger.LogInformation("HandleTimelineDrop called. DraggedItemId: {ItemId}, DropTargetDate: {Date}", 
+            draggedWorkItemId, dropTargetDate);
+        
+        if (!draggedWorkItemId.HasValue)
         {
+            Logger.LogWarning("Drop called but no dragged work item ID");
+            OnDragEnd();
+            return;
+        }
+
+        if (!dropTargetDate.HasValue)
+        {
+            Logger.LogWarning("Drop called but no drop target date set");
             OnDragEnd();
             return;
         }
 
         try
         {
+            Logger.LogInformation("Updating work item {WorkItemId} with target date {TargetDate}", 
+                draggedWorkItemId.Value, dropTargetDate.Value);
+            
             var success = await UpdateWorkItemDatesAsync(draggedWorkItemId.Value, null, dropTargetDate.Value);
             
             if (success)
             {
+                Logger.LogInformation("Successfully updated work item {WorkItemId}", draggedWorkItemId.Value);
                 await LoadRoadmapDataAsync();
-                Snackbar.Add($"Work item {draggedWorkItemId.Value} scheduled successfully", Severity.Success);
+                Snackbar.Add($"Work item {draggedWorkItemId.Value} scheduled to {dropTargetDate.Value:M/d/yyyy}", Severity.Success);
             }
             else
             {
+                Logger.LogError("Failed to update work item {WorkItemId}", draggedWorkItemId.Value);
                 Snackbar.Add($"Failed to update work item {draggedWorkItemId.Value}", Severity.Error);
             }
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error in timeline drop handler");
+            Logger.LogError(ex, "Error in timeline drop handler for work item {WorkItemId}", draggedWorkItemId);
             Snackbar.Add($"Error updating work item: {ex.Message}", Severity.Error);
         }
         finally
@@ -357,6 +490,8 @@
 
     private async Task HandleUnscheduleDrop()
     {
+        Logger.LogInformation("HandleUnscheduleDrop called. DraggedItemId: {ItemId}", draggedWorkItemId);
+        
         if (!draggedWorkItemId.HasValue)
         {
             OnDragEnd();
@@ -365,6 +500,8 @@
 
         try
         {
+            Logger.LogInformation("Clearing target date for work item {WorkItemId}", draggedWorkItemId.Value);
+            
             var success = await UpdateWorkItemDatesAsync(draggedWorkItemId.Value, null, null);
             
             if (success)
@@ -749,5 +886,23 @@
             TimeUnit.Quarter => new DateTime(config.StartDate.Year, ((config.StartDate.Month - 1) / 3) * 3 + 1, 1),
             _ => config.StartDate
         };
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (jsModule != null)
+        {
+            try
+            {
+                await jsModule.InvokeVoidAsync("dispose");
+                await jsModule.DisposeAsync();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error disposing JavaScript module");
+            }
+        }
+
+        dotNetRef?.Dispose();
     }
 }
