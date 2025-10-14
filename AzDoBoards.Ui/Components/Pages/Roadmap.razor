@@ -254,16 +254,11 @@
             }
 
             allWorkItems = await RoadmapService.LoadRoadmapWorkItemsAsync(currentProjectId, currentProcessId);
-            
-            Logger.LogInformation("Loaded {Count} work items", allWorkItems?.Count ?? 0);
-            
+
             if (allWorkItems?.Count > 0)
             {
                 swimlanes = await RoadmapService.BuildRoadmapSwimlanesAsync(allWorkItems, currentProcessId);
-                Logger.LogInformation("Built {Count} swimlanes", swimlanes?.Count ?? 0);
-            
                 unscheduledItems = await RoadmapService.GetUnscheduledWorkItemsAsync(allWorkItems, currentProcessId);
-                Logger.LogInformation("Found {Count} unscheduled items", unscheduledItems?.Count ?? 0);
             }
             else
             {
@@ -299,22 +294,20 @@
 
     private async Task OnStartDateChanged(DateTime? newDate)
     {
-        if (newDate.HasValue)
-        {
-            config.StartDate = newDate.Value;
-            await RoadmapService.SaveConfigurationAsync(config);
-            StateHasChanged();
-        }
+        if (!newDate.HasValue) return;
+
+        config.StartDate = newDate.Value;
+        await RoadmapService.SaveConfigurationAsync(config);
+        StateHasChanged();
     }
 
     private async Task OnEndDateChanged(DateTime? newDate)
     {
-        if (newDate.HasValue)
-        {
-            config.EndDate = newDate.Value;
-            await RoadmapService.SaveConfigurationAsync(config);
-            StateHasChanged();
-        }
+        if (!newDate.HasValue) return;
+
+        config.EndDate = newDate.Value;
+        await RoadmapService.SaveConfigurationAsync(config);
+        StateHasChanged();
     }
 
     // Drag and Drop handlers
@@ -332,18 +325,16 @@
     private async Task HandleTimelineDrop()
     {
         if (draggedWorkItemId.HasValue && dropTargetDate.HasValue)
-        {
             await UpdateWorkItemSchedule(draggedWorkItemId.Value, null, dropTargetDate.Value);
-        }
+
         OnDragEnd();
     }
 
     private async Task HandleUnscheduleDrop()
     {
         if (draggedWorkItemId.HasValue)
-        {
             await UpdateWorkItemSchedule(draggedWorkItemId.Value, null, null);
-        }
+
         OnDragEnd();
     }
 
@@ -352,7 +343,7 @@
     {
         selectedWorkItemId = workItemId;
         selectedWorkItem = allWorkItems?.FirstOrDefault(wi => wi.Id == workItemId);
-        
+
         if (selectedWorkItem != null)
         {
             scheduleStartDate = selectedWorkItem.Fields.TryGetValue("Microsoft.VSTS.Scheduling.StartDate", out var startDateObj) && startDateObj is DateTime startDate
@@ -374,11 +365,10 @@
 
     private async Task SaveSchedule()
     {
-        if (selectedWorkItemId > 0 && scheduleTargetDate.HasValue)
-        {
-            await UpdateWorkItemSchedule(selectedWorkItemId, scheduleStartDate, scheduleTargetDate.Value);
-            CloseScheduleDialog();
-        }
+        if (selectedWorkItemId <= 0 || !scheduleTargetDate.HasValue) return;
+
+        await UpdateWorkItemSchedule(selectedWorkItemId, scheduleStartDate, scheduleTargetDate.Value);
+        CloseScheduleDialog();
     }
 
     private async Task UpdateWorkItemSchedule(int workItemId, DateTime? startDate, DateTime? targetDate)
@@ -418,44 +408,31 @@
         }
     }
 
-    private string GetUnscheduledItemStyle(UnscheduledWorkItem item)
+    // Helper methods - Consolidated repeated logic
+    private int GetPixelsPerDay() => config.TimeUnit switch
     {
-        var color = !string.IsNullOrEmpty(item.Color) ? item.Color : "#6C757D";
-        return $"background-color: {color}; border-radius: 4px; cursor: move;";
-    }
+        TimeUnit.Week => 10,
+        TimeUnit.Month => 3,
+        TimeUnit.Quarter => 1,
+        _ => 3
+    };
+
+    private string GetColorWithFallback(string? color) => !string.IsNullOrEmpty(color) ? color : "#6C757D";
+    private string GetUnscheduledItemStyle(UnscheduledWorkItem item) => $"background-color: {GetColorWithFallback(item.Color)}; border-radius: 4px; cursor: move;";
+    private string GetPeriodStyle(TimelinePeriod period) => $"width: {period.Width}px; min-width: {period.Width}px;";
+    private bool HasChildren(SwimLane swimlane) => swimlane.Children?.Any() == true;
 
     private string GetTimelineContentWidthStyle()
     {
-        var pixelsPerDay = config.TimeUnit switch
-        {
-            TimeUnit.Week => 10,
-            TimeUnit.Month => 3,
-            TimeUnit.Quarter => 1,
-            _ => 3
-        };
-        
-        // Calculate width based on the actual period boundaries
         var periods = GetTimelinePeriods();
         var totalWidth = periods.Sum(p => p.Width);
-        
         return $"min-width: {totalWidth}px; width: {totalWidth}px;";
-    }
-
-    private string GetPeriodStyle(TimelinePeriod period)
-    {
-        return $"width: {period.Width}px; min-width: {period.Width}px;";
     }
 
     private List<TimelinePeriod> GetTimelinePeriods()
     {
         var periods = new List<TimelinePeriod>();
-        var pixelsPerDay = config.TimeUnit switch
-        {
-            TimeUnit.Week => 10,
-            TimeUnit.Month => 3,
-            TimeUnit.Quarter => 1,
-            _ => 3
-        };
+        var pixelsPerDay = GetPixelsPerDay();
 
         if (config.TimeUnit == TimeUnit.Week)
         {
@@ -482,7 +459,7 @@
         }
         else if (config.TimeUnit == TimeUnit.Month)
         {
-            var current = new DateTime(config.StartDate.Year, config.StartDate.Month, 1);
+            var current = GetAlignedStartDate();
             while (current <= config.EndDate)
             {
                 var daysInMonth = DateTime.DaysInMonth(current.Year, current.Month);
@@ -499,7 +476,7 @@
         }
         else if (config.TimeUnit == TimeUnit.Quarter)
         {
-            var current = new DateTime(config.StartDate.Year, ((config.StartDate.Month - 1) / 3) * 3 + 1, 1);
+            var current = GetAlignedStartDate();
             while (current <= config.EndDate)
             {
                 var quarter = (current.Month - 1) / 3 + 1;
@@ -530,14 +507,19 @@
         public DateTime EndDate { get; set; }
     }
 
+    private string GetDateRangeDisplay(TimelineItem item)
+    {
+        return $"{item.StartDate:M/d/yyyy} - {item.TargetDate.Value:M/d/yyyy}".Trim();
+    }
+
     private RenderFragment RenderSwimLaneLabel(SwimLane swimlane, int level) => __builder =>
     {
         var indentStyle = $"padding-left: {level * 20 + 8}px;";
-        var backgroundColor = !string.IsNullOrEmpty(swimlane.Color) ? swimlane.Color : "#6C757D";
+        var backgroundColor = GetColorWithFallback(swimlane.Color);
         
         <div class="timeline-row" style="@indentStyle">
             <MudStack Row AlignItems="AlignItems.Center" Spacing="1">
-                @if (swimlane.Children?.Any() == true)
+                @if (HasChildren(swimlane))
                 {
                     <MudIconButton Icon="@(swimlane.IsCollapsed ? Icons.Material.Filled.ChevronRight : Icons.Material.Filled.ExpandMore)" Size="Size.Small" OnClick="@(() => ToggleCollapse(swimlane))" />
                 }
@@ -550,14 +532,11 @@
             </MudStack>
         </div>
 
-        @if (!swimlane.IsCollapsed)
+        @if (!swimlane.IsCollapsed && HasChildren(swimlane))
         {
-            @if (swimlane.Children?.Any() == true)
+            @foreach (var child in swimlane.Children!)
             {
-                @foreach (var child in swimlane.Children)
-                {
-                    @RenderSwimLaneLabel(child, level + 1)
-                }
+                @RenderSwimLaneLabel(child, level + 1)
             }
         }
     };
@@ -574,10 +553,7 @@
                     var position = CalculateItemPosition(item);
                     var itemStyle = $"left: {position.Left}px; width: {position.Width}px; background-color: {item.Color};";
                     var itemClass = draggedWorkItemId == item.WorkItemId ? "timeline-item dragging" : "timeline-item";
-                    
-                    // Format date range for display
-                    var startDate = item.StartDate ?? item.TargetDate.Value.AddDays(-90);
-                    var dateRange = $"{startDate:M/d/yyyy} - {item.TargetDate.Value:M/d/yyyy}";
+                    var dateRange = GetDateRangeDisplay(item);
                     
                     <div class="@itemClass" style="@itemStyle" title="@($"{item.Title} - {dateRange}")" draggable="true" @ondragstart="@(() => OnDragStart(item.WorkItemId))" @ondragend="@OnDragEnd" @onclick="@(() => OpenScheduleDialog(item.WorkItemId))">
                         <MudStack Spacing="0" Style="padding: 2px 4px;">
@@ -593,14 +569,11 @@
             }
         </div>
 
-        @if (!swimlane.IsCollapsed)
+        @if (!swimlane.IsCollapsed && HasChildren(swimlane))
         {
-            @if (swimlane.Children?.Any() == true)
+            @foreach (var child in swimlane.Children!)
             {
-                @foreach (var child in swimlane.Children)
-                {
-                    @RenderSwimLaneTimeline(child, level + 1)
-                }
+                @RenderSwimLaneTimeline(child, level + 1)
             }
         }
     };
@@ -613,21 +586,11 @@
 
     private (double Left, double Width) CalculateItemPosition(TimelineItem item)
     {
-        if (!item.TargetDate.HasValue)
-            return (0, 0);
+        if (!item.TargetDate.HasValue) return (0, 0);
 
-        var pixelsPerDay = config.TimeUnit switch
-        {
-            TimeUnit.Week => 10,
-            TimeUnit.Month => 3,
-            TimeUnit.Quarter => 1,
-            _ => 3
-        };
-
+        var pixelsPerDay = GetPixelsPerDay();
         var startDate = item.StartDate ?? item.TargetDate.Value.AddDays(-90);
         var endDate = item.TargetDate.Value;
-
-        // Get the actual timeline start based on time unit alignment
         var timelineStart = GetAlignedStartDate();
         
         var daysFromStart = (startDate - timelineStart).TotalDays;
