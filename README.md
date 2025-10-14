@@ -138,6 +138,14 @@ An App Registration is required to allow this application to integrate with Azur
 
    To have the API permissions configured for all users up front so they don't have to approve during login, use the **Enterprise applications** blade (link to it is available via Manage > API permissions) to view and manage consented permissions for individual apps as well as the tenant's consent settings.
 
+# Application Technical Concepts
+
+## Roadmap
+
+- Swim Lanes
+  - Work Items
+  - Timeline
+
 # History
 
 | Version  | Dates       | Pre-Release | Notes                                                        |

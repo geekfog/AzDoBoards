@@ -77,7 +77,7 @@
     border-bottom: 2px solid var(--mud-palette-divider);
 }
 
-.swimlane-labels-header {
+.workitems-header {
     width: 350px;
     min-width: 350px;
     flex-shrink: 0;
@@ -87,14 +87,6 @@
     left: 0;
     z-index: 60;
     box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1);
-}
-
-.timeline-dates-scroll {
-    flex: 1;
-    overflow-x: hidden;
-    overflow-y: hidden;
-    position: relative;
-    min-width: 0; /* Allow shrinking below content width */
 }
 
 .timeline-dates {
@@ -120,7 +112,6 @@
 
 /* Swimlanes */
 .swimlanes-scroll {
-    flex: 1;
     overflow-y: auto;
     overflow-x: auto;
     position: relative;
@@ -143,7 +134,7 @@
     box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1);
 }
 
-.swimlane-label {
+.timeline-row {
     height: 60px;
     display: flex;
     align-items: center;
@@ -152,7 +143,7 @@
     transition: background-color 0.2s;
 }
 
-.swimlane-label:hover {
+.timeline-row:hover {
     background-color: var(--mud-palette-action-default-hover);
 }
 
@@ -162,14 +153,14 @@
     /* Remove flex: 1 to use explicit width from style attribute */
 }
 
-.swimlane-timeline-row {
+.timeline-row {
     height: 60px;
     position: relative;
     border-bottom: 1px solid var(--mud-palette-divider);
     background: var(--mud-palette-surface);
 }
 
-.swimlane-timeline-row:hover {
+.timeline-row:hover {
     background: var(--mud-palette-action-default-hover);
 }
 
@@ -204,7 +195,6 @@
 /* Scrollbar styling */
 .unscheduled-items-scroll::-webkit-scrollbar,
 .swimlanes-scroll::-webkit-scrollbar,
-.timeline-dates-scroll::-webkit-scrollbar,
 .timeline-items-container::-webkit-scrollbar {
     width: 8px;
     height: 8px;
@@ -212,14 +202,12 @@
 
 .unscheduled-items-scroll::-webkit-scrollbar-track,
 .swimlanes-scroll::-webkit-scrollbar-track,
-.timeline-dates-scroll::-webkit-scrollbar-track,
 .timeline-items-container::-webkit-scrollbar-track {
     background: var(--mud-palette-background);
 }
 
 .unscheduled-items-scroll::-webkit-scrollbar-thumb,
 .swimlanes-scroll::-webkit-scrollbar-thumb,
-.timeline-dates-scroll::-webkit-scrollbar-thumb,
 .timeline-items-container::-webkit-scrollbar-thumb {
     background: var(--mud-palette-divider);
     border-radius: 4px;
@@ -227,7 +215,6 @@
 
 .unscheduled-items-scroll::-webkit-scrollbar-thumb:hover,
 .swimlanes-scroll::-webkit-scrollbar-thumb:hover,
-.timeline-dates-scroll::-webkit-scrollbar-thumb:hover,
 .timeline-items-container::-webkit-scrollbar-thumb:hover {
     background: var(--mud-palette-text-secondary);
 }
@@ -248,7 +235,7 @@
         height: 600px;
     }
     
-    .swimlane-labels-header {
+    .workitems-header {
         width: 100%;
     }
     

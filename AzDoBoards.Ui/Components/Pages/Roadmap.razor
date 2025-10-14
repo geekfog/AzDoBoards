@@ -126,24 +126,22 @@
 
                 <div class="swimlanes-scroll">
                     <div class="timeline-header-content">
-                        <div class="swimlane-labels-header">
+                        <div class="workitems-header">
                             <MudText Typo="Typo.subtitle2" Class="pa-2" Style="font-weight: 600;">Work Items</MudText>
                         </div>
-                        <div class="timeline-dates-scroll">
-                            <div class="timeline-dates" style="@GetTimelineContentWidthStyle()">
-                                @foreach (var period in GetTimelinePeriods())
-                                {
-                                    <div class="timeline-period" style="@GetPeriodStyle(period)">
-                                        <MudStack Spacing="0" Class="pa-1">
-                                            <MudText Typo="Typo.caption" Style="font-weight: 600; text-align: center;">@period.Label</MudText>
-                                            @if (!string.IsNullOrEmpty(period.SubLabel))
-                                            {
-                                                <MudText Typo="Typo.caption" Style="font-size: 0.65rem; opacity: 0.8; text-align: center;">@period.SubLabel</MudText>
-                                            }
-                                        </MudStack>
-                                    </div>
-                                }
-                            </div>
+                        <div class="timeline-dates" style="@GetTimelineContentWidthStyle()">
+                            @foreach (var period in GetTimelinePeriods())
+                            {
+                                <div class="timeline-period" style="@GetPeriodStyle(period)">
+                                    <MudStack Spacing="0" Class="pa-1">
+                                        <MudText Typo="Typo.caption" Style="font-weight: 600; text-align: center;">@period.Label</MudText>
+                                        @if (!string.IsNullOrEmpty(period.SubLabel))
+                                        {
+                                            <MudText Typo="Typo.caption" Style="font-size: 0.65rem; opacity: 0.8; text-align: center;">@period.SubLabel</MudText>
+                                        }
+                                    </MudStack>
+                                </div>
+                            }
                         </div>
                     </div>
 
@@ -540,7 +538,7 @@
         var indentStyle = $"padding-left: {level * 20 + 8}px;";
         var backgroundColor = !string.IsNullOrEmpty(swimlane.Color) ? swimlane.Color : "#6C757D";
         
-        <div class="swimlane-label" style="@indentStyle">
+        <div class="timeline-row" style="@indentStyle">
             <MudStack Row AlignItems="AlignItems.Center" Spacing="1">
                 @if (swimlane.Children?.Any() == true)
                 {
@@ -569,7 +567,7 @@
 
     private RenderFragment RenderSwimLaneTimeline(RoadmapSwimLane swimlane, int level) => __builder =>
     {
-        <div class="swimlane-timeline-row">
+        <div class="timeline-row">
             @if (swimlane.TimelineItems?.Any() == true)
             {
                 @foreach (var item in swimlane.TimelineItems.Where(ti => ti.TargetDate.HasValue))
