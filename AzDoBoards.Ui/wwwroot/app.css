@@ -21,8 +21,8 @@ body {
 .mud-container {
     max-width: none !important;
     margin: 0 !important;
-    padding-left: 16px !important;
-    padding-right: 16px !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
     width: 100% !important;
 }
 

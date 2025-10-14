@@ -11,8 +11,7 @@
 
 <PageTitle>Roadmap</PageTitle>
 
-<MudText Typo="Typo.h4" Class="mb-4">Roadmap</MudText>
-
+<h1>Roadmap</h1>
 
 <MudContainer MaxWidth="MaxWidth.False" Class="roadmap-container">
 
@@ -149,10 +148,10 @@
                         <div class="swimlane-labels">
                             @{
                                 var swimLanesList = swimlanes ?? new List<RoadmapSwimLane>();
-                            }
-                            @foreach (var swimlane in swimLanesList)
-                            {
-                                @RenderSwimLaneLabel(swimlane, 0)
+                                foreach (var swimlane in swimLanesList)
+                                {
+                                    @RenderSwimLaneLabel(swimlane, 0)
+                                }
                             }
                         </div>
                         <div class="timeline-items-container" style="@GetTimelineContentWidthStyle()" ondragover="event.preventDefault();" @ondrop="@HandleTimelineDrop"> 
