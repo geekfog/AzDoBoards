@@ -164,16 +164,7 @@ main {
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    Roadmap Page Styles
    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-.roadmap-container {
-    display: grid;
-    grid-template-rows: auto 1fr;
-    grid-template-areas:
-        "toolbar toolbar"
-        "unscheduled timeline";
-    height: calc(100vh - 120px);
-    gap: 8px;
-    overflow: hidden;
-}
+/* Note: Main roadmap container styles are in Roadmap.razor.css */
 
 .roadmap-toolbar {
     grid-area: toolbar;

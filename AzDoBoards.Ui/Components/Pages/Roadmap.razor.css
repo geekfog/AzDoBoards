@@ -12,7 +12,8 @@
     padding: 0 16px 16px 16px;
     width: 100%;
     max-width: 100%;
-   /* height: calc(100vh - 180px);*/
+    height: 100%;
+    overflow: hidden;
 }
 
 .roadmap-layout {
@@ -20,8 +21,7 @@
     flex-wrap: nowrap;
     gap: 16px;
     height: 100%;
-    min-height: 600px;
-    /*overflow: hidden;*/
+    min-height: 0;
 }
 
 /* Unscheduled Panel */
@@ -59,6 +59,7 @@
     min-width: 600px;
     display: flex;
     flex-direction: column;
+    max-height: 100%;
     overflow: hidden;
     border: 1px solid var(--mud-palette-divider);
 }
@@ -112,9 +113,11 @@
 
 /* Swimlanes */
 .swimlanes-scroll {
+    flex: 1;
     overflow-y: auto;
     overflow-x: auto;
     position: relative;
+    min-height: 0;
 }
 
 .swimlanes-content {
