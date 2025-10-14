@@ -30,37 +30,43 @@ else
 
                     @if (availableProcesses?.Any() == true)
                     {
-                        <MudSelect T="string" @bind-Value="selectedProcessId" @bind-Value:after="OnProcessSelectionChanged" Label="Selected Process" Placeholder="Choose a process" Class="mb-3">
-                            @foreach (var process in availableProcesses.OrderBy(p => p.Name))
-                            {
-                                <MudSelectItem T="string" Value="@process.Id.ToString()">
-                                    @process.Name (@(process.IsSystemProcess ? "System" : process.ParentProcessName))
-                                </MudSelectItem>
-                            }
-                        </MudSelect>
-
-                        @if (isLoadingProjects && (availableProjects == null || !availableProjects.Any()))
-                        {
-                            <MudStack Row AlignItems="AlignItems.Center" Class="mb-3">
-                                <MudProgressCircular Indeterminate="true" Size="Size.Small" />
-                                <MudText Typo="Typo.body2" Class="ml-2">Loading projects...</MudText>
-                            </MudStack>
-                        }
-                        else if (availableProjects?.Any() == true)
-                        {
-                            <MudSelect T="string" @bind-Value="selectedProjectId" @bind-Value:after="OnProjectSelectionChanged" Label="Selected Project" Placeholder="Choose a project" Class="mb-3">
-                                @foreach (var project in availableProjects.OrderBy(p => p.Name))
+                        <MudStack Row AlignItems="AlignItems.End" Spacing="2" Class="mb-3">
+                            <MudSelect T="string" @bind-Value="selectedProcessId" @bind-Value:after="OnProcessSelectionChanged" Label="Selected Process" Placeholder="Choose a process" Class="flex-grow-1">
+                                @foreach (var process in availableProcesses.OrderBy(p => p.Name))
                                 {
-                                    <MudSelectItem T="string" Value="@project.Id.ToString()">
-                                        @project.Name
+                                    <MudSelectItem T="string" Value="@process.Id.ToString()">
+                                        @process.Name (@(process.IsSystemProcess ? "System" : process.ParentProcessName))
                                     </MudSelectItem>
                                 }
                             </MudSelect>
-                        }
-                        else if (!string.IsNullOrEmpty(selectedProcessId) && !isLoadingProjects)
-                        {
-                            <MudAlert Severity="Severity.Warning" Class="mb-3">No projects available for the selected process.</MudAlert>
-                        }
+
+                            @if (isLoadingProjects && (availableProjects == null || !availableProjects.Any()))
+                            {
+                                <MudStack Row AlignItems="AlignItems.Center" Class="flex-grow-1">
+                                    <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+                                    <MudText Typo="Typo.body2" Class="ml-2">Loading projects...</MudText>
+                                </MudStack>
+                            }
+                            else if (availableProjects?.Any() == true)
+                            {
+                                <MudSelect T="string" @bind-Value="selectedProjectId" @bind-Value:after="OnProjectSelectionChanged" Label="Selected Project" Placeholder="Choose a project" Class="flex-grow-1">
+                                    @foreach (var project in availableProjects.OrderBy(p => p.Name))
+                                    {
+                                        <MudSelectItem T="string" Value="@project.Id.ToString()">
+                                            @project.Name
+                                        </MudSelectItem>
+                                    }
+                                </MudSelect>
+                            }
+                            else if (!string.IsNullOrEmpty(selectedProcessId) && !isLoadingProjects)
+                            {
+                                <MudText Typo="Typo.body2" Color="Color.Warning" Class="flex-grow-1">No projects available</MudText>
+                            }
+
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveDefaultConfigurationAsync" Disabled="!AllowDefaultConfigurationSave">
+                                Set as Default
+                            </MudButton>
+                        </MudStack>
 
                         @if (isLoadingWorkItemTypes && (availableWorkItemTypes == null || !availableWorkItemTypes.Any()))
                         {
@@ -70,11 +76,7 @@ else
                             </MudStack>
                         }
 
-                        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveDefaultConfigurationAsync" Class="mr-2" Disabled="!AllowDefaultConfigurationSave">
-                            Set as Default
-                        </MudButton>
-
-                        @if (!AllowDefaultConfigurationSave && (!string.IsNullOrEmpty(selectedProcessId) || !string.IsNullOrEmpty(selectedProjectId)))
+                        @if (string.IsNullOrEmpty(selectedProcessId) || string.IsNullOrEmpty(selectedProjectId))
                         {
                             <MudAlert Severity="Severity.Info" Class="mt-3">
                                 Select both a process and project to set as default configuration.
@@ -276,10 +278,7 @@ else
     private List<List<WorkItemTypeSummary>> workItemHierarchy = new();
     private List<List<string>> hierarchyAudiences = new(); // Track audiences for each level
 
-    private bool AllowDefaultConfigurationSave =>
-        !string.IsNullOrEmpty(selectedProcessId) &&
-        !string.IsNullOrEmpty(selectedProjectId) &&
-        (selectedProcessId != savedProcessId || selectedProjectId != savedProjectId);
+    private bool AllowDefaultConfigurationSave => !string.IsNullOrEmpty(selectedProcessId) && !string.IsNullOrEmpty(selectedProjectId) && (selectedProcessId != savedProcessId || selectedProjectId != savedProjectId);
 
     public async Task InitializeAsync()
     {

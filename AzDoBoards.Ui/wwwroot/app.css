@@ -607,6 +607,24 @@ main {
     cursor: default !important;
 }
 
+/* State Cards */
+.mud-theme-dark .state-card-group {
+    background-color: #353535
+}
+
+.mud-theme-dark .state-card {
+    background-color: #404040 
+}
+
+.mud-theme-light .state-card-group {
+    background-color: #c4c3c3
+}
+
+.mud-theme-light .state-card {
+    background-color: #adadad
+}
+
+
 /* States Settings - Work Item Type Chips - Updated for horizontal layout */
 .work-item-type-chip {
     font-size: 0.75rem !important;

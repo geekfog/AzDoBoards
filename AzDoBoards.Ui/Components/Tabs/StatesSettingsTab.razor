@@ -35,7 +35,7 @@ else
 
                     @foreach (var stateGroup in stateGroups)
                     {
-                        <MudPaper Class="mb-4 pa-4" Elevation="2">
+                        <MudPaper Class="state-card-group mb-4 pa-4" Elevation="2">
                             <MudText Typo="Typo.h6" Class="mb-3" Style="@($"color: {GetCategoryColor(stateGroup.Category)};")">
                                 <MudIcon Icon="@GetCategoryIcon(stateGroup.Category)" Class="mr-2" />
                                 @stateGroup.DisplayName
@@ -47,7 +47,7 @@ else
                                     @foreach (var state in stateGroup.States.OrderBy(s => s.Order))
                                     {
                                         <MudItem xs="12" sm="6" md="4" lg="3">
-                                            <MudPaper Class="pa-3" Elevation="1" Style="@($"border-left: 4px solid {state.Color}; min-height: 120px;")">
+                                            <MudPaper Class="state-card pa-3" Elevation="1" Style="@($"border-left: 4px solid {state.Color}; min-height: 120px;")">
                                                 <MudStack>
                                                     <MudText Typo="Typo.subtitle1" Class="mb-2">
                                                         @state.Name
