@@ -88,6 +88,9 @@
     left: 0;
     z-index: 70;
     box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .timeline-dates {
@@ -135,6 +138,7 @@
     left: 0;
     z-index: 20;
     box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1);
+    padding-top: 20px;
 }
 
 .swimlane-label-row {
@@ -154,7 +158,7 @@
 }
 
 .timeline-row {
-    height: 60px;
+    height: 50px;
     position: relative;
     background: transparent;
 }
