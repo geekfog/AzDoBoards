@@ -1,5 +1,6 @@
 using AzDoBoards.Client.Models;
-using AzDoBoards.Utility.Models;
+using AzDoBoards.Models.Roadmap;
+using AzDoBoards.Models;
 
 namespace AzDoBoards.Ui.Services;
 
@@ -12,10 +13,10 @@ public interface IRoadmapService
     Task<List<HierarchyLevel>> GetRoadmapHierarchyLevelsAsync(string processId);
     Task<(List<string> TopLevel, List<string> ParentLevel, List<string> LowestLevel)> GetWorkItemTypesAsync(string processId);
     Task<List<WorkItem>> LoadRoadmapWorkItemsAsync(string projectId, string processId);
-    Task<List<RoadmapSwimLane>> BuildRoadmapSwimlanesAsync(List<WorkItem> workItems, string processId);
+    Task<List<SwimLane>> BuildRoadmapSwimlanesAsync(List<WorkItem> workItems, string processId);
     Task<List<UnscheduledWorkItem>> GetUnscheduledWorkItemsAsync(List<WorkItem> workItems, string processId);
-    Task<RoadmapConfiguration> GetDefaultConfigurationAsync();
-    Task SaveConfigurationAsync(RoadmapConfiguration config);
+    Task<Config> GetDefaultConfigurationAsync();
+    Task SaveConfigurationAsync(Config config);
     Task<bool> UpdateWorkItemTargetDateAsync(int workItemId, DateTime? targetDate);
-    List<RoadmapTimelineItem> CalculateTimelinePositions(List<RoadmapTimelineItem> timelineItems, RoadmapConfiguration config);
+    List<TimelineItem> CalculateTimelinePositions(List<TimelineItem> timelineItems, Config config);
 }

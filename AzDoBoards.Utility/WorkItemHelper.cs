@@ -1,5 +1,5 @@
 ﻿using System.Text.Json;
-using AzDoBoards.Utility.Models;
+using AzDoBoards.Models;
 
 namespace AzDoBoards.Utility;
 

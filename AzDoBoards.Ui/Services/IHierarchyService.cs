@@ -1,5 +1,5 @@
 using AzDoBoards.Client.Models;
-using AzDoBoards.Utility.Models;
+using AzDoBoards.Models;
 
 namespace AzDoBoards.Ui.Services;
 

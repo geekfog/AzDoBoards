@@ -18,4 +18,8 @@
     <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\AzDoBoards.Models\AzDoBoards.Models.csproj" />
+  </ItemGroup>
+
 </Project>

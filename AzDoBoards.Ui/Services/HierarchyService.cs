@@ -1,8 +1,7 @@
 using AzDoBoards.Client.Models;
 using AzDoBoards.Client.Services;
 using AzDoBoards.Data.Abstractions;
-using AzDoBoards.Utility;
-using AzDoBoards.Utility.Models;
+using AzDoBoards.Models;
 
 namespace AzDoBoards.Ui.Services;
 
@@ -69,7 +68,7 @@ public class JavaScriptFreeHierarchyService : IHierarchyService
             var hierarchyKey = $"work-item-hierarchy-{processId}";
             var hierarchyJson = await _settingsRepository.GetOrCreateAsync(hierarchyKey, "[]");
 
-            return WorkItemHelper.ParseHierarchyLevelsJson(hierarchyJson);
+            return Utility.WorkItemHelper.ParseHierarchyLevelsJson(hierarchyJson);
         }
         catch (Exception ex)
         {

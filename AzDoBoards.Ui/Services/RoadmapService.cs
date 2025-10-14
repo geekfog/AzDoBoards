@@ -2,8 +2,9 @@ using AzDoBoards.Client.Models;
 using AzDoBoards.Client.Services;
 using AzDoBoards.Data.Abstractions;
 using AzDoBoards.Utility;
-using AzDoBoards.Utility.Models;
+using AzDoBoards.Models.Roadmap;
 using Microsoft.AspNetCore.Components.Authorization;
+using AzDoBoards.Models;
 
 namespace AzDoBoards.Ui.Services;
 
@@ -42,7 +43,7 @@ public class JavaScriptFreeRoadmapService : IRoadmapService
         {
             var hierarchyLevels = await _hierarchyService.LoadHierarchyLevelsAsync(processId);
             if (hierarchyLevels == null)
-                return new List<HierarchyLevel>();
+                return [];
 
             // Filter for roadmap audience only
             return hierarchyLevels
@@ -52,7 +53,7 @@ public class JavaScriptFreeRoadmapService : IRoadmapService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting roadmap hierarchy levels for process {ProcessId}", processId);
-            return new List<HierarchyLevel>();
+            return [];
         }
     }
 
@@ -72,7 +73,7 @@ public class JavaScriptFreeRoadmapService : IRoadmapService
             var hierarchyLevels = await GetRoadmapHierarchyLevelsAsync(processId);
             
             if (!hierarchyLevels.Any())
-                return new List<WorkItem>();
+                return [];
 
             // Get all work item types for roadmap
             var allRoadmapWorkItemTypes = hierarchyLevels
@@ -84,7 +85,7 @@ public class JavaScriptFreeRoadmapService : IRoadmapService
             {
                 ProjectId = projectId,
                 WorkItemTypes = allRoadmapWorkItemTypes,
-                StateCategories = new List<string> { "Proposed", "InProgress", "Completed" }, // Include all active states
+                StateCategories = ["Proposed", "InProgress", "Completed"], // Include all active states
                 Top = 1000 // Increase limit for roadmap
             };
 
@@ -93,13 +94,13 @@ public class JavaScriptFreeRoadmapService : IRoadmapService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error loading roadmap work items for project {ProjectId}", projectId);
-            return new List<WorkItem>();
+            return [];
         }
     }
 
-    public async Task<List<RoadmapSwimLane>> BuildRoadmapSwimlanesAsync(List<WorkItem> workItems, string processId)
+    public async Task<List<SwimLane>> BuildRoadmapSwimlanesAsync(List<WorkItem> workItems, string processId)
     {
-        var swimlanes = new List<RoadmapSwimLane>();
+        var swimlanes = new List<SwimLane>();
         
         try
         {
@@ -126,7 +127,7 @@ public class JavaScriptFreeRoadmapService : IRoadmapService
 
             foreach (var topLevelItem in topLevelItems)
             {
-                var swimlane = new RoadmapSwimLane
+                var swimlane = new SwimLane
                 {
                     WorkItemId = topLevelItem.Id,
                     Title = topLevelItem.Title,
@@ -134,12 +135,12 @@ public class JavaScriptFreeRoadmapService : IRoadmapService
                     Color = topLevelItem.Color,
                     Level = 0,
                     IsCollapsed = false,
-                    Children = new List<RoadmapSwimLane>(),
-                    TimelineItems = new List<RoadmapTimelineItem>()
+                    Children = [],
+                    TimelineItems = []
                 };
 
                 // STEP 4: Find parent level items (e.g., Epics) that are children of this top level item
-                var parentItemIds = parentChildMap.ContainsKey(topLevelItem.Id) ? parentChildMap[topLevelItem.Id] : new List<int>();
+                var parentItemIds = parentChildMap.ContainsKey(topLevelItem.Id) ? parentChildMap[topLevelItem.Id] : [];
                 var parentItems = parentItemIds
                     .Where(id => workItemLookup.ContainsKey(id))
                     .Select(id => workItemLookup[id])
@@ -152,7 +153,7 @@ public class JavaScriptFreeRoadmapService : IRoadmapService
 
                 foreach (var parentItem in parentItems)
                 {
-                    var childSwimlane = new RoadmapSwimLane
+                    var childSwimlane = new SwimLane
                     {
                         WorkItemId = parentItem.Id,
                         Title = parentItem.Title,
@@ -160,13 +161,13 @@ public class JavaScriptFreeRoadmapService : IRoadmapService
                         Color = parentItem.Color,
                         Level = 1,
                         IsCollapsed = false,
-                        Children = new List<RoadmapSwimLane>(),
-                        TimelineItems = new List<RoadmapTimelineItem>()
+                        Children = [],
+                        TimelineItems = []
                     };
 
                     // STEP 5: Find lowest level items (e.g., Features) that are children of this parent
                     // Create a separate swimlane row for each lowest-level item
-                    var lowestItemIds = parentChildMap.ContainsKey(parentItem.Id) ? parentChildMap[parentItem.Id] : new List<int>();
+                    var lowestItemIds = parentChildMap.ContainsKey(parentItem.Id) ? parentChildMap[parentItem.Id] : [];
                     var lowestItems = lowestItemIds
                         .Where(id => workItemLookup.ContainsKey(id))
                         .Select(id => workItemLookup[id])
@@ -181,7 +182,7 @@ public class JavaScriptFreeRoadmapService : IRoadmapService
                     // Create a separate swimlane row for each lowest-level work item
                     foreach (var lowestItem in lowestItems)
                     {
-                        var lowestSwimlane = new RoadmapSwimLane
+                        var lowestSwimlane = new SwimLane
                         {
                             WorkItemId = lowestItem.Id,
                             Title = lowestItem.Title,
@@ -189,11 +190,11 @@ public class JavaScriptFreeRoadmapService : IRoadmapService
                             Color = lowestItem.Color,
                             Level = 2,
                             IsCollapsed = false,
-                            Children = new List<RoadmapSwimLane>(),
-                            TimelineItems = new List<RoadmapTimelineItem>
-                            {
+                            Children = [],
+                            TimelineItems =
+                            [
                                 ConvertToTimelineItem(lowestItem)
-                            }
+                            ]
                         };
 
                         childSwimlane.Children.Add(lowestSwimlane);
@@ -214,7 +215,7 @@ public class JavaScriptFreeRoadmapService : IRoadmapService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error building roadmap swimlanes");
-            return new List<RoadmapSwimLane>();
+            return [];
         }
     }
 
@@ -251,11 +252,11 @@ public class JavaScriptFreeRoadmapService : IRoadmapService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting unscheduled work items");
-            return new List<UnscheduledWorkItem>();
+            return [];
         }
     }
 
-    public async Task<RoadmapConfiguration> GetDefaultConfigurationAsync()
+    public async Task<Config> GetDefaultConfigurationAsync()
     {
         try
         {
@@ -268,9 +269,9 @@ public class JavaScriptFreeRoadmapService : IRoadmapService
             
             DateTime.TryParse(startDateStr, out var startDate);
             DateTime.TryParse(endDateStr, out var endDate);
-            Enum.TryParse<RoadmapTimeUnit>(timeUnitStr, out var timeUnit);
+            Enum.TryParse<TimeUnit>(timeUnitStr, out var timeUnit);
 
-            return new RoadmapConfiguration
+            return new Config
             {
                 StartDate = startDate == default ? DateTime.Today.AddMonths(-1) : startDate,
                 EndDate = endDate == default ? DateTime.Today.AddMonths(11) : endDate,
@@ -283,16 +284,16 @@ public class JavaScriptFreeRoadmapService : IRoadmapService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting default roadmap configuration");
-            return new RoadmapConfiguration
+            return new Config
             {
                 StartDate = DateTime.Today.AddMonths(-1),
                 EndDate = DateTime.Today.AddMonths(11),
-                TimeUnit = RoadmapTimeUnit.Week
+                TimeUnit = TimeUnit.Week
             };
         }
     }
 
-    public async Task SaveConfigurationAsync(RoadmapConfiguration config)
+    public async Task SaveConfigurationAsync(Config config)
     {
         try
         {
@@ -335,9 +336,7 @@ public class JavaScriptFreeRoadmapService : IRoadmapService
         }
     }
 
-    public List<RoadmapTimelineItem> CalculateTimelinePositions(
-        List<RoadmapTimelineItem> timelineItems, 
-        RoadmapConfiguration config)
+    public List<TimelineItem> CalculateTimelinePositions(List<TimelineItem> timelineItems, Config config)
     {
         try
         {
@@ -352,10 +351,10 @@ public class JavaScriptFreeRoadmapService : IRoadmapService
                 // Set default width based on time unit
                 item.Width = config.TimeUnit switch
                 {
-                    RoadmapTimeUnit.Day => 1.0,
-                    RoadmapTimeUnit.Week => 7.0 / totalDays * timelineWidth,
-                    RoadmapTimeUnit.Month => 30.0 / totalDays * timelineWidth,
-                    RoadmapTimeUnit.Quarter => 90.0 / totalDays * timelineWidth,
+                    TimeUnit.Day => 1.0,
+                    TimeUnit.Week => 7.0 / totalDays * timelineWidth,
+                    TimeUnit.Month => 30.0 / totalDays * timelineWidth,
+                    TimeUnit.Quarter => 90.0 / totalDays * timelineWidth,
                     _ => 7.0 / totalDays * timelineWidth
                 };
 
@@ -378,33 +377,33 @@ public class JavaScriptFreeRoadmapService : IRoadmapService
     {
         var hierarchyLevels = await GetRoadmapHierarchyLevelsAsync(processId);
         if (!hierarchyLevels.Any())
-            return new List<string>();
+            return [];
 
         // The top level is the first level in the hierarchy
         var topLevel = hierarchyLevels.FirstOrDefault();
-        return topLevel?.WorkItemTypes ?? new List<string>();
+        return topLevel?.WorkItemTypes ?? [];
     }
 
     private async Task<List<string>> GetParentLevelWorkItemTypesAsync(string processId)
     {
         var hierarchyLevels = await GetRoadmapHierarchyLevelsAsync(processId);
         if (hierarchyLevels.Count < 2)
-            return new List<string>();
+            return [];
 
         // The parent level is the second-to-last level in the hierarchy
         var parentLevel = hierarchyLevels[^2]; // C# 8.0 index from end syntax
-        return parentLevel?.WorkItemTypes ?? new List<string>();
+        return parentLevel?.WorkItemTypes ?? [];
     }
 
     private async Task<List<string>> GetLowestLevelWorkItemTypesAsync(string processId)
     {
         var hierarchyLevels = await GetRoadmapHierarchyLevelsAsync(processId);
         if (!hierarchyLevels.Any())
-            return new List<string>();
+            return [];
 
         // The lowest level is the last level in the hierarchy
         var lowestLevel = hierarchyLevels.LastOrDefault();
-        return lowestLevel?.WorkItemTypes ?? new List<string>();
+        return lowestLevel?.WorkItemTypes ?? [];
     }
 
     /// <summary>
@@ -487,7 +486,7 @@ public class JavaScriptFreeRoadmapService : IRoadmapService
         return workItems.FirstOrDefault(wi => wi.Id == parentId)?.WorkItemType ?? string.Empty;
     }
 
-    private RoadmapTimelineItem ConvertToTimelineItem(WorkItem workItem)
+    private TimelineItem ConvertToTimelineItem(WorkItem workItem)
     {
         // Try to extract StartDate from work item fields
         DateTime? startDate = null;
@@ -503,7 +502,7 @@ public class JavaScriptFreeRoadmapService : IRoadmapService
             }
         }
 
-        return new RoadmapTimelineItem
+        return new TimelineItem
         {
             WorkItemId = workItem.Id,
             Title = workItem.Title,

@@ -8,6 +8,7 @@
   </Folder>
   <Project Path="AzDoBoards.Client\AzDoBoards.Client.csproj" />
   <Project Path="AzDoBoards.Data\AzDoBoards.Data.csproj" />
+  <Project Path="AzDoBoards.Models/AzDoBoards.Models.csproj" Id="a2f41773-7c5c-4eb2-9ab9-c1cbedce7cee" />
   <Project Path="AzDoBoards.Ui\AzDoBoards.Ui.csproj" />
   <Project Path="AzDoBoards.Utility\AzDoBoards.Utility.csproj" />
 </Solution>

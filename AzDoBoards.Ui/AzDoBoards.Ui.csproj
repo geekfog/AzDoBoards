@@ -20,6 +20,7 @@
   <ItemGroup>
     <ProjectReference Include="..\AzDoBoards.Client\AzDoBoards.Client.csproj" />
 	<ProjectReference Include="..\AzDoBoards.Data\AzDoBoards.Data.csproj" />
+	<ProjectReference Include="..\AzDoBoards.Models\AzDoBoards.Models.csproj" />
     <ProjectReference Include="..\AzDoBoards.Utility\AzDoBoards.Utility.csproj" />
   </ItemGroup>
 
