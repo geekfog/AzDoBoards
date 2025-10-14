@@ -1,9 +1,7 @@
 using AzDoBoards.Client.Models;
 using AzDoBoards.Client.Services;
 using AzDoBoards.Data.Abstractions;
-using AzDoBoards.Utility;
 using AzDoBoards.Models.Roadmap;
-using Microsoft.AspNetCore.Components.Authorization;
 using AzDoBoards.Models;
 
 namespace AzDoBoards.Ui.Services;
@@ -11,22 +9,22 @@ namespace AzDoBoards.Ui.Services;
 /// <summary>
 /// JavaScript-free implementation of roadmap service for Blazor Server
 /// </summary>
-public class JavaScriptFreeRoadmapService : IRoadmapService
+public class RoadmapService : IRoadmapService
 {
     private readonly ISettingsRepository _settingsRepository;
     private readonly IServiceProvider _serviceProvider;
-    private readonly JavaScriptFreeHierarchyService _hierarchyService;
-    private readonly ILogger<JavaScriptFreeRoadmapService> _logger;
+    private readonly HierarchyService _hierarchyService;
+    private readonly ILogger<RoadmapService> _logger;
 
-    public JavaScriptFreeRoadmapService(
+    public RoadmapService(
         ISettingsRepository settingsRepository,
         IServiceProvider serviceProvider,
         IHierarchyService hierarchyService,
-        ILogger<JavaScriptFreeRoadmapService> logger)
+        ILogger<RoadmapService> logger)
     {
         _settingsRepository = settingsRepository;
         _serviceProvider = serviceProvider;
-        _hierarchyService = (JavaScriptFreeHierarchyService)hierarchyService;
+        _hierarchyService = (HierarchyService)hierarchyService;
         _logger = logger;
     }
 
@@ -72,8 +70,7 @@ public class JavaScriptFreeRoadmapService : IRoadmapService
             var workItemService = _serviceProvider.GetRequiredService<WorkItemServices>();
             var hierarchyLevels = await GetRoadmapHierarchyLevelsAsync(processId);
             
-            if (!hierarchyLevels.Any())
-                return [];
+            if (!hierarchyLevels.Any()) return [];
 
             // Get all work item types for roadmap
             var allRoadmapWorkItemTypes = hierarchyLevels
@@ -108,8 +105,8 @@ public class JavaScriptFreeRoadmapService : IRoadmapService
             var parentLevelTypes = await GetParentLevelWorkItemTypesAsync(processId);
             var lowestLevelTypes = await GetLowestLevelWorkItemTypesAsync(processId);
 
-            _logger.LogInformation("Building swimlanes - Top: {TopTypes}, Parent: {ParentTypes}, Lowest: {LowestTypes}",
-                string.Join(",", topLevelTypes), string.Join(",", parentLevelTypes), string.Join(",", lowestLevelTypes));
+            //_logger.LogInformation("Building swimlanes - Top: {TopTypes}, Parent: {ParentTypes}, Lowest: {LowestTypes}",
+            //    string.Join(",", topLevelTypes), string.Join(",", parentLevelTypes), string.Join(",", lowestLevelTypes));
 
             // STEP 1: Create a dictionary of all work items for quick lookup
             var workItemLookup = workItems.ToDictionary(wi => wi.Id, wi => wi);
@@ -123,7 +120,7 @@ public class JavaScriptFreeRoadmapService : IRoadmapService
                 .OrderBy(wi => wi.Title)
                 .ToList();
 
-            _logger.LogInformation("Found {TopLevelCount} top-level items", topLevelItems.Count);
+            //_logger.LogInformation("Found {TopLevelCount} top-level items", topLevelItems.Count);
 
             foreach (var topLevelItem in topLevelItems)
             {
@@ -148,8 +145,8 @@ public class JavaScriptFreeRoadmapService : IRoadmapService
                     .OrderBy(wi => wi.Title)
                     .ToList();
 
-                _logger.LogInformation("Top-level item {TopItemId} '{TopItemTitle}' has {ParentCount} direct children: {ParentIds}",
-                    topLevelItem.Id, topLevelItem.Title, parentItems.Count, string.Join(", ", parentItems.Select(p => p.Id)));
+                //_logger.LogInformation("Top-level item {TopItemId} '{TopItemTitle}' has {ParentCount} direct children: {ParentIds}",
+                //    topLevelItem.Id, topLevelItem.Title, parentItems.Count, string.Join(", ", parentItems.Select(p => p.Id)));
 
                 foreach (var parentItem in parentItems)
                 {
@@ -175,9 +172,9 @@ public class JavaScriptFreeRoadmapService : IRoadmapService
                         .OrderBy(wi => wi.Title)
                         .ToList();
 
-                    _logger.LogInformation("Parent item {ParentItemId} '{ParentItemTitle}' has {LowestItemCount} lowest-level items: {ItemIds}",
-                        parentItem.Id, parentItem.Title, lowestItems.Count, 
-                        string.Join(", ", lowestItems.Select(li => $"{li.Id}:{li.Title}")));
+                    //_logger.LogInformation("Parent item {ParentItemId} '{ParentItemTitle}' has {LowestItemCount} lowest-level items: {ItemIds}",
+                    //    parentItem.Id, parentItem.Title, lowestItems.Count, 
+                    //    string.Join(", ", lowestItems.Select(li => $"{li.Id}:{li.Title}")));
 
                     // Create a separate swimlane row for each lowest-level work item
                     foreach (var lowestItem in lowestItems)
@@ -203,8 +200,8 @@ public class JavaScriptFreeRoadmapService : IRoadmapService
                     swimlane.Children.Add(childSwimlane);
                 }
 
-                _logger.LogInformation("Adding swimlane {SwimlaneName} with {ChildCount} children",
-                    swimlane.Title, swimlane.Children.Count);
+                //_logger.LogInformation("Adding swimlane {SwimlaneName} with {ChildCount} children",
+                //    swimlane.Title, swimlane.Children.Count);
 
                 swimlanes.Add(swimlane);
             }
@@ -297,12 +294,9 @@ public class JavaScriptFreeRoadmapService : IRoadmapService
     {
         try
         {
-            await _settingsRepository.SetAsync("roadmap-start-date", 
-                config.StartDate.ToString("yyyy-MM-dd"), "Roadmap Configuration");
-            await _settingsRepository.SetAsync("roadmap-end-date", 
-                config.EndDate.ToString("yyyy-MM-dd"), "Roadmap Configuration");
-            await _settingsRepository.SetAsync("roadmap-time-unit", 
-                config.TimeUnit.ToString(), "Roadmap Configuration");
+            await _settingsRepository.SetAsync("roadmap-start-date", config.StartDate.ToString("yyyy-MM-dd"), "Roadmap Configuration");
+            await _settingsRepository.SetAsync("roadmap-end-date", config.EndDate.ToString("yyyy-MM-dd"), "Roadmap Configuration");
+            await _settingsRepository.SetAsync("roadmap-time-unit", config.TimeUnit.ToString(), "Roadmap Configuration");
         }
         catch (Exception ex)
         {
@@ -449,8 +443,7 @@ public class JavaScriptFreeRoadmapService : IRoadmapService
     private async Task<List<string>> GetParentLevelWorkItemTypesAsync(string processId)
     {
         var hierarchyLevels = await GetRoadmapHierarchyLevelsAsync(processId);
-        if (hierarchyLevels.Count < 2)
-            return [];
+        if (hierarchyLevels.Count < 2) return [];
 
         // The parent level is the second-to-last level in the hierarchy
         var parentLevel = hierarchyLevels[^2]; // C# 8.0 index from end syntax
@@ -460,8 +453,7 @@ public class JavaScriptFreeRoadmapService : IRoadmapService
     private async Task<List<string>> GetLowestLevelWorkItemTypesAsync(string processId)
     {
         var hierarchyLevels = await GetRoadmapHierarchyLevelsAsync(processId);
-        if (!hierarchyLevels.Any())
-            return [];
+        if (!hierarchyLevels.Any()) return [];
 
         // The lowest level is the last level in the hierarchy
         var lowestLevel = hierarchyLevels.LastOrDefault();
@@ -482,8 +474,8 @@ public class JavaScriptFreeRoadmapService : IRoadmapService
             var workItemService = _serviceProvider.GetRequiredService<WorkItemServices>();
             var parentChildMap = await workItemService.GetWorkItemRelationshipsAsync(workItemIds);
             
-            _logger.LogInformation("Retrieved {RelationshipCount} parent-child relationships from Azure DevOps API", 
-                parentChildMap.Sum(kvp => kvp.Value.Count));
+            //_logger.LogInformation("Retrieved {RelationshipCount} parent-child relationships from Azure DevOps API", 
+            //    parentChildMap.Sum(kvp => kvp.Value.Count));
                 
             return parentChildMap;
         }

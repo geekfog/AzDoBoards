@@ -85,8 +85,8 @@ public class Program
         builder.Services.AddSingleton<IConnectionMultiplexer>(sp => ConnectionMultiplexer.Connect(redisConnectionString)); // Register Redis connection multiplexer
         
         // Add the JavaScript-free services
-        builder.Services.AddScoped<IRoadmapService, JavaScriptFreeRoadmapService>();
-        builder.Services.AddScoped<IHierarchyService, JavaScriptFreeHierarchyService>();
+        builder.Services.AddScoped<IRoadmapService, RoadmapService>();
+        builder.Services.AddScoped<IHierarchyService, HierarchyService>();
 
         // Add Entra ID (Azure AD) Authentication
         builder.Services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)

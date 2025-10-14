@@ -8,16 +8,16 @@ namespace AzDoBoards.Ui.Services;
 /// <summary>
 /// JavaScript-free implementation of hierarchy service for Blazor Server
 /// </summary>
-public class JavaScriptFreeHierarchyService : IHierarchyService
+public class HierarchyService : IHierarchyService
 {
     private readonly ISettingsRepository _settingsRepository;
     private readonly IServiceProvider _serviceProvider;
-    private readonly ILogger<JavaScriptFreeHierarchyService> _logger;
+    private readonly ILogger<HierarchyService> _logger;
 
-    public JavaScriptFreeHierarchyService(
+    public HierarchyService(
         ISettingsRepository settingsRepository,
         IServiceProvider serviceProvider,
-        ILogger<JavaScriptFreeHierarchyService> logger)
+        ILogger<HierarchyService> logger)
     {
         _settingsRepository = settingsRepository;
         _serviceProvider = serviceProvider;
