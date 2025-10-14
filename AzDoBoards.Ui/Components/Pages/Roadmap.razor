@@ -200,7 +200,7 @@
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="CloseScheduleDialog">Cancel</MudButton>
-        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="SaveSchedule" Disabled="@(scheduleStartDate.HasValue && scheduleTargetDate.HasValue && scheduleStartDate.Value > scheduleTargetDate.Value)">
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="SaveWorkItem" Disabled="@(scheduleStartDate.HasValue && scheduleTargetDate.HasValue && scheduleStartDate.Value > scheduleTargetDate.Value)">
             Save Schedule
         </MudButton>
     </DialogActions>
@@ -324,18 +324,68 @@
 
     private async Task HandleTimelineDrop()
     {
-        if (draggedWorkItemId.HasValue && dropTargetDate.HasValue)
-            await UpdateWorkItemSchedule(draggedWorkItemId.Value, null, dropTargetDate.Value);
+        if (!draggedWorkItemId.HasValue || !dropTargetDate.HasValue)
+        {
+            OnDragEnd();
+            return;
+        }
 
-        OnDragEnd();
+        try
+        {
+            var success = await UpdateWorkItemDatesAsync(draggedWorkItemId.Value, null, dropTargetDate.Value);
+            
+            if (success)
+            {
+                await LoadRoadmapDataAsync();
+                Snackbar.Add($"Work item {draggedWorkItemId.Value} scheduled successfully", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add($"Failed to update work item {draggedWorkItemId.Value}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error in timeline drop handler");
+            Snackbar.Add($"Error updating work item: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            OnDragEnd();
+        }
     }
 
     private async Task HandleUnscheduleDrop()
     {
-        if (draggedWorkItemId.HasValue)
-            await UpdateWorkItemSchedule(draggedWorkItemId.Value, null, null);
+        if (!draggedWorkItemId.HasValue)
+        {
+            OnDragEnd();
+            return;
+        }
 
-        OnDragEnd();
+        try
+        {
+            var success = await UpdateWorkItemDatesAsync(draggedWorkItemId.Value, null, null);
+            
+            if (success)
+            {
+                await LoadRoadmapDataAsync();
+                Snackbar.Add($"Work item {draggedWorkItemId.Value} unscheduled successfully", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add($"Failed to update work item {draggedWorkItemId.Value}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error in unschedule drop handler");
+            Snackbar.Add($"Error updating work item: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            OnDragEnd();
+        }
     }
 
     // Schedule Dialog handlers
@@ -370,25 +420,108 @@
         availableStates.Clear();
     }
 
-    private async Task SaveSchedule()
+    private async Task SaveWorkItem()
     {
-        if (selectedWorkItemId <= 0 || !scheduleTargetDate.HasValue) return;
+        if (selectedWorkItemId <= 0 || selectedWorkItem == null) return;
 
-        // Update dates
-        await UpdateWorkItemSchedule(selectedWorkItemId, scheduleStartDate, scheduleTargetDate.Value);
-        
-        // Update state if it changed
-        if (!string.IsNullOrEmpty(selectedWorkItemState) && selectedWorkItem != null && selectedWorkItemState != selectedWorkItem.State)
-            await UpdateWorkItemState(selectedWorkItemId, selectedWorkItemState);
-        
-        CloseScheduleDialog();
+        try
+        {
+            var updates = new List<string>();
+
+            // Check what fields have changed
+            var currentStartDate = selectedWorkItem.Fields.TryGetValue("Microsoft.VSTS.Scheduling.StartDate", out var startDateObj) && startDateObj is DateTime sd
+                ? (DateTime?)sd
+                : null;
+            
+            var startDateChanged = scheduleStartDate != currentStartDate;
+            var targetDateChanged = scheduleTargetDate != selectedWorkItem.TargetDate;
+            var stateChanged = !string.IsNullOrEmpty(selectedWorkItemState) && selectedWorkItemState != selectedWorkItem.State;
+
+            // If nothing changed, just close the dialog
+            if (!startDateChanged && !targetDateChanged && !stateChanged)
+            {
+                CloseScheduleDialog();
+                return;
+            }
+
+            // Build update messages
+            if (targetDateChanged)
+            {
+                var action = scheduleTargetDate.HasValue ? "scheduled" : "unscheduled";
+                updates.Add(action);
+            }
+
+            if (startDateChanged && scheduleStartDate.HasValue)
+            {
+                updates.Add($"start date set to {scheduleStartDate.Value:M/d/yyyy}");
+            }
+            else if (startDateChanged && !scheduleStartDate.HasValue)
+            {
+                updates.Add("start date cleared");
+            }
+
+            if (stateChanged)
+            {
+                updates.Add($"state changed to {selectedWorkItemState}");
+            }
+
+            // Make a single API call to update all changed fields
+            var success = await RoadmapService.UpdateWorkItemFieldsAsync(
+                selectedWorkItemId,
+                scheduleStartDate,
+                scheduleTargetDate,
+                stateChanged ? selectedWorkItemState : null,
+                updateStartDate: startDateChanged,
+                updateTargetDate: targetDateChanged
+            );
+
+            if (success)
+            {
+                // Update local data
+                var workItem = allWorkItems?.FirstOrDefault(wi => wi.Id == selectedWorkItemId);
+                if (workItem != null)
+                {
+                    if (targetDateChanged)
+                        workItem.TargetDate = scheduleTargetDate;
+                    
+                    if (startDateChanged)
+                    {
+                        if (scheduleStartDate.HasValue)
+                            workItem.Fields["Microsoft.VSTS.Scheduling.StartDate"] = scheduleStartDate.Value;
+                        else
+                            workItem.Fields.Remove("Microsoft.VSTS.Scheduling.StartDate");
+                    }
+                    
+                    if (stateChanged && !string.IsNullOrEmpty(selectedWorkItemState))
+                        workItem.State = selectedWorkItemState;
+                }
+
+                // Refresh the roadmap data to reflect changes
+                await LoadRoadmapDataAsync();
+                
+                var message = $"Work item {selectedWorkItemId} updated: {string.Join(", ", updates)}";
+                Snackbar.Add(message, Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add($"Failed to update work item {selectedWorkItemId}", Severity.Error);
+                return;
+            }
+            
+            CloseScheduleDialog();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error saving work item {WorkItemId}", selectedWorkItemId);
+            Snackbar.Add($"Error saving work item: {ex.Message}", Severity.Error);
+        }
     }
 
-    private async Task UpdateWorkItemSchedule(int workItemId, DateTime? startDate, DateTime? targetDate)
+    private async Task<bool> UpdateWorkItemDatesAsync(int workItemId, DateTime? startDate, DateTime? targetDate)
     {
         try
         {
-            var success = await RoadmapService.UpdateWorkItemTargetDateAsync(workItemId, targetDate);
+            var success = await RoadmapService.UpdateWorkItemDatesAsync(workItemId, startDate, targetDate);
             
             if (success)
             {
@@ -398,55 +531,18 @@
                 {
                     workItem.TargetDate = targetDate;
                     if (startDate.HasValue)
-                    {
                         workItem.Fields["Microsoft.VSTS.Scheduling.StartDate"] = startDate.Value;
-                    }
+                    else
+                        workItem.Fields.Remove("Microsoft.VSTS.Scheduling.StartDate");
                 }
+            }
 
-                // Rebuild swimlanes and unscheduled items
-                await LoadRoadmapDataAsync();
-                
-                var action = targetDate.HasValue ? "scheduled" : "unscheduled";
-                Snackbar.Add($"Work item {workItemId} {action} successfully", Severity.Success);
-            }
-            else
-            {
-                Snackbar.Add($"Failed to update work item {workItemId}", Severity.Error);
-            }
+            return success;
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error updating work item schedule");
-            Snackbar.Add($"Error updating work item: {ex.Message}", Severity.Error);
-        }
-    }
-
-    private async Task UpdateWorkItemState(int workItemId, string newState)
-    {
-        try
-        {
-            var success = await RoadmapService.UpdateWorkItemStateAsync(workItemId, newState);
-            
-            if (success)
-            {
-                // Update local data
-                var workItem = allWorkItems?.FirstOrDefault(wi => wi.Id == workItemId);
-                if (workItem != null)
-                {
-                    workItem.State = newState;
-                }
-
-                Snackbar.Add($"Work item {workItemId} state updated to {newState}", Severity.Success);
-            }
-            else
-            {
-                Snackbar.Add($"Failed to update work item {workItemId} state", Severity.Error);
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error updating work item state");
-            Snackbar.Add($"Error updating work item state: {ex.Message}", Severity.Error);
+            Logger.LogError(ex, "Error updating work item {WorkItemId} dates", workItemId);
+            return false;
         }
     }
 

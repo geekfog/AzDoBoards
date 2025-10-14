@@ -310,30 +310,52 @@ public class JavaScriptFreeRoadmapService : IRoadmapService
         }
     }
 
-    public async Task<bool> UpdateWorkItemTargetDateAsync(int workItemId, DateTime? targetDate)
+    public async Task<bool> UpdateWorkItemFieldsAsync(
+        int workItemId, 
+        DateTime? startDate, 
+        DateTime? targetDate, 
+        string? state,
+        bool updateStartDate,
+        bool updateTargetDate)
     {
         try
         {
             var workItemService = _serviceProvider.GetRequiredService<WorkItemServices>();
-            var success = await workItemService.UpdateWorkItemDatesAsync(workItemId, null, targetDate);
-            
-            if (success)
-            {
-                _logger.LogInformation("Successfully updated work item {WorkItemId} target date to {TargetDate}", 
-                    workItemId, targetDate?.ToString("yyyy-MM-dd") ?? "null");
-                return true;
-            }
-            else
-            {
-                _logger.LogWarning("Failed to update work item {WorkItemId} target date", workItemId);
-                return false;
-            }
+            var success = await workItemService.UpdateWorkItemFieldsAsync(
+                workItemId, 
+                startDate, 
+                targetDate, 
+                state,
+                updateStartDate,
+                updateTargetDate);
+            return success;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error updating work item {WorkItemId} target date", workItemId);
+            _logger.LogError(ex, "Error updating work item {WorkItemId} fields", workItemId);
             return false;
         }
+    }
+
+    public async Task<bool> UpdateWorkItemDatesAsync(int workItemId, DateTime? startDate, DateTime? targetDate)
+    {
+        try
+        {
+            var workItemService = _serviceProvider.GetRequiredService<WorkItemServices>();
+            var success = await workItemService.UpdateWorkItemDatesAsync(workItemId, startDate, targetDate);
+            return success;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating work item {WorkItemId} dates", workItemId);
+            return false;
+        }
+    }
+
+    public async Task<bool> UpdateWorkItemTargetDateAsync(int workItemId, DateTime? targetDate)
+    {
+        // Delegate to the more comprehensive method
+        return await UpdateWorkItemDatesAsync(workItemId, null, targetDate);
     }
 
     public async Task<bool> UpdateWorkItemStateAsync(int workItemId, string newState)
@@ -342,18 +364,7 @@ public class JavaScriptFreeRoadmapService : IRoadmapService
         {
             var workItemService = _serviceProvider.GetRequiredService<WorkItemServices>();
             var success = await workItemService.UpdateWorkItemStateAsync(workItemId, newState);
-            
-            if (success)
-            {
-                _logger.LogInformation("Successfully updated work item {WorkItemId} state to {State}", 
-                    workItemId, newState);
-                return true;
-            }
-            else
-            {
-                _logger.LogWarning("Failed to update work item {WorkItemId} state", workItemId);
-                return false;
-            }
+            return success;           
         }
         catch (Exception ex)
         {
@@ -366,8 +377,7 @@ public class JavaScriptFreeRoadmapService : IRoadmapService
     {
         try
         {
-            if (!Guid.TryParse(processId, out var processGuid))
-                return [];
+            if (!Guid.TryParse(processId, out var processGuid)) return [];
 
             var stateService = _serviceProvider.GetRequiredService<WorkItemStateServices>();
             var stateGroups = await stateService.GetWorkItemStatesForProcessAsync(processGuid);

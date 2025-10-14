@@ -431,13 +431,22 @@ public class WorkItemServices(ConnectionFactory connectionFactory) : Base(connec
     }
 
     /// <summary>
-    /// Updates work item start and target dates in Azure DevOps
+    /// Updates work item fields (dates and/or state) in a single Azure DevOps API call
     /// </summary>
     /// <param name="workItemId">Work item ID to update</param>
-    /// <param name="startDate">Start date (optional)</param>
-    /// <param name="targetDate">Target date (optional)</param>
+    /// <param name="startDate">Start date (null to clear, omit parameter to leave unchanged)</param>
+    /// <param name="targetDate">Target date (null to clear, omit parameter to leave unchanged)</param>
+    /// <param name="state">New state value (null or empty to leave unchanged)</param>
+    /// <param name="updateStartDate">Whether to update the start date field</param>
+    /// <param name="updateTargetDate">Whether to update the target date field</param>
     /// <returns>True if successful, false otherwise</returns>
-    public async Task<bool> UpdateWorkItemDatesAsync(int workItemId, DateTime? startDate, DateTime? targetDate)
+    public async Task<bool> UpdateWorkItemFieldsAsync(
+        int workItemId, 
+        DateTime? startDate = null, 
+        DateTime? targetDate = null, 
+        string? state = null,
+        bool updateStartDate = false,
+        bool updateTargetDate = false)
     {
         try
         {
@@ -446,34 +455,66 @@ public class WorkItemServices(ConnectionFactory connectionFactory) : Base(connec
 
             var patchDocument = new Microsoft.VisualStudio.Services.WebApi.Patch.Json.JsonPatchDocument();
 
-            if (startDate.HasValue)
+            // Update start date if requested
+            if (updateStartDate)
+            {
+                if (startDate.HasValue)
+                {
+                    patchDocument.Add(new Microsoft.VisualStudio.Services.WebApi.Patch.Json.JsonPatchOperation()
+                    {
+                        Operation = Microsoft.VisualStudio.Services.WebApi.Patch.Operation.Add,
+                        Path = "/fields/Microsoft.VSTS.Scheduling.StartDate",
+                        Value = startDate.Value.ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
+                    });
+                }
+                else
+                {
+                    // Remove start date if explicitly cleared
+                    patchDocument.Add(new Microsoft.VisualStudio.Services.WebApi.Patch.Json.JsonPatchOperation()
+                    {
+                        Operation = Microsoft.VisualStudio.Services.WebApi.Patch.Operation.Remove,
+                        Path = "/fields/Microsoft.VSTS.Scheduling.StartDate"
+                    });
+                }
+            }
+
+            // Update target date if requested
+            if (updateTargetDate)
+            {
+                if (targetDate.HasValue)
+                {
+                    patchDocument.Add(new Microsoft.VisualStudio.Services.WebApi.Patch.Json.JsonPatchOperation()
+                    {
+                        Operation = Microsoft.VisualStudio.Services.WebApi.Patch.Operation.Add,
+                        Path = "/fields/Microsoft.VSTS.Scheduling.TargetDate",
+                        Value = targetDate.Value.ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
+                    });
+                }
+                else
+                {
+                    // Remove target date if explicitly cleared
+                    patchDocument.Add(new Microsoft.VisualStudio.Services.WebApi.Patch.Json.JsonPatchOperation()
+                    {
+                        Operation = Microsoft.VisualStudio.Services.WebApi.Patch.Operation.Remove,
+                        Path = "/fields/Microsoft.VSTS.Scheduling.TargetDate"
+                    });
+                }
+            }
+
+            // Update state if provided
+            if (!string.IsNullOrEmpty(state))
             {
                 patchDocument.Add(new Microsoft.VisualStudio.Services.WebApi.Patch.Json.JsonPatchOperation()
                 {
                     Operation = Microsoft.VisualStudio.Services.WebApi.Patch.Operation.Add,
-                    Path = "/fields/Microsoft.VSTS.Scheduling.StartDate",
-                    Value = startDate.Value.ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
+                    Path = "/fields/System.State",
+                    Value = state
                 });
             }
 
-            if (targetDate.HasValue)
-            {
-                patchDocument.Add(new Microsoft.VisualStudio.Services.WebApi.Patch.Json.JsonPatchOperation()
-                {
-                    Operation = Microsoft.VisualStudio.Services.WebApi.Patch.Operation.Add,
-                    Path = "/fields/Microsoft.VSTS.Scheduling.TargetDate",
-                    Value = targetDate.Value.ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
-                });
-            }
-            else
-            {
-                // Remove target date if null
-                patchDocument.Add(new Microsoft.VisualStudio.Services.WebApi.Patch.Json.JsonPatchOperation()
-                {
-                    Operation = Microsoft.VisualStudio.Services.WebApi.Patch.Operation.Remove,
-                    Path = "/fields/Microsoft.VSTS.Scheduling.TargetDate"
-                });
-            }
+            // Only make API call if there are changes
+            if (patchDocument.Count == 0)
+                return true;
 
             var updatedWorkItem = await workItemClient.UpdateWorkItemAsync(patchDocument, workItemId);
             
@@ -481,9 +522,28 @@ public class WorkItemServices(ConnectionFactory connectionFactory) : Base(connec
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error updating work item dates: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"Error updating work item fields: {ex.Message}");
             return false;
         }
+    }
+
+    /// <summary>
+    /// Updates work item start and target dates in Azure DevOps
+    /// </summary>
+    /// <param name="workItemId">Work item ID to update</param>
+    /// <param name="startDate">Start date (optional, null to clear)</param>
+    /// <param name="targetDate">Target date (optional, null to clear)</param>
+    /// <returns>True if successful, false otherwise</returns>
+    public async Task<bool> UpdateWorkItemDatesAsync(int workItemId, DateTime? startDate, DateTime? targetDate)
+    {
+        // Delegate to the consolidated method
+        return await UpdateWorkItemFieldsAsync(
+            workItemId, 
+            startDate, 
+            targetDate, 
+            state: null,
+            updateStartDate: true,
+            updateTargetDate: true);
     }
 
     /// <summary>
@@ -494,28 +554,9 @@ public class WorkItemServices(ConnectionFactory connectionFactory) : Base(connec
     /// <returns>True if successful, false otherwise</returns>
     public async Task<bool> UpdateWorkItemStateAsync(int workItemId, string newState)
     {
-        try
-        {
-            var connection = await _connectionFactory.GetConnectionAsync();
-            var workItemClient = connection.GetClient<WorkItemTrackingHttpClient>();
-
-            var patchDocument = new Microsoft.VisualStudio.Services.WebApi.Patch.Json.JsonPatchDocument();
-
-            patchDocument.Add(new Microsoft.VisualStudio.Services.WebApi.Patch.Json.JsonPatchOperation()
-            {
-                Operation = Microsoft.VisualStudio.Services.WebApi.Patch.Operation.Add,
-                Path = "/fields/System.State",
-                Value = newState
-            });
-
-            var updatedWorkItem = await workItemClient.UpdateWorkItemAsync(patchDocument, workItemId);
-            
-            return updatedWorkItem != null;
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"Error updating work item state: {ex.Message}");
-            return false;
-        }
+        // Delegate to the consolidated method
+        return await UpdateWorkItemFieldsAsync(
+            workItemId, 
+            state: newState);
     }
 }

@@ -17,6 +17,8 @@ public interface IRoadmapService
     Task<List<UnscheduledWorkItem>> GetUnscheduledWorkItemsAsync(List<WorkItem> workItems, string processId);
     Task<Config> GetDefaultConfigurationAsync();
     Task SaveConfigurationAsync(Config config);
+    Task<bool> UpdateWorkItemFieldsAsync(int workItemId, DateTime? startDate, DateTime? targetDate, string? state, bool updateStartDate, bool updateTargetDate);
+    Task<bool> UpdateWorkItemDatesAsync(int workItemId, DateTime? startDate, DateTime? targetDate);
     Task<bool> UpdateWorkItemTargetDateAsync(int workItemId, DateTime? targetDate);
     Task<bool> UpdateWorkItemStateAsync(int workItemId, string newState);
     Task<List<string>> GetAvailableStatesForWorkItemTypeAsync(string workItemType, string processId);
