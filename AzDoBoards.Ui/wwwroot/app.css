@@ -58,6 +58,11 @@ body {
     max-width: none !important;
 }
 
+/* Light mode data grid background for better contrast */
+.mud-theme-light .mud-table-row {
+    background-color: #e8ecf1;
+}
+
 /* Make cards and paper components use full width when needed */
 .mud-paper.full-width,
 .mud-card.full-width {
