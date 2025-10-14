@@ -168,7 +168,8 @@ public class RoadmapService : IRoadmapService
                     var lowestItems = lowestItemIds
                         .Where(id => workItemLookup.ContainsKey(id))
                         .Select(id => workItemLookup[id])
-                        .Where(wi => lowestLevelTypes.Contains(wi.WorkItemType, StringComparer.OrdinalIgnoreCase))
+                        .Where(wi => lowestLevelTypes.Contains(wi.WorkItemType, StringComparer.OrdinalIgnoreCase) &&
+                                    wi.TargetDate.HasValue) // Only include scheduled items in swimlanes
                         .OrderBy(wi => wi.Title)
                         .ToList();
 
@@ -223,22 +224,49 @@ public class RoadmapService : IRoadmapService
             var lowestLevelTypes = await GetLowestLevelWorkItemTypesAsync(processId);
             var parentLevelTypes = await GetParentLevelWorkItemTypesAsync(processId);
 
+            // Get actual parent-child relationships from Azure DevOps
+            var parentChildMap = await GetWorkItemRelationshipsAsync(workItems.Select(wi => wi.Id).ToList());
+            
+            // Build a reverse lookup: child ID -> parent ID
+            var childToParentMap = new Dictionary<int, int>();
+            foreach (var kvp in parentChildMap)
+            {
+                var parentId = kvp.Key;
+                foreach (var childId in kvp.Value)
+                {
+                    childToParentMap[childId] = parentId;
+                }
+            }
+
             var unscheduledItems = workItems
                 .Where(wi => lowestLevelTypes.Contains(wi.WorkItemType, StringComparer.OrdinalIgnoreCase) && 
                             !wi.TargetDate.HasValue &&
                             wi.StateCategory != "Completed")
-                .Select(wi => new UnscheduledWorkItem
+                .Select(wi =>
                 {
-                    WorkItemId = wi.Id,
-                    Title = wi.Title,
-                    WorkItemType = wi.WorkItemType,
-                    Color = wi.Color,
-                    State = wi.State,
-                    StateCategory = wi.StateCategory,
-                    AssignedTo = wi.AssignedToDisplayName,
-                    ParentId = GetParentWorkItemId(workItems, wi.Id, parentLevelTypes),
-                    ParentTitle = GetParentWorkItemTitle(workItems, wi.Id, parentLevelTypes),
-                    ParentType = GetParentWorkItemType(workItems, wi.Id, parentLevelTypes)
+                    // Try to get parent from relationship map first
+                    var parentId = 0;
+                    if (childToParentMap.TryGetValue(wi.Id, out var actualParentId))
+                    {
+                        parentId = actualParentId;
+                    }
+                    
+                    // Get parent work item details
+                    var parentWorkItem = parentId > 0 ? workItems.FirstOrDefault(w => w.Id == parentId) : null;
+                    
+                    return new UnscheduledWorkItem
+                    {
+                        WorkItemId = wi.Id,
+                        Title = wi.Title,
+                        WorkItemType = wi.WorkItemType,
+                        Color = wi.Color,
+                        State = wi.State,
+                        StateCategory = wi.StateCategory,
+                        AssignedTo = wi.AssignedToDisplayName,
+                        ParentId = parentId,
+                        ParentTitle = parentWorkItem?.Title ?? string.Empty,
+                        ParentType = parentWorkItem?.WorkItemType ?? string.Empty
+                    };
                 })
                 .OrderBy(ui => ui.ParentTitle)
                 .ThenBy(ui => ui.Title)
@@ -500,44 +528,6 @@ public class RoadmapService : IRoadmapService
         _logger.LogWarning("Using empty fallback for work item relationships");
         
         return relationships;
-    }
-
-    private int GetParentWorkItemId(List<WorkItem> workItems, int workItemId, List<string> parentTypes)
-    {
-        var workItem = workItems.FirstOrDefault(wi => wi.Id == workItemId);
-        if (workItem == null) return 0;
-
-        // First try to use the actual System.Parent field
-        if (workItem.Fields.TryGetValue("System.Parent", out var parentField))
-        {
-            if (parentField is int parentFieldInt)
-            {
-                return parentFieldInt;
-            }
-            else if (parentField is string parentFieldStr && int.TryParse(parentFieldStr, out var parsedParentId))
-            {
-                return parsedParentId;
-            }
-        }
-
-        // Fallback to heuristic based on area path and work item type
-        return workItems
-            .Where(wi => parentTypes.Contains(wi.WorkItemType, StringComparer.OrdinalIgnoreCase) &&
-                        wi.AreaPath == workItem.AreaPath &&
-                        wi.IterationPath == workItem.IterationPath)
-            .FirstOrDefault()?.Id ?? 0;
-    }
-
-    private string GetParentWorkItemTitle(List<WorkItem> workItems, int workItemId, List<string> parentTypes)
-    {
-        var parentId = GetParentWorkItemId(workItems, workItemId, parentTypes);
-        return workItems.FirstOrDefault(wi => wi.Id == parentId)?.Title ?? string.Empty;
-    }
-
-    private string GetParentWorkItemType(List<WorkItem> workItems, int workItemId, List<string> parentTypes)
-    {
-        var parentId = GetParentWorkItemId(workItems, workItemId, parentTypes);
-        return workItems.FirstOrDefault(wi => wi.Id == parentId)?.WorkItemType ?? string.Empty;
     }
 
     private TimelineItem ConvertToTimelineItem(WorkItem workItem)
