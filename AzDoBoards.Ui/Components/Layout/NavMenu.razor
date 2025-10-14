@@ -9,7 +9,7 @@
     <div id="navbarContainer" style="display: flex; align-items: center;">
         <img id="navbarLogo" src="@Assets["img/favicon-0128.png"]" srcset="@Assets["img/favicon.svg"]" />
         <div id="navbarName">
-            <a class="navbar-brand nav-brand" href=""><img alt="AzDo Boards" src="@Assets["img/AzDoBoards-4Dark.png"]" srcset="@Assets["img/AzDoBoards-4Dark.svg"]" /></a>
+            <a class="navbar-brand nav-brand" href=""><img alt="AzDo Boards" src="@GetLogoPath()" /></a>
         </div>
     </div>
 </div>
@@ -40,7 +40,7 @@
                                 <span>@(Initials?.ToUpper())</span>
                             }
                         </MudAvatar>
-                        <span>@Name</span>
+                        <span class="nav-item">@Name</span>
                     </div>
                 </ActivatorContent>
                 <ChildContent>
@@ -70,31 +70,42 @@
 </form>
 
 @code {
-    private string? PreferredUserName;
-    private string? Email;
-    private string? Name;
-    private string? GravatarUrl;
-    private string? Initials;
+private string? PreferredUserName;
+private string? Email;
+private string? Name;
+private string? GravatarUrl;
+private string? Initials;
+private bool _isLightMode = false;
 
-    protected override async Task OnInitializedAsync()
+protected override async Task OnInitializedAsync()
+{
+    var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+    var user = authState.User;
+    PreferredUserName = user?.Claims.FirstOrDefault(c => c.Type == "preferred_username")?.Value;
+    Email = user?.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Email)?.Value;
+    GravatarUrl = !string.IsNullOrEmpty(PreferredUserName) ? GetGravatarUrl(PreferredUserName) : null;
+
+    Name = user?.Claims.FirstOrDefault(c => c.Type == "name")?.Value ?? "(Unknown)";
+    var givenName = user?.Claims.FirstOrDefault(c => c.Type == ClaimTypes.GivenName)?.Value;
+    var surname = user?.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Surname)?.Value;
+
+    if (!string.IsNullOrEmpty(GravatarUrl)) return;
+
+    Initials = string.Empty;
+    if (!string.IsNullOrEmpty(givenName)) Initials += givenName[0];
+    if (!string.IsNullOrEmpty(surname)) Initials += surname[0];
+    if (string.IsNullOrEmpty(Initials)) Initials = "?";
+}
+
+protected override async Task OnAfterRenderAsync(bool firstRender)
+{
+    if (firstRender)
     {
-        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-        var user = authState.User;
-        PreferredUserName = user?.Claims.FirstOrDefault(c => c.Type == "preferred_username")?.Value;
-        Email = user?.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Email)?.Value;
-        GravatarUrl = !string.IsNullOrEmpty(PreferredUserName) ? GetGravatarUrl(PreferredUserName) : null;
-
-        Name = user?.Claims.FirstOrDefault(c => c.Type == "name")?.Value ?? "(Unknown)";
-        var givenName = user?.Claims.FirstOrDefault(c => c.Type == ClaimTypes.GivenName)?.Value;
-        var surname = user?.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Surname)?.Value;
-
-        if (!string.IsNullOrEmpty(GravatarUrl)) return;
-
-        Initials = string.Empty;
-        if (!string.IsNullOrEmpty(givenName)) Initials += givenName[0];
-        if (!string.IsNullOrEmpty(surname)) Initials += surname[0];
-        if (string.IsNullOrEmpty(Initials)) Initials = "?";
+        // Detect theme preference after render (when JS interop is available)
+        _isLightMode = await JSRuntime.InvokeAsync<bool>("eval", "window.matchMedia('(prefers-color-scheme: light)').matches");
+        StateHasChanged();
     }
+}
 
     private async Task HandleSignOut()
     {
@@ -116,5 +127,15 @@
         return string.Concat(hashBytes.Select(b => b.ToString("x2")));
     }
 
-    private string Icon(string file) => Assets[$"img/{file}-4Dark.svg"];
+    private string Icon(string file)
+    {
+        var suffix = _isLightMode ? "4Light" : "4Dark";
+        return Assets[$"img/{file}-{suffix}.svg"];
+    }
+
+    private string GetLogoPath()
+    {
+        var suffix = _isLightMode ? "4Light" : "4Dark";
+        return Assets[$"img/AzDoBoards-{suffix}.svg"];
+    }
 }

@@ -13,10 +13,14 @@ main {
 }
 
 .sidebar {
-    background-image: linear-gradient(180deg, #374151 0%, #000000 100%);
+    background-image: linear-gradient(180deg, #374151 0%, #000000 100%); /* Dark mode gradient */
     display: flex;
     flex-direction: column;
     overflow: hidden; /* Prevent sidebar from scrolling at this level */
+}
+
+.mud-theme-light .sidebar {
+    background-image: linear-gradient(180deg, #D1D5DB 0%, #9CA3AF 100%); /* Light mode gradient */
 }
 
 .top-row {
@@ -62,7 +66,6 @@ main {
     .sidebar {
         width: 250px;
         height: 100vh; /* Fixed height for independent scrolling */
-        background-image: linear-gradient(180deg, #374151 0%, #000000 100%);
     }
 
     .top-row {
