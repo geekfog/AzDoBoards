@@ -12,6 +12,7 @@
 <PageTitle>Roadmap</PageTitle>
 
 <h1>Roadmap</h1>
+<p>Config Timeunit=@(config.TimeUnit)</p>
 
 <MudContainer MaxWidth="MaxWidth.False" Class="roadmap-container">
 
@@ -104,17 +105,15 @@
                     <div class="timeline-header-row">
                         <div class="timeline-controls">
                             <MudStack Row AlignItems="AlignItems.Center" Spacing="2" Class="pa-2">
-                                <MudButtonGroup Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small">
-                                    <MudButton OnClick="@(() => ChangeTimeUnit(RoadmapTimeUnit.Week))" Variant="@(config.TimeUnit == RoadmapTimeUnit.Week ? Variant.Filled : Variant.Outlined)">
-                                        Week
-                                    </MudButton>
-                                    <MudButton OnClick="@(() => ChangeTimeUnit(RoadmapTimeUnit.Month))" Variant="@(config.TimeUnit == RoadmapTimeUnit.Month ? Variant.Filled : Variant.Outlined)">
-                                        Month
-                                    </MudButton>
-                                    <MudButton OnClick="@(() => ChangeTimeUnit(RoadmapTimeUnit.Quarter))" Variant="@(config.TimeUnit == RoadmapTimeUnit.Quarter ? Variant.Filled : Variant.Outlined)">
-                                        Quarter
-                                    </MudButton>
-                                </MudButtonGroup>
+                                <MudButton OnClick="@(() => ChangeTimeUnit(RoadmapTimeUnit.Week))" Color="Color.Primary" Size="Size.Small" Variant="@(config.TimeUnit == RoadmapTimeUnit.Week ? Variant.Filled : Variant.Outlined)">
+                                    Week
+                                </MudButton>
+                                <MudButton OnClick="@(() => ChangeTimeUnit(RoadmapTimeUnit.Month))" Color="Color.Primary" Size="Size.Small" Variant="@(config.TimeUnit == RoadmapTimeUnit.Month ? Variant.Filled : Variant.Outlined)">
+                                    Month
+                                </MudButton>
+                                <MudButton OnClick="@(() => ChangeTimeUnit(RoadmapTimeUnit.Quarter))" Color="Color.Primary" Size="Size.Small" Variant="@(config.TimeUnit == RoadmapTimeUnit.Quarter ? Variant.Filled : Variant.Outlined)">
+                                    Quarter
+                                </MudButton>
                                 <MudDatePicker Label="Start" Date="config.StartDate" DateChanged="@OnStartDateChanged" Variant="Variant.Outlined" Margin="Margin.Dense" Class="date-picker-compact" />
                                 <MudDatePicker Label="End"   Date="config.EndDate"   DateChanged="@OnEndDateChanged"   Variant="Variant.Outlined" Margin="Margin.Dense" Class="date-picker-compact" />
                                 <MudIconButton Icon="@Icons.Material.Filled.Refresh" Color="Color.Primary" OnClick="RefreshDataAsync" Size="Size.Small" />
