@@ -37,11 +37,14 @@ export function initialize(dotNetRef, startDate, endDate, pxPerDay) {
     // Create drag indicator overlay
     createDragIndicator();
     
-    // Attach event listeners
+    // Attach event listeners to timeline container
     timelineContainer.addEventListener('dragstart', handleDragStart, true); // Capture phase
     timelineContainer.addEventListener('dragover', handleDragOver);
     timelineContainer.addEventListener('dragleave', handleDragLeave);
     timelineContainer.addEventListener('drop', handleDrop);
+    
+    // Add global dragend listener to catch ESC from anywhere (unscheduled panel or timeline)
+    document.addEventListener('dragend', handleDragEnd, true);
     
     console.log('Roadmap drag module initialized successfully');
 }
@@ -71,6 +74,9 @@ export function dispose() {
         timelineContainer.removeEventListener('dragleave', handleDragLeave);
         timelineContainer.removeEventListener('drop', handleDrop);
     }
+    
+    // Remove global dragend listener
+    document.removeEventListener('dragend', handleDragEnd, true);
     
     if (dragIndicator && dragIndicator.parentNode) {
         dragIndicator.parentNode.removeChild(dragIndicator);
@@ -259,15 +265,30 @@ function handleDrop(e) {
     
     console.log('Drop detected on timeline');
     
+    hideIndicator();
+    
+    // The actual drop processing is handled by Blazor's @ondrop event
+}
+
+/**
+ * Handle drag end (including ESC key cancel) - global listener
+ */
+function handleDragEnd(e) {
+    console.log('Drag ended (dropped or cancelled) from:', e.target.className);
+    
+    hideIndicator();
+}
+
+/**
+ * Hide the indicator and reset state
+ */
+function hideIndicator() {
     if (dragIndicator) {
         dragIndicator.style.opacity = '0';
     }
     
     // Reset offset for next drag
     draggedItemEndOffset = 0;
-    
-    // The actual drop processing is handled by Blazor's @ondrop event
-    // We just hide the indicator here
 }
 
 /**
