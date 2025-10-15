@@ -9,6 +9,7 @@ let timelineStartDate = null;
 let timelineEndDate = null;
 let pixelsPerDay = 1;
 let dotNetHelper = null;
+let draggedItemEndOffset = 0; // Offset from mouse to item's END position
 
 /**
  * Initialize the drag and drop system
@@ -37,6 +38,7 @@ export function initialize(dotNetRef, startDate, endDate, pxPerDay) {
     createDragIndicator();
     
     // Attach event listeners
+    timelineContainer.addEventListener('dragstart', handleDragStart, true); // Capture phase
     timelineContainer.addEventListener('dragover', handleDragOver);
     timelineContainer.addEventListener('dragleave', handleDragLeave);
     timelineContainer.addEventListener('drop', handleDrop);
@@ -64,6 +66,7 @@ export function dispose() {
     console.log('Disposing drag module...');
     
     if (timelineContainer) {
+        timelineContainer.removeEventListener('dragstart', handleDragStart, true);
         timelineContainer.removeEventListener('dragover', handleDragOver);
         timelineContainer.removeEventListener('dragleave', handleDragLeave);
         timelineContainer.removeEventListener('drop', handleDrop);
@@ -76,6 +79,7 @@ export function dispose() {
     dragIndicator = null;
     timelineContainer = null;
     dotNetHelper = null;
+    draggedItemEndOffset = 0;
     
     console.log('Drag module disposed');
 }
@@ -105,7 +109,7 @@ function createDragIndicator() {
         box-shadow: 0 0 10px rgba(76, 175, 80, 0.8);
     `;
     
-    // Add date label
+    // Add date label container
     const dateLabel = document.createElement('div');
     dateLabel.id = 'roadmap-drag-date-label';
     dateLabel.style.cssText = `
@@ -115,24 +119,81 @@ function createDragIndicator() {
         transform: translateX(-50%);
         background-color: #4CAF50;
         color: white;
-        padding: 6px 14px;
+        padding: 8px 14px;
         border-radius: 6px;
         font-size: 13px;
         font-weight: 600;
         white-space: nowrap;
         box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        text-align: center;
     `;
+    
+    // Add the date text (will be updated during drag)
+    const dateText = document.createElement('div');
+    dateText.id = 'roadmap-drag-date-text';
+    dateLabel.appendChild(dateText);
+    
+    // Add "Target Date" subtitle
+    const subtitle = document.createElement('div');
+    subtitle.textContent = 'Target Date';
+    subtitle.style.cssText = `
+        font-size: 10px;
+        opacity: 0.9;
+        margin-top: 2px;
+        font-weight: 500;
+    `;
+    dateLabel.appendChild(subtitle);
+    
     dragIndicator.appendChild(dateLabel);
     
     // Append to timeline container instead of body
     timelineContainer.appendChild(dragIndicator);
     
-    console.log('Drag indicator created and appended to timeline container');
+    console.log('Drag indicator created with Target Date label');
+}
+
+/**
+ * Handle drag start to calculate offset from mouse to item's END
+ */
+function handleDragStart(e) {
+    const element = e.target;
+    
+    // Check if this is a timeline item (existing scheduled item)
+    if (element.classList.contains('timeline-item')) {
+        // Get the item's position and width
+        const rect = element.getBoundingClientRect();
+        const containerRect = timelineContainer.getBoundingClientRect();
+        const scrollLeft = timelineContainer.scrollLeft;
+        
+        // Calculate where the mouse clicked relative to the timeline container
+        const mouseX = e.clientX - containerRect.left + scrollLeft;
+        
+        // Calculate where the item's RIGHT EDGE is (this is the current target date position)
+        const itemLeft = rect.left - containerRect.left + scrollLeft;
+        const itemWidth = rect.width;
+        const itemEnd = itemLeft + itemWidth;
+        
+        // Store the offset: how far is the mouse from the item's END?
+        // Positive value = mouse is left of the end
+        draggedItemEndOffset = itemEnd - mouseX;
+        
+        console.log('Dragging timeline item:', {
+            mouseX,
+            itemEnd,
+            offset: draggedItemEndOffset,
+            itemWidth
+        });
+    } else {
+        // Unscheduled item - no offset needed, indicator at mouse position
+        draggedItemEndOffset = 0;
+        console.log('Dragging unscheduled item - no offset');
+    }
 }
 
 /**
  * Handle drag over timeline
+ * The indicator position represents where the work item will END (target date)
  */
 function handleDragOver(e) {
     e.preventDefault();
@@ -146,20 +207,25 @@ function handleDragOver(e) {
     // Get mouse position relative to timeline container
     const rect = timelineContainer.getBoundingClientRect();
     const scrollLeft = timelineContainer.scrollLeft;
-    const x = e.clientX - rect.left + scrollLeft;
+    const mouseX = e.clientX - rect.left + scrollLeft;
     
-    // Calculate the target date based on mouse position
-    const targetDate = calculateDateFromPosition(x);
+    // Calculate where the item's END will be
+    // For existing items: mouse position + offset to end
+    // For new items: mouse position (offset is 0)
+    const targetEndX = mouseX + draggedItemEndOffset;
+    
+    // The indicator position represents the TARGET DATE (end of work item)
+    const targetDate = calculateDateFromPosition(targetEndX);
     
     if (targetDate) {
-        // Position the indicator relative to container
-        dragIndicator.style.left = `${x}px`;
+        // Position the indicator at the target END position
+        dragIndicator.style.left = `${targetEndX}px`;
         dragIndicator.style.opacity = '1';
         
-        // Update date label
-        const dateLabel = dragIndicator.querySelector('#roadmap-drag-date-label');
-        if (dateLabel) {
-            dateLabel.textContent = formatDate(targetDate);
+        // Update date text
+        const dateText = dragIndicator.querySelector('#roadmap-drag-date-text');
+        if (dateText) {
+            dateText.textContent = formatDate(targetDate);
         }
         
         // Notify Blazor of the target date (for drop processing)
@@ -196,6 +262,9 @@ function handleDrop(e) {
     if (dragIndicator) {
         dragIndicator.style.opacity = '0';
     }
+    
+    // Reset offset for next drag
+    draggedItemEndOffset = 0;
     
     // The actual drop processing is handled by Blazor's @ondrop event
     // We just hide the indicator here
