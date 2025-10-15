@@ -476,24 +476,15 @@
                 // If there's a start date and target date, preserve the duration
                 if (currentStartDate.HasValue && currentTargetDate.HasValue && dropTargetDate.HasValue)
                 {
-                    try
-                    {
-                        var durationDays = (currentTargetDate.Value - currentStartDate.Value).Days;
-                        newStartDate = dropTargetDate.Value.AddDays(-durationDays);
-                        
-                        Logger.LogInformation("Preserving duration: {Duration} days. Old: {OldStart} to {OldTarget}, New: {NewStart} to {NewTarget}",
-                            durationDays, currentStartDate.Value, currentTargetDate.Value, newStartDate.Value, dropTargetDate.Value);
-                    }
-                    catch (Exception dateEx)
-                    {
-                        Logger.LogWarning(dateEx, "Error calculating new start date, will only update target date");
-                        newStartDate = null;
-                    }
+                    var durationDays = (currentTargetDate.Value - currentStartDate.Value).Days;
+                    newStartDate = dropTargetDate.Value.AddDays(-durationDays);
+                    
+                    Logger.LogInformation("Preserving duration: {Duration} days. Old: {OldStart} to {OldTarget}, New: {NewStart} to {NewTarget}",
+                        durationDays, currentStartDate.Value, currentTargetDate.Value, newStartDate.Value, dropTargetDate.Value);
                 }
                 else
                 {
-                    Logger.LogInformation("No start date to shift, setting only target date. CurrentStart: {Start}, CurrentTarget: {Target}", 
-                        currentStartDate, currentTargetDate);
+                    Logger.LogInformation("No start date to shift, setting only target date");
                 }
             }
             
@@ -519,8 +510,7 @@
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error in timeline drop handler for work item {WorkItemId}. Message: {Message}, StackTrace: {StackTrace}", 
-                draggedWorkItemId, ex.Message, ex.StackTrace);
+            Logger.LogError(ex, "Error in timeline drop handler for work item {WorkItemId}", draggedWorkItemId);
             Snackbar.Add($"Error updating work item: {ex.Message}", Severity.Error);
         }
         finally
@@ -719,9 +709,7 @@
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error updating work item {WorkItemId} dates. StartDate: {Start}, TargetDate: {Target}", 
-                workItemId, startDate, targetDate);
-            // Don't throw - let the caller handle the error
+            Logger.LogError(ex, "Error updating work item {WorkItemId} dates", workItemId);
             return false;
         }
     }
