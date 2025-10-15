@@ -460,16 +460,56 @@
 
         try
         {
-            Logger.LogInformation("Updating work item {WorkItemId} with target date {TargetDate}", 
-                draggedWorkItemId.Value, dropTargetDate.Value);
+            // Find the work item to get its current dates
+            var workItem = allWorkItems?.FirstOrDefault(wi => wi.Id == draggedWorkItemId.Value);
+            DateTime? newStartDate = null;
             
-            var success = await UpdateWorkItemDatesAsync(draggedWorkItemId.Value, null, dropTargetDate.Value);
+            if (workItem != null)
+            {
+                // Get current start date if it exists
+                var currentStartDate = workItem.Fields.TryGetValue("Microsoft.VSTS.Scheduling.StartDate", out var startDateObj) && startDateObj is DateTime sd
+                    ? (DateTime?)sd
+                    : null;
+                
+                var currentTargetDate = workItem.TargetDate;
+                
+                // If there's a start date and target date, preserve the duration
+                if (currentStartDate.HasValue && currentTargetDate.HasValue && dropTargetDate.HasValue)
+                {
+                    try
+                    {
+                        var durationDays = (currentTargetDate.Value - currentStartDate.Value).Days;
+                        newStartDate = dropTargetDate.Value.AddDays(-durationDays);
+                        
+                        Logger.LogInformation("Preserving duration: {Duration} days. Old: {OldStart} to {OldTarget}, New: {NewStart} to {NewTarget}",
+                            durationDays, currentStartDate.Value, currentTargetDate.Value, newStartDate.Value, dropTargetDate.Value);
+                    }
+                    catch (Exception dateEx)
+                    {
+                        Logger.LogWarning(dateEx, "Error calculating new start date, will only update target date");
+                        newStartDate = null;
+                    }
+                }
+                else
+                {
+                    Logger.LogInformation("No start date to shift, setting only target date. CurrentStart: {Start}, CurrentTarget: {Target}", 
+                        currentStartDate, currentTargetDate);
+                }
+            }
+            
+            Logger.LogInformation("Updating work item {WorkItemId} with start date {StartDate} and target date {TargetDate}", 
+                draggedWorkItemId.Value, newStartDate, dropTargetDate.Value);
+            
+            var success = await UpdateWorkItemDatesAsync(draggedWorkItemId.Value, newStartDate, dropTargetDate.Value);
             
             if (success)
             {
                 Logger.LogInformation("Successfully updated work item {WorkItemId}", draggedWorkItemId.Value);
+                var message = newStartDate.HasValue 
+                    ? $"Work item {draggedWorkItemId.Value} moved to {newStartDate.Value:M/d/yyyy} - {dropTargetDate.Value:M/d/yyyy}"
+                    : $"Work item {draggedWorkItemId.Value} scheduled to {dropTargetDate.Value:M/d/yyyy}";
                 await LoadRoadmapDataAsync();
-                Snackbar.Add($"Work item {draggedWorkItemId.Value} scheduled to {dropTargetDate.Value:M/d/yyyy}", Severity.Success);
+                Snackbar.Add(message, Severity.Success);
             }
             else
             {
@@ -479,7 +519,8 @@
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error in timeline drop handler for work item {WorkItemId}", draggedWorkItemId);
+            Logger.LogError(ex, "Error in timeline drop handler for work item {WorkItemId}. Message: {Message}, StackTrace: {StackTrace}", 
+                draggedWorkItemId, ex.Message, ex.StackTrace);
             Snackbar.Add($"Error updating work item: {ex.Message}", Severity.Error);
         }
         finally
@@ -678,7 +719,9 @@
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error updating work item {WorkItemId} dates", workItemId);
+            Logger.LogError(ex, "Error updating work item {WorkItemId} dates. StartDate: {Start}, TargetDate: {Target}", 
+                workItemId, startDate, targetDate);
+            // Don't throw - let the caller handle the error
             return false;
         }
     }
@@ -784,7 +827,13 @@
 
     private string GetDateRangeDisplay(TimelineItem item)
     {
-        return $"{item.StartDate:M/d/yyyy} - {item.TargetDate.Value:M/d/yyyy}".Trim();
+        if (!item.TargetDate.HasValue)
+            return "No target date";
+            
+        if (!item.StartDate.HasValue)
+            return $"Target: {item.TargetDate.Value:M/d/yyyy}";
+            
+        return $"{item.StartDate.Value:M/d/yyyy} - {item.TargetDate.Value:M/d/yyyy}";
     }
 
     private RenderFragment RenderSwimLaneLabel(SwimLane swimlane, int level) => __builder =>
@@ -823,23 +872,33 @@
             {
                 @foreach (var item in swimlane.TimelineItems.Where(ti => ti.TargetDate.HasValue))
                 {
-                    if (item.TargetDate == null) continue;
+                    if (!item.TargetDate.HasValue) continue;
 
-                    var position = CalculateItemPosition(item);
-                    var itemStyle = $"left: {position.Left}px; width: {position.Width}px; background-color: {item.Color};";
-                    var itemClass = draggedWorkItemId == item.WorkItemId ? "timeline-item dragging" : "timeline-item";
-                    var dateRange = GetDateRangeDisplay(item);
-                    
-                    <div class="@itemClass" style="@itemStyle" title="@($"{item.Title} - {dateRange}")" draggable="true" @ondragstart="@(() => OnDragStart(item.WorkItemId))" @ondragend="@OnDragEnd" @onclick="@(async () => await OpenScheduleDialog(item.WorkItemId))">
-                        <MudStack Spacing="0" Style="padding: 2px 4px;">
-                            <MudText Typo="Typo.caption" Style="color: white; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500;">
-                                @item.WorkItemId - @item.Title
-                            </MudText>
-                            <MudText Typo="Typo.caption" Style="color: rgba(255,255,255,0.9); font-size: 0.65rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                                @dateRange
-                            </MudText>
-                        </MudStack>
-                    </div>
+                    try
+                    {
+                        var position = CalculateItemPosition(item);
+                        if (position.Width == 0) continue; // Skip items with no valid position
+                        
+                        var itemStyle = $"left: {position.Left}px; width: {position.Width}px; background-color: {item.Color};";
+                        var itemClass = draggedWorkItemId == item.WorkItemId ? "timeline-item dragging" : "timeline-item";
+                        var dateRange = GetDateRangeDisplay(item);
+                        
+                        <div class="@itemClass" style="@itemStyle" title="@($"{item.Title} - {dateRange}")" draggable="true" @ondragstart="@(() => OnDragStart(item.WorkItemId))" @ondragend="@OnDragEnd" @onclick="@(async () => await OpenScheduleDialog(item.WorkItemId))">
+                            <MudStack Spacing="0" Style="padding: 2px 4px;">
+                                <MudText Typo="Typo.caption" Style="color: white; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500;">
+                                    @item.WorkItemId - @item.Title
+                                </MudText>
+                                <MudText Typo="Typo.caption" Style="color: rgba(255,255,255,0.9); font-size: 0.65rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                    @dateRange
+                                </MudText>
+                            </MudStack>
+                        </div>
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.LogWarning(ex, "Error rendering timeline item {ItemId}", item.WorkItemId);
+                        // Skip this item and continue rendering others
+                    }
                 }
             }
         </div>
@@ -861,20 +920,33 @@
 
     private (double Left, double Width) CalculateItemPosition(TimelineItem item)
     {
-        if (!item.TargetDate.HasValue) return (0, 0);
+        if (!item.TargetDate.HasValue) 
+        {
+            Logger.LogWarning("CalculateItemPosition called for item {ItemId} with no target date", item.WorkItemId);
+            return (0, 0);
+        }
 
-        var pixelsPerDay = GetPixelsPerDay();
-        var startDate = item.StartDate ?? item.TargetDate.Value.AddDays(-90);
-        var endDate = item.TargetDate.Value;
-        var timelineStart = GetAlignedStartDate();
-        
-        var daysFromStart = (startDate - timelineStart).TotalDays;
-        var duration = (endDate - startDate).TotalDays;
+        try
+        {
+            var pixelsPerDay = GetPixelsPerDay();
+            var startDate = item.StartDate ?? item.TargetDate.Value.AddDays(-90);
+            var endDate = item.TargetDate.Value;
+            var timelineStart = GetAlignedStartDate();
+            
+            var daysFromStart = (startDate - timelineStart).TotalDays;
+            var duration = (endDate - startDate).TotalDays;
 
-        var left = Math.Max(0, daysFromStart * pixelsPerDay);
-        var width = Math.Max(20, duration * pixelsPerDay);
+            var left = Math.Max(0, daysFromStart * pixelsPerDay);
+            var width = Math.Max(20, duration * pixelsPerDay);
 
-        return (left, width);
+            return (left, width);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error calculating position for item {ItemId}. StartDate: {Start}, TargetDate: {Target}", 
+                item.WorkItemId, item.StartDate, item.TargetDate);
+            return (0, 0);
+        }
     }
     
     private DateTime GetAlignedStartDate()
