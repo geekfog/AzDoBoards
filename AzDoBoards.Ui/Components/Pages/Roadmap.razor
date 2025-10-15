@@ -319,7 +319,7 @@
     }
 
     [JSInvokable]
-    public void SetDropTargetDate(string dateString)
+    public void SetDropTargetDate(String dateString)
     {
         try
         {
@@ -385,15 +385,7 @@
     private async Task RefreshDataAsync()
     {
         await LoadRoadmapDataAsync();
-        
-        // Reinitialize JavaScript module after data refresh
-        if (jsModuleInitialized)
-        {
-            jsModuleInitialized = false;
-            await Task.Delay(100); // Wait for render
-            await InitializeJavaScriptModule();
-        }
-        
+        await ReinitializeJavaScriptModuleAsync();
         Snackbar.Add("Roadmap refreshed", Severity.Success);
     }
 
@@ -423,6 +415,20 @@
         await RoadmapService.SaveConfigurationAsync(config);
         await UpdateJavaScriptConfig();
         StateHasChanged();
+    }
+
+    /// <summary>
+    /// Reinitializes the JavaScript drag and drop module after DOM changes.
+    /// Call this after any operation that reloads the roadmap data.
+    /// </summary>
+    private async Task ReinitializeJavaScriptModuleAsync()
+    {
+        if (jsModuleInitialized)
+        {
+            jsModuleInitialized = false;
+            await Task.Delay(100); // Wait for DOM to update
+            await InitializeJavaScriptModule();
+        }
     }
 
     // Drag and Drop handlers
@@ -499,7 +505,10 @@
                 var message = newStartDate.HasValue 
                     ? $"Work item {draggedWorkItemId.Value} moved to {newStartDate.Value:M/d/yyyy} - {dropTargetDate.Value:M/d/yyyy}"
                     : $"Work item {draggedWorkItemId.Value} scheduled to {dropTargetDate.Value:M/d/yyyy}";
+                
                 await LoadRoadmapDataAsync();
+                await ReinitializeJavaScriptModuleAsync();
+                
                 Snackbar.Add(message, Severity.Success);
             }
             else
@@ -538,6 +547,8 @@
             if (success)
             {
                 await LoadRoadmapDataAsync();
+                await ReinitializeJavaScriptModuleAsync();
+                
                 Snackbar.Add($"Work item {draggedWorkItemId.Value} unscheduled successfully", Severity.Success);
             }
             else
@@ -690,7 +701,6 @@
         try
         {
             var success = await RoadmapService.UpdateWorkItemDatesAsync(workItemId, startDate, targetDate);
-            
             if (success)
             {
                 // Update local data
