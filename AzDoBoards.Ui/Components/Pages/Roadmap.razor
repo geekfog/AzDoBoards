@@ -815,12 +815,8 @@
 
     private string GetDateRangeDisplay(TimelineItem item)
     {
-        if (!item.TargetDate.HasValue)
-            return "No target date";
-            
-        if (!item.StartDate.HasValue)
-            return $"Target: {item.TargetDate.Value:M/d/yyyy}";
-            
+        if (!item.TargetDate.HasValue) return "No target date";
+        if (!item.StartDate.HasValue) return $"- {item.TargetDate.Value:M/d/yyyy}";
         return $"{item.StartDate.Value:M/d/yyyy} - {item.TargetDate.Value:M/d/yyyy}";
     }
 
