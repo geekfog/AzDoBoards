@@ -96,7 +96,12 @@
                                         </MudStack>
                                         <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" OnClick="@(async () => await OpenScheduleDialog(item.WorkItemId))" Style="@($"color: {textColor};")" />
                                     </MudStack>
-                                    <MudText Typo="Typo.body2" Style="@($"font-weight: 500; color: {textColor};")">@item.Title</MudText>
+                                    <MudStack Row AlignItems="AlignItems.Center" Spacing="1">
+                                        <MudChip T="string" Size="Size.Small" Style="@($"background-color: rgba(255,255,255,0.2); color: {textColor}; font-size: 0.65rem; height: 18px; padding: 0 6px;")">
+                                            @item.State
+                                        </MudChip>
+                                        <MudText Typo="Typo.body2" Style="@($"font-weight: 500; color: {textColor};")">@item.Title</MudText>
+                                    </MudStack>
                                     @if (!string.IsNullOrEmpty(item.ParentTitle))
                                     {
                                         <MudText Typo="Typo.caption" Style="@($"color: {textColor}; opacity: 0.8;")">
@@ -1426,14 +1431,19 @@
                         var itemClass = draggedWorkItemId == item.WorkItemId ? "timeline-item dragging" : "timeline-item";
                         var dateRange = GetDateRangeDisplay(item);
                         
-                        <div class="@itemClass" style="@itemStyle" title="@($"{item.Title} - {dateRange}")" draggable="true" @ondragstart="@(() => OnDragStart(item.WorkItemId))" @ondragend="@OnDragEnd" @ondblclick="@(async () => await OpenScheduleDialog(item.WorkItemId))">
+                        <div class="@itemClass" style="@itemStyle" title="@($"{item.Title} - {item.State} - {dateRange}")" draggable="true" @ondragstart="@(() => OnDragStart(item.WorkItemId))" @ondragend="@OnDragEnd" @ondblclick="@(async () => await OpenScheduleDialog(item.WorkItemId))">
                             <MudStack Spacing="0" Style="padding: 2px 4px;">
                                 <MudText Typo="Typo.caption" Style="@($"color: {textColor}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500;")">
                                     @item.WorkItemId - @item.Title
                                 </MudText>
-                                <MudText Typo="Typo.caption" Style="@($"color: {textColor}; opacity: 0.9; font-size: 0.65rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;")">
-                                    @dateRange
-                                </MudText>
+                                <MudStack Row AlignItems="AlignItems.Center" Spacing="1" Style="flex-wrap: nowrap;">
+                                    <MudChip T="string" Size="Size.Small" Style="@($"background-color: rgba(255,255,255,0.2); color: {textColor}; font-size: 0.6rem; height: 16px; padding: 0 4px; min-width: auto; flex-shrink: 0;")">
+                                        @item.State
+                                    </MudChip>
+                                    <MudText Typo="Typo.caption" Style="@($"color: {textColor}; opacity: 0.9; font-size: 0.65rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;")">
+                                        @dateRange
+                                    </MudText>
+                                </MudStack>
                             </MudStack>
                         </div>
                     }
