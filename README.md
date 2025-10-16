@@ -1,6 +1,6 @@
 # AzDo Boards Project Management Tool
 
-***NOTE**: This is under heavy development. In short, it is very incomplete. This is an idea that has been noodled for a while. Now this is being attempted for future efficiency of project work, to give back, to see if there is interest within the open source community, and potential business opportunities. The goal is to try different items to see what looks and feels right. AI is leveraged as a coding companion (right now, Claude Sonnet 4, Claude Sonnet 4.5, and GPT-5 are leveraged) as part of the experimentation. It is with interest to see where this goes, if anywhere. The goal is to make a usable product and remove this banner. Perhaps this could be commercially viable (but always open-source), similarly done and inspired by [IdentityServer](https://github.com/DuendeSoftware/products/tree/main/identity-server).*
+***NOTE**: This is under heavy development. In short, it is very incomplete. This is an idea that has been noodled for a while. Now this is being attempted for future efficiency of project work, to give back, to see if there is interest within the open source community, and potential business opportunities. The goal is to try different items to see what looks and feels right. AI is leveraged as a coding companion (right now Claude Sonnet 4.5 is primarily leveraged, replacing initial work with Claude Sonnet 4) as part of the experimentation. The goal is to make a usable product and remove this banner. Perhaps this could be commercially viable (and open-source), similarly done and inspired by [IdentityServer](https://github.com/DuendeSoftware/products/tree/main/identity-server).*
 
 ## Overview
 
@@ -24,12 +24,11 @@ This supports a custom-defined work item hierarchy based on work item types (e.g
 
 # Development Technologies
 
-- Visual Studio 202618.0.0 Insiders [11018.127]+
-  - [Mudblazor Component Library](https://mudblazor.com/docs/overview)
+- Visual Studio 2026 18.0.324.43266 Insiders [11111.16] or higher (x64 or arm64)
+  - [MudBlazor Component Library](https://mudblazor.com/docs/overview)
   - [Material UI](https://mui.com/material-ui/material-icons/)
   - *Microsoft TFS Client (to abstract Azure DevOps API calls) NuGet packages leveraged*
-  
-- [.NET 10 SDK RC.1+](https://dotnet.microsoft.com/en-us/download/dotnet/10.0)
+- [.NET 10 SDK RC.2.22502.107](https://dotnet.microsoft.com/en-us/download/dotnet/10.0) or higher
 - (Optional) Azurite for Azure Storage Emulation locally.
 - Redis Cache - one of the following:
   - [Azure Cache for Redis](https://azure.microsoft.com/en-us/pricing/details/cache/) (Microsoft-based basic tier for Development, higher tiers for non-Development environments)
