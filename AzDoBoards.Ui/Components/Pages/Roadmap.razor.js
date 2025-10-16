@@ -10,6 +10,12 @@ let timelineEndDate = null;
 let pixelsPerDay = 1;
 let dotNetHelper = null;
 let draggedItemEndOffset = 0; // Offset from mouse to item's END position
+let resizeMode = null; // 'left', 'right', or null
+let resizingElement = null;
+let resizeStartX = 0;
+let resizeOriginalLeft = 0;
+let resizeOriginalWidth = 0;
+let resizeWorkItemId = 0;
 
 /**
  * Initialize the drag and drop system
@@ -38,6 +44,7 @@ export function initialize(dotNetRef, startDate, endDate, pxPerDay) {
     createDragIndicator();
     
     // Attach event listeners to timeline container
+    timelineContainer.addEventListener('mousedown', handleMouseDown, true); // For resize
     timelineContainer.addEventListener('dragstart', handleDragStart, true); // Capture phase
     timelineContainer.addEventListener('dragover', handleDragOver);
     timelineContainer.addEventListener('dragleave', handleDragLeave);
@@ -45,6 +52,10 @@ export function initialize(dotNetRef, startDate, endDate, pxPerDay) {
     
     // Add global dragend listener to catch ESC from anywhere (unscheduled panel or timeline)
     document.addEventListener('dragend', handleDragEnd, true);
+    
+    // Add global mouse listeners for resize
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
     
     console.log('Roadmap drag module initialized successfully');
 }
@@ -69,6 +80,7 @@ export function dispose() {
     console.log('Disposing drag module...');
     
     if (timelineContainer) {
+        timelineContainer.removeEventListener('mousedown', handleMouseDown, true);
         timelineContainer.removeEventListener('dragstart', handleDragStart, true);
         timelineContainer.removeEventListener('dragover', handleDragOver);
         timelineContainer.removeEventListener('dragleave', handleDragLeave);
@@ -77,6 +89,10 @@ export function dispose() {
     
     // Remove global dragend listener
     document.removeEventListener('dragend', handleDragEnd, true);
+    
+    // Remove global mouse listeners
+    document.removeEventListener('mousemove', handleMouseMove);
+    document.removeEventListener('mouseup', handleMouseUp);
     
     if (dragIndicator && dragIndicator.parentNode) {
         dragIndicator.parentNode.removeChild(dragIndicator);
@@ -138,10 +154,12 @@ function createDragIndicator() {
     // Add the date text (will be updated during drag)
     const dateText = document.createElement('div');
     dateText.id = 'roadmap-drag-date-text';
+    dateText.textContent = ''; // Initialize empty
     dateLabel.appendChild(dateText);
     
     // Add "Target Date" subtitle
     const subtitle = document.createElement('div');
+    subtitle.id = 'roadmap-drag-date-subtitle';
     subtitle.textContent = 'Target Date';
     subtitle.style.cssText = `
         font-size: 10px;
@@ -160,9 +178,213 @@ function createDragIndicator() {
 }
 
 /**
+ * Handle mousedown to detect resize operations
+ */
+function handleMouseDown(e) {
+    const element = e.target;
+    
+    // Check if clicking on a timeline item
+    if (!element.classList.contains('timeline-item')) {
+        return;
+    }
+    
+    const rect = element.getBoundingClientRect();
+    const clickX = e.clientX;
+    const edgeThreshold = 8; // pixels from edge to consider as resize handle
+    
+    // Check if clicking near the left edge (resize start date)
+    if (clickX - rect.left <= edgeThreshold) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        resizeMode = 'left';
+        resizingElement = element;
+        resizeStartX = clickX;
+        resizeOriginalLeft = parseFloat(element.style.left) || 0;
+        resizeOriginalWidth = parseFloat(element.style.width) || rect.width;
+        
+        // Extract work item ID from the element
+        resizeWorkItemId = getWorkItemIdFromElement(element);
+        
+        // Prevent drag start
+        element.setAttribute('draggable', 'false');
+        element.classList.add('resizing-left');
+        
+        console.log('Started resizing left edge', { workItemId: resizeWorkItemId, originalLeft: resizeOriginalLeft, originalWidth: resizeOriginalWidth });
+        return;
+    }
+    
+    // Check if clicking near the right edge (resize target date)
+    if (rect.right - clickX <= edgeThreshold) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        resizeMode = 'right';
+        resizingElement = element;
+        resizeStartX = clickX;
+        resizeOriginalLeft = parseFloat(element.style.left) || 0;
+        resizeOriginalWidth = parseFloat(element.style.width) || rect.width;
+        
+        // Extract work item ID from the element
+        resizeWorkItemId = getWorkItemIdFromElement(element);
+        
+        // Prevent drag start
+        element.setAttribute('draggable', 'false');
+        element.classList.add('resizing-right');
+        
+        console.log('Started resizing right edge', { workItemId: resizeWorkItemId, originalLeft: resizeOriginalLeft, originalWidth: resizeOriginalWidth });
+        return;
+    }
+}
+
+/**
+ * Handle mouse move during resize
+ */
+function handleMouseMove(e) {
+    if (!resizeMode || !resizingElement) {
+        return;
+    }
+    
+    e.preventDefault();
+    
+    const deltaX = e.clientX - resizeStartX;
+    const scrollLeft = timelineContainer.scrollLeft;
+    
+    if (resizeMode === 'left') {
+        // Resizing left edge (changing start date)
+        const newLeft = resizeOriginalLeft + deltaX;
+        const newWidth = resizeOriginalWidth - deltaX;
+        
+        // Minimum width of 20px (approximately 1 day for most zoom levels)
+        if (newWidth >= 20) {
+            resizingElement.style.left = `${newLeft}px`;
+            resizingElement.style.width = `${newWidth}px`;
+            
+            // Show indicator at new start position
+            if (dragIndicator) {
+                dragIndicator.style.left = `${newLeft}px`;
+                dragIndicator.style.opacity = '1';
+                
+                const startDate = calculateDateFromPosition(newLeft);
+                if (startDate) {
+                    const dateText = dragIndicator.querySelector('#roadmap-drag-date-text');
+                    const subtitle = dragIndicator.querySelector('#roadmap-drag-date-subtitle');
+                    if (dateText) {
+                        dateText.textContent = formatDate(startDate);
+                    }
+                    if (subtitle) {
+                        subtitle.textContent = 'Start Date';
+                    }
+                }
+            }
+        }
+    } else if (resizeMode === 'right') {
+        // Resizing right edge (changing target date)
+        const newWidth = resizeOriginalWidth + deltaX;
+        
+        // Minimum width of 20px
+        if (newWidth >= 20) {
+            resizingElement.style.width = `${newWidth}px`;
+            
+            // Show indicator at new end position
+            if (dragIndicator) {
+                const newRight = resizeOriginalLeft + newWidth;
+                dragIndicator.style.left = `${newRight}px`;
+                dragIndicator.style.opacity = '1';
+                
+                const targetDate = calculateDateFromPosition(newRight);
+                if (targetDate) {
+                    const dateText = dragIndicator.querySelector('#roadmap-drag-date-text');
+                    const subtitle = dragIndicator.querySelector('#roadmap-drag-date-subtitle');
+                    if (dateText) {
+                        dateText.textContent = formatDate(targetDate);
+                    }
+                    if (subtitle) {
+                        subtitle.textContent = 'Target Date';
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Handle mouse up to complete resize
+ */
+function handleMouseUp(e) {
+    if (!resizeMode || !resizingElement) {
+        return;
+    }
+    
+    console.log('Resize completed', { mode: resizeMode, workItemId: resizeWorkItemId });
+    
+    // Calculate the new dates based on final position
+    const finalLeft = parseFloat(resizingElement.style.left) || 0;
+    const finalWidth = parseFloat(resizingElement.style.width) || 0;
+    const finalRight = finalLeft + finalWidth;
+    
+    const startDate = calculateDateFromPosition(finalLeft);
+    const targetDate = calculateDateFromPosition(finalRight);
+    
+    console.log('New dates calculated', { 
+        startDate: startDate?.toISOString(), 
+        targetDate: targetDate?.toISOString(),
+        mode: resizeMode 
+    });
+    
+    // Notify Blazor of the resize operation
+    if (dotNetHelper && startDate && targetDate && resizeWorkItemId > 0) {
+        try {
+            if (resizeMode === 'left') {
+                // Changed start date, keep target date
+                dotNetHelper.invokeMethodAsync('HandleResizeLeft', resizeWorkItemId, startDate.toISOString());
+            } else if (resizeMode === 'right') {
+                // Changed target date, keep start date
+                dotNetHelper.invokeMethodAsync('HandleResizeRight', resizeWorkItemId, targetDate.toISOString());
+            }
+        } catch (error) {
+            console.error('Error calling resize handler:', error);
+        }
+    }
+    
+    // Clean up
+    resizingElement.setAttribute('draggable', 'true');
+    resizingElement.classList.remove('resizing-left', 'resizing-right');
+    
+    if (dragIndicator) {
+        dragIndicator.style.opacity = '0';
+    }
+    
+    resizeMode = null;
+    resizingElement = null;
+    resizeStartX = 0;
+    resizeOriginalLeft = 0;
+    resizeOriginalWidth = 0;
+    resizeWorkItemId = 0;
+}
+
+/**
+ * Extract work item ID from timeline element
+ */
+function getWorkItemIdFromElement(element) {
+    // Try to find the work item ID from the element's text content or data attributes
+    const text = element.textContent || '';
+    const match = text.match(/^(\d+)\s*-/);
+    if (match) {
+        return parseInt(match[1], 10);
+    }
+    return 0;
+}
+
+/**
  * Handle drag start to calculate offset from mouse to item's END
  */
 function handleDragStart(e) {
+    // If we're in resize mode, prevent drag
+    if (resizeMode) {
+        e.preventDefault();
+        return;
+    }
     const element = e.target;
     
     // Check if this is a timeline item (existing scheduled item)
@@ -228,10 +450,14 @@ function handleDragOver(e) {
         dragIndicator.style.left = `${targetEndX}px`;
         dragIndicator.style.opacity = '1';
         
-        // Update date text
+        // Update date text and subtitle
         const dateText = dragIndicator.querySelector('#roadmap-drag-date-text');
+        const subtitle = dragIndicator.querySelector('#roadmap-drag-date-subtitle');
         if (dateText) {
             dateText.textContent = formatDate(targetDate);
+        }
+        if (subtitle) {
+            subtitle.textContent = 'Target Date';
         }
         
         // Notify Blazor of the target date (for drop processing)

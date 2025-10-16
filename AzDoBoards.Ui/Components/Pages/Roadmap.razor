@@ -338,6 +338,190 @@
         }
     }
 
+    [JSInvokable]
+    public async Task HandleResizeLeft(int workItemId, string newStartDateString)
+    {
+        try
+        {
+            if (!DateTime.TryParse(newStartDateString, out var newStartDate))
+            {
+                Logger.LogWarning("Failed to parse new start date: {DateString}", newStartDateString);
+                return;
+            }
+
+            Logger.LogInformation("Resize left: WorkItem {WorkItemId}, new start date {StartDate}", workItemId, newStartDate);
+
+            var workItem = allWorkItems?.FirstOrDefault(wi => wi.Id == workItemId);
+            if (workItem == null)
+            {
+                Logger.LogWarning("Work item {WorkItemId} not found", workItemId);
+                return;
+            }
+
+            var currentTargetDate = workItem.TargetDate;
+            if (!currentTargetDate.HasValue)
+            {
+                Logger.LogWarning("Work item {WorkItemId} has no target date", workItemId);
+                return;
+            }
+
+            // Validate that start date is not after target date
+            if (newStartDate >= currentTargetDate.Value)
+            {
+                Logger.LogWarning("New start date {StartDate} is after target date {TargetDate}", newStartDate, currentTargetDate);
+                Snackbar.Add("Start date cannot be after target date", Severity.Warning);
+                await LoadRoadmapDataAsync();
+                await ReinitializeJavaScriptModuleAsync();
+                return;
+            }
+
+            var originalStartDate = workItem.Fields.TryGetValue("Microsoft.VSTS.Scheduling.StartDate", out var startDateObj) && startDateObj is DateTime sd
+                ? (DateTime?)sd
+                : null;
+
+            // Update local state immediately for responsiveness
+            workItem.Fields["Microsoft.VSTS.Scheduling.StartDate"] = newStartDate;
+            UpdateTimelineItemStartDate(workItemId, newStartDate);
+            StateHasChanged();
+
+            // Update in Azure DevOps
+            var success = await RoadmapService.UpdateWorkItemDatesAsync(workItemId, newStartDate, currentTargetDate.Value);
+
+            if (success)
+            {
+                Logger.LogInformation("Successfully updated start date for work item {WorkItemId}", workItemId);
+                Snackbar.Add($"Work item {workItemId} start date updated to {newStartDate:M/d/yyyy}", Severity.Success);
+            }
+            else
+            {
+                Logger.LogError("Failed to update work item {WorkItemId}, reverting changes", workItemId);
+                
+                // Revert changes
+                if (originalStartDate.HasValue)
+                    workItem.Fields["Microsoft.VSTS.Scheduling.StartDate"] = originalStartDate.Value;
+                else
+                    workItem.Fields.Remove("Microsoft.VSTS.Scheduling.StartDate");
+                
+                UpdateTimelineItemStartDate(workItemId, originalStartDate);
+                StateHasChanged();
+                
+                Snackbar.Add($"Failed to update work item {workItemId}", Severity.Error);
+                await LoadRoadmapDataAsync();
+                await ReinitializeJavaScriptModuleAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error handling resize left for work item {WorkItemId}", workItemId);
+            Snackbar.Add($"Error updating work item: {ex.Message}", Severity.Error);
+            await LoadRoadmapDataAsync();
+            await ReinitializeJavaScriptModuleAsync();
+        }
+    }
+
+    [JSInvokable]
+    public async Task HandleResizeRight(int workItemId, string newTargetDateString)
+    {
+        try
+        {
+            if (!DateTime.TryParse(newTargetDateString, out var newTargetDate))
+            {
+                Logger.LogWarning("Failed to parse new target date: {DateString}", newTargetDateString);
+                return;
+            }
+
+            Logger.LogInformation("Resize right: WorkItem {WorkItemId}, new target date {TargetDate}", workItemId, newTargetDate);
+
+            var workItem = allWorkItems?.FirstOrDefault(wi => wi.Id == workItemId);
+            if (workItem == null)
+            {
+                Logger.LogWarning("Work item {WorkItemId} not found", workItemId);
+                return;
+            }
+
+            var currentStartDate = workItem.Fields.TryGetValue("Microsoft.VSTS.Scheduling.StartDate", out var startDateObj) && startDateObj is DateTime sd
+                ? (DateTime?)sd
+                : null;
+
+            var originalTargetDate = workItem.TargetDate;
+
+            // Validate that target date is not before start date (only if start date exists)
+            if (currentStartDate.HasValue && newTargetDate <= currentStartDate.Value)
+            {
+                Logger.LogWarning("New target date {TargetDate} is before start date {StartDate}", newTargetDate, currentStartDate);
+                Snackbar.Add("Target date cannot be before start date", Severity.Warning);
+                await LoadRoadmapDataAsync();
+                await ReinitializeJavaScriptModuleAsync();
+                return;
+            }
+
+            // Update local state immediately for responsiveness - ONLY update target date
+            workItem.TargetDate = newTargetDate;
+            
+            UpdateTimelineItemTargetDate(workItemId, newTargetDate);
+            StateHasChanged();
+
+            // Update in Azure DevOps - only update target date, keep existing start date
+            var success = await RoadmapService.UpdateWorkItemDatesAsync(workItemId, currentStartDate, newTargetDate);
+
+            if (success)
+            {
+                Logger.LogInformation("Successfully updated target date for work item {WorkItemId}", workItemId);
+                var message = currentStartDate.HasValue
+                    ? $"Work item {workItemId} updated: {currentStartDate.Value:M/d/yyyy} - {newTargetDate:M/d/yyyy}"
+                    : $"Work item {workItemId} target date updated to {newTargetDate:M/d/yyyy}";
+                Snackbar.Add(message, Severity.Success);
+            }
+            else
+            {
+                Logger.LogError("Failed to update work item {WorkItemId}, reverting changes", workItemId);
+                
+                // Revert changes - restore original target date
+                workItem.TargetDate = originalTargetDate;
+                
+                UpdateTimelineItemTargetDate(workItemId, originalTargetDate);
+                StateHasChanged();
+                
+                Snackbar.Add($"Failed to update work item {workItemId}", Severity.Error);
+                await LoadRoadmapDataAsync();
+                await ReinitializeJavaScriptModuleAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error handling resize right for work item {WorkItemId}", workItemId);
+            Snackbar.Add($"Error updating work item: {ex.Message}", Severity.Error);
+            await LoadRoadmapDataAsync();
+            await ReinitializeJavaScriptModuleAsync();
+        }
+    }
+
+    private void UpdateTimelineItemStartDate(int workItemId, DateTime? newStartDate)
+    {
+        var swimlane = FindSwimlaneForWorkItem(workItemId, swimlanes);
+        if (swimlane != null)
+        {
+            var timelineItem = swimlane.TimelineItems?.FirstOrDefault(ti => ti.WorkItemId == workItemId);
+            if (timelineItem != null)
+            {
+                timelineItem.StartDate = newStartDate;
+            }
+        }
+    }
+
+    private void UpdateTimelineItemTargetDate(int workItemId, DateTime? newTargetDate)
+    {
+        var swimlane = FindSwimlaneForWorkItem(workItemId, swimlanes);
+        if (swimlane != null)
+        {
+            var timelineItem = swimlane.TimelineItems?.FirstOrDefault(ti => ti.WorkItemId == workItemId);
+            if (timelineItem != null)
+            {
+                timelineItem.TargetDate = newTargetDate;
+            }
+        }
+    }
+
     private async Task LoadRoadmapDataAsync()
     {
         try
