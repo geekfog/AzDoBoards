@@ -131,6 +131,119 @@ public class ProcessServices(ConnectionFactory connectionFactory) : Base(connect
     }
 
     /// <summary>
+    /// Gets field definitions and layout for a specific work item type
+    /// </summary>
+    /// <param name="processId">The ID of the process</param>
+    /// <param name="workItemType">The work item type name (display name like "Feature" or "Epic")</param>
+    /// <returns>Work item type layout with field definitions</returns>
+    public async Task<WorkItemTypeLayout> GetWorkItemTypeLayoutAsync(Guid processId, string workItemType)
+    {
+        var connection = await _connectionFactory.GetConnectionAsync();
+        var processClient = connection.GetClient<WorkItemTrackingProcessHttpClient>();
+
+        // First, get all work item types to find the reference name
+        var workItemTypes = await processClient.GetProcessWorkItemTypesAsync(processId);
+        var workItemTypeInfo = workItemTypes.FirstOrDefault(wit => 
+            wit.Name.Equals(workItemType, StringComparison.OrdinalIgnoreCase));
+
+        if (workItemTypeInfo == null)
+        {
+            throw new InvalidOperationException($"Work item type '{workItemType}' not found in process {processId}");
+        }
+
+        // Use the reference name for API calls
+        var workItemTypeRefName = workItemTypeInfo.ReferenceName;
+
+        // Get all fields for the work item type using reference name
+        var fields = await processClient.GetAllWorkItemTypeFieldsAsync(processId, workItemTypeRefName);
+
+        // Get the layout (page structure with groups) using reference name
+        var layout = await processClient.GetFormLayoutAsync(processId, workItemTypeRefName);
+
+        var fieldGroups = new List<WorkItemFieldGroup>();
+        var allFields = new List<WorkItemFieldDefinition>();
+
+        // Map fields to our model
+        foreach (var field in fields)
+        {
+            var fieldDef = new WorkItemFieldDefinition
+            {
+                ReferenceName = field.ReferenceName,
+                Name = field.Name,
+                Description = field.Description ?? string.Empty,
+                FieldType = field.Type.ToString(),
+                IsRequired = field.Required,
+                IsReadOnly = field.ReadOnly,
+                IsCore = field.ReferenceName.StartsWith("System."),
+                DefaultValue = field.DefaultValue?.ToString(),
+                AllowedValues = field.AllowedValues?.Select(v => v.ToString() ?? string.Empty).ToList() ?? new List<string>()
+            };
+
+            allFields.Add(fieldDef);
+        }
+
+        // Parse layout to get field groups
+        if (layout?.Pages?.Any() == true)
+        {
+            foreach (var page in layout.Pages)
+            {
+                if (page.Sections?.Any() == true)
+                {
+                    foreach (var section in page.Sections)
+                    {
+                        if (section.Groups?.Any() == true)
+                        {
+                            foreach (var group in section.Groups)
+                            {
+                                var fieldGroup = new WorkItemFieldGroup
+                                {
+                                    Id = group.Id,
+                                    Label = group.Label,
+                                    IsVisible = group.Visible ?? true
+                                };
+
+                                if (group.Controls?.Any() == true)
+                                {
+                                    foreach (var control in group.Controls)
+                                    {
+                                        // Find the field definition for this control
+                                        var fieldDef = allFields.FirstOrDefault(f => 
+                                            f.ReferenceName.Equals(control.Id, StringComparison.OrdinalIgnoreCase));
+                                        
+                                        if (fieldDef != null)
+                                        {
+                                            // Override with control-specific settings if available
+                                            if (!string.IsNullOrEmpty(control.Label))
+                                                fieldDef.Name = control.Label;
+                                            
+                                            if (control.ReadOnly == true)
+                                                fieldDef.IsReadOnly = true;
+
+                                            fieldGroup.Fields.Add(fieldDef);
+                                        }
+                                    }
+                                }
+
+                                if (fieldGroup.Fields.Any())
+                                {
+                                    fieldGroups.Add(fieldGroup);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return new WorkItemTypeLayout
+        {
+            WorkItemType = workItemType,
+            Groups = fieldGroups,
+            AllFields = allFields
+        };
+    }
+
+    /// <summary>
     /// Clears the internal cache (useful for testing or force refresh)
     /// </summary>
     public void ClearCache()

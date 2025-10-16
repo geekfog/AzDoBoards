@@ -22,7 +22,7 @@
                 @errorMessage
             </MudAlert>
         }
-        else if (workItem != null)
+        else if (workItem != null && workItemLayout != null)
         {
             <MudStack Spacing="3">
                 <!-- Work Item Header -->
@@ -38,26 +38,19 @@
 
                 <MudDivider />
 
-                <!-- Editable Fields (simplified for now) -->
-                <MudTextField @bind-Value="editedTitle"
-                              Label="Title"
-                              Variant="Variant.Outlined"
-                              Required="true" />
-                              
-                <MudSelect T="string" @bind-Value="editedState"
-                           Label="State"
-                           Variant="Variant.Outlined"
-                           Disabled="!availableStates.Any()">
-                    @foreach (var state in availableStates)
-                    {
-                        <MudSelectItem T="string" Value="@state">@state</MudSelectItem>
-                    }
-                </MudSelect>
-                
-                <MudDatePicker Label="Target Date"
-                               @bind-Date="editedTargetDate"
-                               Variant="Variant.Outlined"
-                               Clearable="true" />
+                <!-- Dynamic Field Groups from Layout -->
+                @foreach (var group in workItemLayout.Groups.Where(g => g.IsVisible && g.Fields.Any(f => !f.IsReadOnly || ShouldShowReadOnlyField(f))))
+                {
+                    <MudText Typo="Typo.h6" Class="mt-3">@group.Label</MudText>
+                    <MudGrid>
+                        @foreach (var field in group.Fields.Where(f => !f.IsReadOnly || ShouldShowReadOnlyField(f)))
+                        {
+                            <MudItem xs="12" md="@(IsFullWidthField(field) ? 12 : 6)">
+                                @RenderField(field)
+                            </MudItem>
+                        }
+                    </MudGrid>
+                }
 
                 @if (hasChanges)
                 {
@@ -73,7 +66,7 @@
         <MudButton Color="Color.Primary" 
                    Variant="Variant.Filled" 
                    OnClick="SaveAsync" 
-                   Disabled="isLoading || isSaving || !hasChanges">
+                   Disabled="isLoading || isSaving || !hasChanges || HasValidationErrors()">
             @if (isSaving)
             {
                 <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
@@ -99,22 +92,31 @@
     private bool isSaving = false;
     private string errorMessage = string.Empty;
     private WorkItem? workItem;
-    private List<string> availableStates = new();
+    private WorkItemTypeLayout? workItemLayout;
     
-    // Editable fields
-    private string editedTitle = string.Empty;
-    private string editedState = string.Empty;
-    private DateTime? editedTargetDate;
+    // Dynamic field values storage
+    private Dictionary<string, string> editedValues = new();
+    private Dictionary<string, string> originalValues = new();
     
-    // Original values for change detection
-    private string originalTitle = string.Empty;
-    private string originalState = string.Empty;
-    private DateTime? originalTargetDate;
-    
-    private bool hasChanges => 
-        editedTitle != originalTitle ||
-        editedState != originalState ||
-        editedTargetDate != originalTargetDate;
+    private bool hasChanges => !editedValues.SequenceEqual(originalValues);
+
+    // Core fields that should be shown even if read-only
+    private static readonly HashSet<string> ImportantReadOnlyFields = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "System.CreatedDate",
+        "System.CreatedBy",
+        "System.ChangedDate",
+        "System.ChangedBy"
+    };
+
+    // Fields that should be full width
+    private static readonly HashSet<string> FullWidthFields = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "System.Title",
+        "System.Description",
+        "System.Tags",
+        "Microsoft.VSTS.Common.AcceptanceCriteria"
+    };
 
     protected override async Task OnInitializedAsync()
     {
@@ -147,26 +149,18 @@
                 return;
             }
 
-            // Load available states for the work item type
+            // Load work item type layout and field definitions
             if (!string.IsNullOrEmpty(ProcessId) && Guid.TryParse(ProcessId, out var processGuid))
             {
-                var stateService = ServiceProvider.GetRequiredService<WorkItemStateServices>();
-                var stateGroups = await stateService.GetWorkItemStatesForProcessAsync(processGuid);
-                
-                availableStates = stateGroups
-                    .SelectMany(group => group.States)
-                    .Where(state => state.WorkItemTypes.Contains(workItem.WorkItemType, StringComparer.OrdinalIgnoreCase))
-                    .OrderBy(state => state.Order)
-                    .Select(state => state.Name)
-                    .ToList();
+                var processService = ServiceProvider.GetRequiredService<ProcessServices>();
+                workItemLayout = await processService.GetWorkItemTypeLayoutAsync(processGuid, workItem.WorkItemType);
             }
 
-            // Initialize edited values
-            originalTitle = editedTitle = workItem.Title;
-            originalState = editedState = workItem.State;
-            originalTargetDate = editedTargetDate = workItem.TargetDate;
+            // Initialize edited values from work item
+            InitializeEditedValues();
             
-            Logger.LogInformation("Loaded work item {WorkItemId} for editing", WorkItemId);
+            Logger.LogInformation("Loaded work item {WorkItemId} with {FieldCount} fields for editing", 
+                WorkItemId, workItemLayout?.AllFields.Count ?? 0);
         }
         catch (Exception ex)
         {
@@ -180,9 +174,208 @@
         }
     }
 
+    private void InitializeEditedValues()
+    {
+        if (workItem == null || workItemLayout == null) return;
+
+        originalValues.Clear();
+        editedValues.Clear();
+
+        foreach (var field in workItemLayout.AllFields.Where(f => !f.IsReadOnly))
+        {
+            var value = GetFieldValueAsString(field.ReferenceName);
+            originalValues[field.ReferenceName] = value;
+            editedValues[field.ReferenceName] = value;
+        }
+    }
+
+    private string GetFieldValueAsString(string fieldReferenceName)
+    {
+        if (workItem == null) return string.Empty;
+
+        // Handle special core fields
+        if (fieldReferenceName == "System.Title")
+            return workItem.Title;
+
+        if (fieldReferenceName == "System.State")
+            return workItem.State;
+
+        if (fieldReferenceName == "System.AssignedTo")
+            return workItem.AssignedToDisplayName;
+
+        if (fieldReferenceName == "Microsoft.VSTS.Scheduling.TargetDate" && workItem.TargetDate.HasValue)
+            return workItem.TargetDate.Value.ToString("yyyy-MM-dd");
+
+        if (fieldReferenceName == "System.Tags")
+            return string.Join("; ", workItem.Tags);
+
+        // Try to get from Fields dictionary
+        if (workItem.Fields.TryGetValue(fieldReferenceName, out var value))
+        {
+            if (value is DateTime dateValue)
+                return dateValue.ToString("yyyy-MM-dd");
+            
+            if (value is bool boolValue)
+                return boolValue.ToString();
+
+            return value?.ToString() ?? string.Empty;
+        }
+
+        return string.Empty;
+    }
+
+    private bool ShouldShowReadOnlyField(WorkItemFieldDefinition field)
+    {
+        return ImportantReadOnlyFields.Contains(field.ReferenceName);
+    }
+
+    private bool IsFullWidthField(WorkItemFieldDefinition field)
+    {
+        return FullWidthFields.Contains(field.ReferenceName) || 
+               field.FieldType.Equals("Html", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private bool HasValidationErrors()
+    {
+        if (workItemLayout == null) return false;
+
+        foreach (var field in workItemLayout.AllFields.Where(f => f.IsRequired && !f.IsReadOnly))
+        {
+            if (editedValues.TryGetValue(field.ReferenceName, out var value) && string.IsNullOrWhiteSpace(value))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private RenderFragment RenderField(WorkItemFieldDefinition field) => __builder =>
+    {
+        if (!editedValues.ContainsKey(field.ReferenceName))
+        {
+            editedValues[field.ReferenceName] = string.Empty;
+        }
+
+        // Read-only fields
+        if (field.IsReadOnly)
+        {
+            <MudTextField Value="@GetFieldValueAsString(field.ReferenceName)"
+                          Label="@field.Name"
+                          Variant="Variant.Outlined"
+                          ReadOnly="true"
+                          Disabled="true"
+                          HelperText="@(field.HelpText ?? "Read-only field")" />
+            return;
+        }
+
+        // Determine field type and render appropriate control
+        switch (field.FieldType.ToLowerInvariant())
+        {
+            case "string":
+            case "plaintext":
+                if (field.AllowedValues.Any())
+                {
+                    // Dropdown for fields with allowed values
+                    <MudSelect T="string" 
+                               @bind-Value="editedValues[field.ReferenceName]"
+                               Label="@field.Name"
+                               Variant="Variant.Outlined"
+                               Required="@field.IsRequired"
+                               HelperText="@field.HelpText">
+                        @foreach (var allowedValue in field.AllowedValues)
+                        {
+                            <MudSelectItem T="string" Value="@allowedValue">@allowedValue</MudSelectItem>
+                        }
+                    </MudSelect>
+                }
+                else if (field.ReferenceName == "System.Tags")
+                {
+                    <MudTextField @bind-Value="editedValues[field.ReferenceName]"
+                                  Label="@field.Name"
+                                  Variant="Variant.Outlined"
+                                  Required="@field.IsRequired"
+                                  HelperText="@(field.HelpText ?? "Separate tags with semicolons")" />
+                }
+                else
+                {
+                    <MudTextField @bind-Value="editedValues[field.ReferenceName]"
+                                  Label="@field.Name"
+                                  Variant="Variant.Outlined"
+                                  Required="@field.IsRequired"
+                                  HelperText="@field.HelpText" />
+                }
+                break;
+
+            case "html":
+                <MudTextField @bind-Value="editedValues[field.ReferenceName]"
+                              Label="@field.Name"
+                              Variant="Variant.Outlined"
+                              Lines="5"
+                              Required="@field.IsRequired"
+                              HelperText="@(field.HelpText ?? "HTML content")" />
+                break;
+
+            case "datetime":
+                DateTime? dateValue = null;
+                if (!string.IsNullOrEmpty(editedValues[field.ReferenceName]) && 
+                    DateTime.TryParse(editedValues[field.ReferenceName], out var parsedDate))
+                {
+                    dateValue = parsedDate;
+                }
+                <MudDatePicker Label="@field.Name"
+                               Date="@dateValue"
+                               DateChanged="@((DateTime? d) => editedValues[field.ReferenceName] = d?.ToString("yyyy-MM-dd") ?? string.Empty)"
+                               Variant="Variant.Outlined"
+                               Clearable="!field.IsRequired"
+                               Required="@field.IsRequired"
+                               HelperText="@field.HelpText" />
+                break;
+
+            case "integer":
+                <MudNumericField @bind-Value="editedValues[field.ReferenceName]"
+                                 Label="@field.Name"
+                                 Variant="Variant.Outlined"
+                                 Required="@field.IsRequired"
+                                 HelperText="@field.HelpText" />
+                break;
+
+            case "double":
+                <MudNumericField @bind-Value="editedValues[field.ReferenceName]"
+                                 Label="@field.Name"
+                                 Variant="Variant.Outlined"
+                                 Required="@field.IsRequired"
+                                 HelperText="@field.HelpText" />
+                break;
+
+            case "boolean":
+                bool boolValue = bool.TryParse(editedValues[field.ReferenceName], out var parsed) && parsed;
+                <MudSwitch Value="@boolValue"
+                           ValueChanged="@((bool v) => { editedValues[field.ReferenceName] = v.ToString(); StateHasChanged(); })"
+                           Label="@field.Name"
+                           Color="Color.Primary">
+                </MudSwitch>
+                @if (!string.IsNullOrEmpty(field.HelpText))
+                {
+                    <MudText Typo="Typo.caption" Class="ml-2">@field.HelpText</MudText>
+                }
+                break;
+
+            case "treepath":
+            case "identity":
+            default:
+                <MudTextField @bind-Value="editedValues[field.ReferenceName]"
+                              Label="@field.Name"
+                              Variant="Variant.Outlined"
+                              Required="@field.IsRequired"
+                              HelperText="@(field.HelpText ?? field.FieldType)" />
+                break;
+        }
+    };
+
     private async Task SaveAsync()
     {
-        if (workItem == null || !hasChanges)
+        if (workItem == null || workItemLayout == null || !hasChanges)
         {
             DialogReference?.Close(DialogResult.Ok(false));
             return;
@@ -193,47 +386,64 @@
             isSaving = true;
             StateHasChanged();
 
-            var workItemService = ServiceProvider.GetRequiredService<WorkItemServices>();
             var patchDocument = new Microsoft.VisualStudio.Services.WebApi.Patch.Json.JsonPatchDocument();
 
-            // Build patch document for changed fields
-            if (editedTitle != originalTitle)
+            // Build patch document for all changed fields
+            foreach (var field in workItemLayout.AllFields.Where(f => !f.IsReadOnly))
             {
-                patchDocument.Add(new Microsoft.VisualStudio.Services.WebApi.Patch.Json.JsonPatchOperation
+                if (editedValues.TryGetValue(field.ReferenceName, out var newValue) &&
+                    originalValues.TryGetValue(field.ReferenceName, out var oldValue) &&
+                    newValue != oldValue)
                 {
-                    Operation = Microsoft.VisualStudio.Services.WebApi.Patch.Operation.Add,
-                    Path = "/fields/System.Title",
-                    Value = editedTitle
-                });
-            }
+                    object? patchValue = newValue;
 
-            if (editedState != originalState)
-            {
-                patchDocument.Add(new Microsoft.VisualStudio.Services.WebApi.Patch.Json.JsonPatchOperation
-                {
-                    Operation = Microsoft.VisualStudio.Services.WebApi.Patch.Operation.Add,
-                    Path = "/fields/System.State",
-                    Value = editedState
-                });
-            }
+                    // Convert value based on field type
+                    switch (field.FieldType.ToLowerInvariant())
+                    {
+                        case "datetime":
+                            if (!string.IsNullOrEmpty(newValue) && DateTime.TryParse(newValue, out var dateValue))
+                            {
+                                patchValue = dateValue.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
+                            }
+                            else if (string.IsNullOrEmpty(newValue))
+                            {
+                                // Remove the field
+                                patchDocument.Add(new Microsoft.VisualStudio.Services.WebApi.Patch.Json.JsonPatchOperation
+                                {
+                                    Operation = Microsoft.VisualStudio.Services.WebApi.Patch.Operation.Remove,
+                                    Path = $"/fields/{field.ReferenceName}"
+                                });
+                                continue;
+                            }
+                            break;
 
-            if (editedTargetDate != originalTargetDate)
-            {
-                if (editedTargetDate.HasValue)
-                {
+                        case "integer":
+                            if (!string.IsNullOrEmpty(newValue) && int.TryParse(newValue, out var intValue))
+                            {
+                                patchValue = intValue;
+                            }
+                            break;
+
+                        case "double":
+                            if (!string.IsNullOrEmpty(newValue) && double.TryParse(newValue, out var doubleValue))
+                            {
+                                patchValue = doubleValue;
+                            }
+                            break;
+
+                        case "boolean":
+                            if (bool.TryParse(newValue, out var boolValue))
+                            {
+                                patchValue = boolValue;
+                            }
+                            break;
+                    }
+
                     patchDocument.Add(new Microsoft.VisualStudio.Services.WebApi.Patch.Json.JsonPatchOperation
                     {
                         Operation = Microsoft.VisualStudio.Services.WebApi.Patch.Operation.Add,
-                        Path = "/fields/Microsoft.VSTS.Scheduling.TargetDate",
-                        Value = editedTargetDate.Value.ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
-                    });
-                }
-                else
-                {
-                    patchDocument.Add(new Microsoft.VisualStudio.Services.WebApi.Patch.Json.JsonPatchOperation
-                    {
-                        Operation = Microsoft.VisualStudio.Services.WebApi.Patch.Operation.Remove,
-                        Path = "/fields/Microsoft.VSTS.Scheduling.TargetDate"
+                        Path = $"/fields/{field.ReferenceName}",
+                        Value = patchValue
                     });
                 }
             }
@@ -245,6 +455,9 @@
                 return;
             }
 
+            Logger.LogInformation("Updating work item {WorkItemId} with {ChangeCount} field changes", 
+                WorkItemId, patchDocument.Count);
+
             // Update the work item
             var connection = await ServiceProvider.GetRequiredService<ConnectionFactory>().GetConnectionAsync();
             var workItemClient = connection.GetClient<Microsoft.TeamFoundation.WorkItemTracking.WebApi.WorkItemTrackingHttpClient>();
@@ -253,7 +466,7 @@
             if (updatedWorkItem != null)
             {
                 Logger.LogInformation("Successfully updated work item {WorkItemId}", WorkItemId);
-                Snackbar.Add($"Work item {WorkItemId} updated successfully", Severity.Success);
+                Snackbar.Add($"Work item {WorkItemId} updated successfully ({patchDocument.Count} fields changed)", Severity.Success);
                 DialogReference?.Close(DialogResult.Ok(true));
             }
             else
@@ -281,3 +494,4 @@
         DialogReference?.Close(DialogResult.Cancel());
     }
 }
+
