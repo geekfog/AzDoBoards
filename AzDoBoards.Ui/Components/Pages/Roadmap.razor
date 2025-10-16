@@ -52,12 +52,29 @@
     else
     {
         <div class="roadmap-layout">
-            <MudPaper Class="unscheduled-panel" Elevation="2">
-                <MudText Typo="Typo.h6" Class="pa-3">
-                    <MudIcon Icon="@Icons.Material.Filled.Schedule" Class="mr-2" />
-                    Unscheduled Items (@(unscheduledItems?.Count ?? 0))
-                </MudText>
-                <MudDivider />
+            <MudPaper Class="@($"unscheduled-panel{(unscheduledPanelCollapsed ? " collapsed" : "")}")" Elevation="2">
+                <div class="unscheduled-panel-header">
+                    <div class="unscheduled-panel-title">
+                        @if (!unscheduledPanelCollapsed)
+                        {
+                            @* <MudIcon Icon="@Icons.Material.Filled.Schedule" /> *@
+                            <MudText Typo="Typo.h6">
+                                Unscheduled Items (@(unscheduledItems?.Count ?? 0))
+                            </MudText>
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.body2" Style="font-weight: 600;">
+                                Unscheduled Items (@(unscheduledItems?.Count ?? 0))
+                            </MudText>
+                        }
+                    </div>
+                    <MudIconButton 
+                        Icon="@(unscheduledPanelCollapsed ? Icons.Material.Filled.ChevronRight : Icons.Material.Filled.ChevronLeft)" 
+                        Size="Size.Small" 
+                        OnClick="@(() => unscheduledPanelCollapsed = !unscheduledPanelCollapsed)"
+                        Title="@(unscheduledPanelCollapsed ? "Expand" : "Collapse")" />
+                </div>
                 
                 <div class="unscheduled-items-scroll" ondragover="event.preventDefault();" @ondrop="@(() => HandleUnscheduleDrop())">
                     @if (unscheduledItems?.Any() == true)
@@ -238,6 +255,9 @@
     private List<string> availableStates = new();
 
     private DialogOptions dialogOptions = new() { MaxWidth = MaxWidth.Small, FullWidth = true };
+
+    // Unscheduled panel collapse state
+    private bool unscheduledPanelCollapsed = false;
 
     protected override async Task OnInitializedAsync()
     {
