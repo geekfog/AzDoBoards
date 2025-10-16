@@ -189,8 +189,8 @@
                             <MudSelectItem T="string" Value="@state">@state</MudSelectItem>
                         }
                     </MudSelect>
-                    <MudDatePicker Label="Start Date" Date="scheduleStartDate" DateChanged="@((DateTime? d) => scheduleStartDate = d)" Clearable="true" />
-                    <MudDatePicker Label="Target Date" Date="scheduleTargetDate" DateChanged="@((DateTime? d) => scheduleTargetDate = d)" Clearable="true" /> @* Required="true" *@
+                    <MudDatePicker Label="Start Date" Date="scheduleStartDate" DateChanged="@((DateTime? d) => scheduleStartDate = d)" Clearable="true" />  @* Required="true" *@
+                    <MudDatePicker Label="Target Date" Date="scheduleTargetDate" DateChanged="@((DateTime? d) => scheduleTargetDate = d)" Clearable="true" />
                 </MudStack>
                 @if (scheduleStartDate.HasValue && scheduleTargetDate.HasValue && scheduleStartDate.Value > scheduleTargetDate.Value)
                 {
@@ -268,8 +268,7 @@
 
             Logger.LogInformation("JavaScript module imported successfully");
 
-            // Create .NET reference for callbacks
-            dotNetRef = DotNetObjectReference.Create(this);
+            dotNetRef = DotNetObjectReference.Create(this); // Create .NET reference for callbacks
 
             // Initialize the drag and drop system with aligned start date
             var pixelsPerDay = GetPixelsPerDay();
@@ -466,54 +465,61 @@
 
         try
         {
-            // Find the work item to get its current dates
+           // Find the work item to get its current dates
             var workItem = allWorkItems?.FirstOrDefault(wi => wi.Id == draggedWorkItemId.Value);
+            if (workItem == null)
+            {
+                Logger.LogWarning("Work item {WorkItemId} not found in local data", draggedWorkItemId.Value);
+                OnDragEnd();
+                return;
+            }
+
+            var currentStartDate = workItem.Fields.TryGetValue("Microsoft.VSTS.Scheduling.StartDate", out var startDateObj) && startDateObj is DateTime sd
+                ? (DateTime?)sd
+                : null;
+            
+            var currentTargetDate = workItem.TargetDate;
             DateTime? newStartDate = null;
             
-            if (workItem != null)
+            // If there's a start date and target date, preserve the duration
+            if (currentStartDate.HasValue && currentTargetDate.HasValue && dropTargetDate.HasValue)
             {
-                // Get current start date if it exists
-                var currentStartDate = workItem.Fields.TryGetValue("Microsoft.VSTS.Scheduling.StartDate", out var startDateObj) && startDateObj is DateTime sd
-                    ? (DateTime?)sd
-                    : null;
+                var durationDays = (currentTargetDate.Value - currentStartDate.Value).Days;
+                newStartDate = dropTargetDate.Value.AddDays(-durationDays);
                 
-                var currentTargetDate = workItem.TargetDate;
-                
-                // If there's a start date and target date, preserve the duration
-                if (currentStartDate.HasValue && currentTargetDate.HasValue && dropTargetDate.HasValue)
-                {
-                    var durationDays = (currentTargetDate.Value - currentStartDate.Value).Days;
-                    newStartDate = dropTargetDate.Value.AddDays(-durationDays);
-                    
-                    Logger.LogInformation("Preserving duration: {Duration} days. Old: {OldStart} to {OldTarget}, New: {NewStart} to {NewTarget}",
-                        durationDays, currentStartDate.Value, currentTargetDate.Value, newStartDate.Value, dropTargetDate.Value);
-                }
-                else
-                {
-                    Logger.LogInformation("No start date to shift, setting only target date");
-                }
+                Logger.LogInformation("Preserving duration: {Duration} days. Old: {OldStart} to {OldTarget}, New: {NewStart} to {NewTarget}",
+                    durationDays, currentStartDate.Value, currentTargetDate.Value, newStartDate.Value, dropTargetDate.Value);
             }
+            else
+            {
+                Logger.LogInformation("No start date to shift, setting only target date");
+            }
+            
+            var wasUnscheduled = !currentTargetDate.HasValue;
+            await UpdateLocalWorkItemDates(draggedWorkItemId.Value, newStartDate, dropTargetDate.Value, wasUnscheduled);
+            StateHasChanged();
             
             Logger.LogInformation("Updating work item {WorkItemId} with start date {StartDate} and target date {TargetDate}", 
                 draggedWorkItemId.Value, newStartDate, dropTargetDate.Value);
             
-            var success = await UpdateWorkItemDatesAsync(draggedWorkItemId.Value, newStartDate, dropTargetDate.Value);
+            var success = await RoadmapService.UpdateWorkItemDatesAsync(draggedWorkItemId.Value, newStartDate, dropTargetDate.Value);
             
             if (success)
             {
                 Logger.LogInformation("Successfully updated work item {WorkItemId}", draggedWorkItemId.Value);
-                var message = newStartDate.HasValue 
+                var message = newStartDate != null
                     ? $"Work item {draggedWorkItemId.Value} moved to {newStartDate.Value:M/d/yyyy} - {dropTargetDate.Value:M/d/yyyy}"
                     : $"Work item {draggedWorkItemId.Value} scheduled to {dropTargetDate.Value:M/d/yyyy}";
-                
-                await LoadRoadmapDataAsync();
-                await ReinitializeJavaScriptModuleAsync();
                 
                 Snackbar.Add(message, Severity.Success);
             }
             else
             {
-                Logger.LogError("Failed to update work item {WorkItemId}", draggedWorkItemId.Value);
+                Logger.LogError("Failed to update work item {WorkItemId}, reverting changes", draggedWorkItemId.Value);
+                
+                await UpdateLocalWorkItemDates(draggedWorkItemId.Value, currentStartDate, currentTargetDate, !wasUnscheduled);
+                StateHasChanged();
+                
                 Snackbar.Add($"Failed to update work item {draggedWorkItemId.Value}", Severity.Error);
             }
         }
@@ -521,6 +527,9 @@
         {
             Logger.LogError(ex, "Error in timeline drop handler for work item {WorkItemId}", draggedWorkItemId);
             Snackbar.Add($"Error updating work item: {ex.Message}", Severity.Error);
+            
+            await LoadRoadmapDataAsync();
+            await ReinitializeJavaScriptModuleAsync();
         }
         finally
         {
@@ -540,19 +549,37 @@
 
         try
         {
+            var workItem = allWorkItems?.FirstOrDefault(wi => wi.Id == draggedWorkItemId.Value);
+            if (workItem == null)
+            {
+                Logger.LogWarning("Work item {WorkItemId} not found in local data", draggedWorkItemId.Value);
+                OnDragEnd();
+                return;
+            }
+
+            var originalStartDate = workItem.Fields.TryGetValue("Microsoft.VSTS.Scheduling.StartDate", out var startDateObj) && startDateObj is DateTime sd
+                ? (DateTime?)sd
+                : null;
+            var originalTargetDate = workItem.TargetDate;
+            
             Logger.LogInformation("Clearing target date for work item {WorkItemId}", draggedWorkItemId.Value);
             
-            var success = await UpdateWorkItemDatesAsync(draggedWorkItemId.Value, null, null);
+            await UpdateLocalWorkItemDates(draggedWorkItemId.Value, null, null, true);
+            StateHasChanged();
+            
+            var success = await RoadmapService.UpdateWorkItemDatesAsync(draggedWorkItemId.Value, null, null);
             
             if (success)
             {
-                await LoadRoadmapDataAsync();
-                await ReinitializeJavaScriptModuleAsync();
-                
                 Snackbar.Add($"Work item {draggedWorkItemId.Value} unscheduled successfully", Severity.Success);
             }
             else
             {
+                Logger.LogError("Failed to update work item {WorkItemId}, reverting changes", draggedWorkItemId.Value);
+                
+                await UpdateLocalWorkItemDates(draggedWorkItemId.Value, originalStartDate, originalTargetDate, false);
+                StateHasChanged();
+                
                 Snackbar.Add($"Failed to update work item {draggedWorkItemId.Value}", Severity.Error);
             }
         }
@@ -560,6 +587,9 @@
         {
             Logger.LogError(ex, "Error in unschedule drop handler");
             Snackbar.Add($"Error updating work item: {ex.Message}", Severity.Error);
+            
+            await LoadRoadmapDataAsync();
+            await ReinitializeJavaScriptModuleAsync();
         }
         finally
         {
@@ -567,7 +597,6 @@
         }
     }
 
-    // Schedule Dialog handlers
     private async Task OpenScheduleDialog(int workItemId)
     {
         selectedWorkItemId = workItemId;
@@ -581,7 +610,6 @@
             scheduleTargetDate = selectedWorkItem.TargetDate;
             selectedWorkItemState = selectedWorkItem.State;
             
-            // Load available states for the work item type
             availableStates = await RoadmapService.GetAvailableStatesForWorkItemTypeAsync(selectedWorkItem.WorkItemType, currentProcessId);
 
             scheduleDialogVisible = true;
@@ -607,7 +635,6 @@
         {
             var updates = new List<string>();
 
-            // Check what fields have changed
             var currentStartDate = selectedWorkItem.Fields.TryGetValue("Microsoft.VSTS.Scheduling.StartDate", out var startDateObj) && startDateObj is DateTime sd
                 ? (DateTime?)sd
                 : null;
@@ -616,14 +643,16 @@
             var targetDateChanged = scheduleTargetDate != selectedWorkItem.TargetDate;
             var stateChanged = !string.IsNullOrEmpty(selectedWorkItemState) && selectedWorkItemState != selectedWorkItem.State;
 
-            // If nothing changed, just close the dialog
             if (!startDateChanged && !targetDateChanged && !stateChanged)
             {
                 CloseScheduleDialog();
                 return;
             }
 
-            // Build update messages
+            var originalStartDate = currentStartDate;
+            var originalTargetDate = selectedWorkItem.TargetDate;
+            var originalState = selectedWorkItem.State;
+
             if (targetDateChanged)
             {
                 var action = scheduleTargetDate.HasValue ? "scheduled" : "unscheduled";
@@ -644,7 +673,33 @@
                 updates.Add($"state changed to {selectedWorkItemState}");
             }
 
-            // Make a single API call to update all changed fields
+            var workItem = allWorkItems?.FirstOrDefault(wi => wi.Id == selectedWorkItemId);
+            if (workItem != null)
+            {
+                if (targetDateChanged)
+                    workItem.TargetDate = scheduleTargetDate;
+                
+                if (startDateChanged)
+                {
+                    if (scheduleStartDate.HasValue)
+                        workItem.Fields["Microsoft.VSTS.Scheduling.StartDate"] = scheduleStartDate.Value;
+                    else
+                        workItem.Fields.Remove("Microsoft.VSTS.Scheduling.StartDate");
+                }
+                
+                if (stateChanged && !string.IsNullOrEmpty(selectedWorkItemState))
+                    workItem.State = selectedWorkItemState;
+
+                if (targetDateChanged)
+                {
+                    var moveToUnscheduled = !scheduleTargetDate.HasValue;
+                    await UpdateLocalWorkItemDates(selectedWorkItemId, scheduleStartDate, scheduleTargetDate, moveToUnscheduled);
+                }
+            }
+
+            CloseScheduleDialog();
+            StateHasChanged();
+
             var success = await RoadmapService.UpdateWorkItemFieldsAsync(
                 selectedWorkItemId,
                 scheduleStartDate,
@@ -656,75 +711,205 @@
 
             if (success)
             {
-                // Update local data
-                var workItem = allWorkItems?.FirstOrDefault(wi => wi.Id == selectedWorkItemId);
-                if (workItem != null)
-                {
-                    if (targetDateChanged)
-                        workItem.TargetDate = scheduleTargetDate;
-                    
-                    if (startDateChanged)
-                    {
-                        if (scheduleStartDate.HasValue)
-                            workItem.Fields["Microsoft.VSTS.Scheduling.StartDate"] = scheduleStartDate.Value;
-                        else
-                            workItem.Fields.Remove("Microsoft.VSTS.Scheduling.StartDate");
-                    }
-                    
-                    if (stateChanged && !string.IsNullOrEmpty(selectedWorkItemState))
-                        workItem.State = selectedWorkItemState;
-                }
-
-                // Refresh the roadmap data to reflect changes
-                await LoadRoadmapDataAsync();
-                
                 var message = $"Work item {selectedWorkItemId} updated: {string.Join(", ", updates)}";
                 Snackbar.Add(message, Severity.Success);
             }
             else
             {
+                Logger.LogError("Failed to update work item {WorkItemId}, reverting changes", selectedWorkItemId);
+                
+                if (workItem != null)
+                {
+                    workItem.TargetDate = originalTargetDate;
+                    workItem.State = originalState;
+                    
+                    if (originalStartDate.HasValue)
+                        workItem.Fields["Microsoft.VSTS.Scheduling.StartDate"] = originalStartDate.Value;
+                    else
+                        workItem.Fields.Remove("Microsoft.VSTS.Scheduling.StartDate");
+
+                    if (targetDateChanged)
+                    {
+                        var moveToUnscheduled = !originalTargetDate.HasValue;
+                        await UpdateLocalWorkItemDates(selectedWorkItemId, originalStartDate, originalTargetDate, moveToUnscheduled);
+                    }
+                }
+                
+                StateHasChanged();
                 Snackbar.Add($"Failed to update work item {selectedWorkItemId}", Severity.Error);
-                return;
             }
-            
-            CloseScheduleDialog();
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error saving work item {WorkItemId}", selectedWorkItemId);
             Snackbar.Add($"Error saving work item: {ex.Message}", Severity.Error);
+            
+            await LoadRoadmapDataAsync();
+            await ReinitializeJavaScriptModuleAsync();
         }
     }
 
-    private async Task<bool> UpdateWorkItemDatesAsync(int workItemId, DateTime? startDate, DateTime? targetDate)
+    private async Task UpdateLocalWorkItemDates(int workItemId, DateTime? startDate, DateTime? targetDate, bool moveToUnscheduled)
     {
-        try
+        var workItem = allWorkItems?.FirstOrDefault(wi => wi.Id == workItemId);
+        if (workItem == null) return;
+
+        workItem.TargetDate = targetDate;
+        if (startDate.HasValue)
+            workItem.Fields["Microsoft.VSTS.Scheduling.StartDate"] = startDate.Value;
+        else
+            workItem.Fields.Remove("Microsoft.VSTS.Scheduling.StartDate");
+
+        if (moveToUnscheduled)
         {
-            var success = await RoadmapService.UpdateWorkItemDatesAsync(workItemId, startDate, targetDate);
-            if (success)
+            await MoveItemToUnscheduled(workItemId);
+        }
+        else
+        {
+            await MoveItemToScheduled(workItemId, startDate, targetDate);
+        }
+    }
+
+    private async Task MoveItemToUnscheduled(int workItemId)
+    {
+        var workItem = allWorkItems?.FirstOrDefault(wi => wi.Id == workItemId);
+        if (workItem == null) return;
+
+        RemoveItemFromSwimlanes(workItemId, swimlanes);
+
+        if (unscheduledItems?.Any(ui => ui.WorkItemId == workItemId) == true)
+            return;
+
+        var parentChildMap = new Dictionary<int, List<int>>();
+        BuildParentLookupFromSwimlanes(swimlanes, parentChildMap);
+        
+        var parentId = parentChildMap.FirstOrDefault(kvp => kvp.Value.Contains(workItemId)).Key;
+        var parentWorkItem = parentId > 0 ? allWorkItems?.FirstOrDefault(w => w.Id == parentId) : null;
+
+        var unscheduledItem = new UnscheduledWorkItem
+        {
+            WorkItemId = workItem.Id,
+            Title = workItem.Title,
+            WorkItemType = workItem.WorkItemType,
+            Color = workItem.Color,
+            State = workItem.State,
+            StateCategory = workItem.StateCategory,
+            AssignedTo = workItem.AssignedToDisplayName,
+            ParentId = parentId,
+            ParentTitle = parentWorkItem?.Title ?? string.Empty,
+            ParentType = parentWorkItem?.WorkItemType ?? string.Empty
+        };
+
+        unscheduledItems ??= new List<UnscheduledWorkItem>();
+        unscheduledItems.Add(unscheduledItem);
+        unscheduledItems = unscheduledItems.OrderBy(ui => ui.ParentTitle).ThenBy(ui => ui.Title).ToList();
+
+        await Task.CompletedTask;
+    }
+
+    private async Task MoveItemToScheduled(int workItemId, DateTime? startDate, DateTime? targetDate)
+    {
+        var workItem = allWorkItems?.FirstOrDefault(wi => wi.Id == workItemId);
+        if (workItem == null || !targetDate.HasValue) return;
+
+        if (unscheduledItems != null)
+        {
+            unscheduledItems = unscheduledItems.Where(ui => ui.WorkItemId != workItemId).ToList();
+        }
+
+        var swimlane = FindSwimlaneForWorkItem(workItemId, swimlanes);
+        
+        if (swimlane != null)
+        {
+            var existingTimelineItem = swimlane.TimelineItems?.FirstOrDefault(ti => ti.WorkItemId == workItemId);
+            
+            if (existingTimelineItem != null)
             {
-                // Update local data
-                var workItem = allWorkItems?.FirstOrDefault(wi => wi.Id == workItemId);
-                if (workItem != null)
+                existingTimelineItem.StartDate = startDate;
+                existingTimelineItem.TargetDate = targetDate;
+            }
+            else
+            {
+                swimlane.TimelineItems ??= new List<TimelineItem>();
+                swimlane.TimelineItems.Add(new TimelineItem
                 {
-                    workItem.TargetDate = targetDate;
-                    if (startDate.HasValue)
-                        workItem.Fields["Microsoft.VSTS.Scheduling.StartDate"] = startDate.Value;
-                    else
-                        workItem.Fields.Remove("Microsoft.VSTS.Scheduling.StartDate");
-                }
+                    WorkItemId = workItem.Id,
+                    Title = workItem.Title,
+                    WorkItemType = workItem.WorkItemType,
+                    Color = workItem.Color,
+                    StartDate = startDate,
+                    TargetDate = targetDate,
+                    State = workItem.State,
+                    StateCategory = workItem.StateCategory,
+                    AssignedTo = workItem.AssignedToDisplayName
+                });
+            }
+        }
+
+        await Task.CompletedTask;
+    }
+
+    private void RemoveItemFromSwimlanes(int workItemId, List<SwimLane>? swimlanes)
+    {
+        if (swimlanes == null) return;
+
+        foreach (var swimlane in swimlanes)
+        {
+            if (swimlane.TimelineItems != null)
+            {
+                swimlane.TimelineItems = swimlane.TimelineItems.Where(ti => ti.WorkItemId != workItemId).ToList();
             }
 
-            return success;
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error updating work item {WorkItemId} dates", workItemId);
-            return false;
+            if (swimlane.Children != null)
+            {
+                RemoveItemFromSwimlanes(workItemId, swimlane.Children);
+            }
         }
     }
 
-    // Helper methods - Consolidated repeated logic
+    private SwimLane? FindSwimlaneForWorkItem(int workItemId, List<SwimLane>? swimlanes)
+    {
+        if (swimlanes == null) return null;
+
+        foreach (var swimlane in swimlanes)
+        {
+            if (swimlane.WorkItemId == workItemId)
+            {
+                return swimlane;
+            }
+
+            if (swimlane.Children != null)
+            {
+                var found = FindSwimlaneForWorkItem(workItemId, swimlane.Children);
+                if (found != null) return found;
+            }
+        }
+
+        return null;
+    }
+
+    private void BuildParentLookupFromSwimlanes(List<SwimLane>? swimlanes, Dictionary<int, List<int>> parentLookup)
+    {
+        if (swimlanes == null) return;
+
+        foreach (var swimlane in swimlanes)
+        {
+            if (swimlane.Children != null)
+            {
+                foreach (var child in swimlane.Children)
+                {
+                    if (!parentLookup.ContainsKey(swimlane.WorkItemId))
+                    {
+                        parentLookup[swimlane.WorkItemId] = new List<int>();
+                    }
+                    parentLookup[swimlane.WorkItemId].Add(child.WorkItemId);
+                }
+
+                BuildParentLookupFromSwimlanes(swimlane.Children, parentLookup);
+            }
+        }
+    }
+
     private int GetPixelsPerDay() => config.TimeUnit switch
     {
         TimeUnit.Week => 10,
@@ -871,7 +1056,7 @@
                     try
                     {
                         var position = CalculateItemPosition(item);
-                        if (position.Width == 0) continue; // Skip items with no valid position
+                        if (position.Width == 0) continue;
                         
                         var itemStyle = $"left: {position.Left}px; width: {position.Width}px; background-color: {item.Color};";
                         var itemClass = draggedWorkItemId == item.WorkItemId ? "timeline-item dragging" : "timeline-item";
@@ -891,7 +1076,6 @@
                     catch (Exception ex)
                     {
                         Logger.LogWarning(ex, "Error rendering timeline item {ItemId}", item.WorkItemId);
-                        // Skip this item and continue rendering others
                     }
                 }
             }
