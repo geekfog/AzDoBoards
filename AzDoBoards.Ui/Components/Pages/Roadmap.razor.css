@@ -335,6 +335,67 @@
     background: var(--mud-palette-text-secondary);
 }
 
+/* Context Menu */
+.context-menu {
+    position: fixed !important;
+    background: var(--mud-palette-surface) !important;
+    border: 1px solid var(--mud-palette-divider) !important;
+    border-radius: 4px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
+    z-index: 99999 !important;
+    min-width: 160px !important;
+    padding: 4px 0 !important;
+    opacity: 0 !important;
+    transform: scale(0.95) !important;
+    transition: opacity 0.15s ease, transform 0.15s ease !important;
+    pointer-events: none !important;
+    display: block !important;
+}
+
+.context-menu.show {
+    opacity: 1 !important;
+    transform: scale(1) !important;
+    pointer-events: all !important;
+}
+
+.context-menu-item {
+    padding: 10px 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: var(--mud-palette-text-primary);
+    transition: background-color 0.15s ease;
+    user-select: none;
+}
+
+.context-menu-item:hover {
+    background-color: var(--mud-palette-action-default-hover);
+}
+
+.context-menu-item:active {
+    background-color: var(--mud-palette-action-default);
+}
+
+.context-menu-item .icon {
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.context-menu-item .text {
+    flex: 1;
+    font-size: 14px;
+}
+
+.context-menu-divider {
+    height: 1px;
+    background-color: var(--mud-palette-divider);
+    margin: 4px 0;
+}
+
 /* Responsive */
 @media (max-width: 1200px) {
     .roadmap-layout {

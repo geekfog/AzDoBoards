@@ -87,7 +87,7 @@
                             var textColor = GetContrastTextColor(bgColor);
                             var itemStyle = GetUnscheduledItemStyle(item);
                             
-                            <div class="unscheduled-work-item pa-2 mb-2" style="@itemStyle" draggable="true" @ondragstart="@(() => OnDragStart(item.WorkItemId))" @ondragend="@OnDragEnd">
+                            <div class="unscheduled-work-item pa-2 mb-2" style="@itemStyle" draggable="true" @ondragstart="@(() => OnDragStart(item.WorkItemId))" @ondragend="@OnDragEnd" @oncontextmenu:preventDefault="true">
                                 <MudStack Spacing="1">
                                     <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
                                         <MudStack Row AlignItems="AlignItems.Center" Spacing="1">
@@ -211,12 +211,22 @@
                 </MudStack>
                 <MudDivider />
                 <MudStack Row AlignItems="AlignItems.Center" Spacing="3">
-                    <MudSelect T="string" Label="State" @bind-Value="selectedWorkItemState" Variant="Variant.Outlined" AnchorOrigin="Origin.BottomLeft" Style="min-width: 150px; max-width: 200px;">
-                        @foreach (var state in availableStates)
-                        {
-                            <MudSelectItem T="string" Value="@state">@state</MudSelectItem>
-                        }
-                    </MudSelect>
+                    @if (availableStates.Any())
+                    {
+                        <MudSelect T="string" Label="State" @bind-Value="selectedWorkItemState" Variant="Variant.Outlined" AnchorOrigin="Origin.BottomLeft" Style="min-width: 150px; max-width: 200px;">
+                            @foreach (var state in availableStates)
+                            {
+                                <MudSelectItem T="string" Value="@state">@state</MudSelectItem>
+                            }
+                        </MudSelect>
+                    }
+                    else
+                    {
+                        <MudStack Row AlignItems="AlignItems.Center" Spacing="1" Style="min-width: 150px; max-width: 200px;">
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                            <MudText Typo="Typo.caption">Loading states...</MudText>
+                        </MudStack>
+                    }
                     <MudDatePicker Label="Start Date" Date="scheduleStartDate" DateChanged="@((DateTime? d) => scheduleStartDate = d)" Clearable="true" />  @* Required="true" *@
                     <MudDatePicker Label="Target Date" Date="scheduleTargetDate" DateChanged="@((DateTime? d) => scheduleTargetDate = d)" Clearable="true" />
                 </MudStack>
@@ -371,6 +381,26 @@
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error setting drop target date");
+        }
+    }
+
+    [JSInvokable]
+    public async Task OpenScheduleDialogFromJS(int workItemId)
+    {
+        try
+        {
+            Logger.LogInformation("Opening schedule dialog from context menu for work item {WorkItemId}", workItemId);
+            
+            // Use InvokeAsync to ensure we're on the UI thread
+            await InvokeAsync(async () =>
+            {
+                await OpenScheduleDialog(workItemId);
+                StateHasChanged();
+            });
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error opening schedule dialog from JS for work item {WorkItemId}", workItemId);
         }
     }
 
@@ -847,6 +877,8 @@
             return;
         }
         
+        Logger.LogInformation("OpenScheduleDialog called for work item {WorkItemId}", workItemId);
+        
         selectedWorkItemId = workItemId;
         selectedWorkItem = allWorkItems?.FirstOrDefault(wi => wi.Id == workItemId);
 
@@ -858,9 +890,20 @@
             scheduleTargetDate = selectedWorkItem.TargetDate;
             selectedWorkItemState = selectedWorkItem.State;
             
-            availableStates = await RoadmapService.GetAvailableStatesForWorkItemTypeAsync(selectedWorkItem.WorkItemType, currentProcessId);
-
+            // Show dialog immediately with empty states (will load asynchronously)
+            availableStates = new List<string>();
             scheduleDialogVisible = true;
+            StateHasChanged(); // Trigger render immediately
+            
+            // Load states asynchronously in the background
+            Logger.LogInformation("Loading available states for work item type {WorkItemType}", selectedWorkItem.WorkItemType);
+            availableStates = await RoadmapService.GetAvailableStatesForWorkItemTypeAsync(selectedWorkItem.WorkItemType, currentProcessId);
+            Logger.LogInformation("Loaded {StateCount} available states", availableStates.Count);
+            StateHasChanged(); // Update dialog with loaded states
+        }
+        else
+        {
+            Logger.LogWarning("Work item {WorkItemId} not found in allWorkItems collection", workItemId);
         }
     }
 
@@ -1431,7 +1474,7 @@
                         var itemClass = draggedWorkItemId == item.WorkItemId ? "timeline-item dragging" : "timeline-item";
                         var dateRange = GetDateRangeDisplay(item);
                         
-                        <div class="@itemClass" style="@itemStyle" title="@($"{item.Title} - {item.State} - {dateRange}")" draggable="true" @ondragstart="@(() => OnDragStart(item.WorkItemId))" @ondragend="@OnDragEnd" @ondblclick="@(async () => await OpenScheduleDialog(item.WorkItemId))">
+                        <div class="@itemClass" style="@itemStyle" title="@($"{item.Title} - {item.State} - {dateRange}")" draggable="true" @ondragstart="@(() => OnDragStart(item.WorkItemId))" @ondragend="@OnDragEnd" @ondblclick="@(async () => await OpenScheduleDialog(item.WorkItemId))" @oncontextmenu:preventDefault="true">
                             <MudStack Spacing="0" Style="padding: 2px 4px;">
                                 <MudText Typo="Typo.caption" Style="@($"color: {textColor}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500;")">
                                     @item.WorkItemId - @item.Title

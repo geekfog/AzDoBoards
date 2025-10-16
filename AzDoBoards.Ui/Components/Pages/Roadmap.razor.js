@@ -16,6 +16,8 @@ let resizeStartX = 0;
 let resizeOriginalLeft = 0;
 let resizeOriginalWidth = 0;
 let resizeWorkItemId = 0;
+let contextMenu = null;
+let contextMenuVisible = false;
 
 /**
  * Initialize the drag and drop system
@@ -57,6 +59,13 @@ export function initialize(dotNetRef, startDate, endDate, pxPerDay) {
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', handleMouseUp);
     
+    // Create context menu
+    createContextMenu();
+    
+    // Add context menu listeners
+    document.addEventListener('contextmenu', handleContextMenu);
+    document.addEventListener('click', hideContextMenu);
+    
     console.log('Roadmap drag module initialized successfully');
 }
 
@@ -94,12 +103,22 @@ export function dispose() {
     document.removeEventListener('mousemove', handleMouseMove);
     document.removeEventListener('mouseup', handleMouseUp);
     
+    // Remove context menu listeners
+    document.removeEventListener('contextmenu', handleContextMenu);
+    document.removeEventListener('click', hideContextMenu);
+    
     if (dragIndicator && dragIndicator.parentNode) {
         dragIndicator.parentNode.removeChild(dragIndicator);
     }
     
+    if (contextMenu && contextMenu.parentNode) {
+        contextMenu.parentNode.removeChild(contextMenu);
+    }
+    
     dragIndicator = null;
     timelineContainer = null;
+    contextMenu = null;
+    contextMenuVisible = false;
     dotNetHelper = null;
     draggedItemEndOffset = 0;
     
@@ -369,10 +388,18 @@ function handleMouseUp(e) {
 function getWorkItemIdFromElement(element) {
     // Try to find the work item ID from the element's text content or data attributes
     const text = element.textContent || '';
-    const match = text.match(/^(\d+)\s*-/);
+    // Match work item ID at the beginning of text (handles both "123 - Title" and "123-Title" formats)
+    const match = text.match(/^\s*(\d+)\s*[-–]/);
     if (match) {
         return parseInt(match[1], 10);
     }
+    
+    // Fallback: try to find any number at the start
+    const numberMatch = text.match(/^\s*(\d+)/);
+    if (numberMatch) {
+        return parseInt(numberMatch[1], 10);
+    }
+    
     return 0;
 }
 
@@ -563,4 +590,162 @@ function formatDate(date) {
         year: 'numeric' 
     };
     return date.toLocaleDateString('en-US', options);
+}
+
+/**
+ * Create the context menu element
+ */
+function createContextMenu() {
+    const existing = document.getElementById('roadmap-context-menu');
+    if (existing) {
+        existing.remove();
+    }
+    
+    contextMenu = document.createElement('div');
+    contextMenu.id = 'roadmap-context-menu';
+    contextMenu.className = 'context-menu';
+    
+    const isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const bgColor = isDarkMode ? '#1e1e1e' : '#ffffff';
+    const textColor = isDarkMode ? '#e0e0e0' : '#333333';
+    const borderColor = isDarkMode ? '#404040' : '#cccccc';
+    const hoverBg = isDarkMode ? '#2a2a2a' : '#f5f5f5';
+    
+    contextMenu.style.cssText = `
+        position: fixed;
+        background: ${bgColor};
+        border: 1px solid ${borderColor};
+        border-radius: 4px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+        z-index: 999999;
+        min-width: 160px;
+        padding: 4px 0;
+        opacity: 0;
+        transform: scale(0.95);
+        transition: opacity 0.15s ease, transform 0.15s ease;
+        pointer-events: none;
+        display: block;
+    `;
+    
+    const scheduleItem = document.createElement('div');
+    scheduleItem.className = 'context-menu-item';
+    scheduleItem.style.cssText = `
+        padding: 10px 16px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        color: ${textColor};
+        transition: background-color 0.15s ease;
+        user-select: none;
+    `;
+    scheduleItem.innerHTML = `
+        <span class="icon" style="width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; color: ${textColor};">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                <path d="M20 3h-1V1h-2v2H7V1H5v2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 18H4V8h16v13z"/>
+            </svg>
+        </span>
+        <span class="text" style="flex: 1; font-size: 14px; color: ${textColor};">Schedule</span>
+    `;
+    scheduleItem.setAttribute('data-action', 'schedule');
+    
+    scheduleItem.addEventListener('mouseenter', () => {
+        scheduleItem.style.backgroundColor = hoverBg;
+    });
+    scheduleItem.addEventListener('mouseleave', () => {
+        scheduleItem.style.backgroundColor = 'transparent';
+    });
+    
+    contextMenu.appendChild(scheduleItem);
+    document.body.appendChild(contextMenu);
+    contextMenu.addEventListener('click', handleContextMenuClick);
+}
+
+/**
+ * Handle context menu event (right-click)
+ */
+function handleContextMenu(e) {
+    const target = e.target;
+    const timelineItem = target.closest('.timeline-item');
+    const unscheduledItem = target.closest('.unscheduled-work-item');
+    
+    if (timelineItem || unscheduledItem) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const element = timelineItem || unscheduledItem;
+        const workItemId = getWorkItemIdFromElement(element);
+        
+        if (workItemId > 0) {
+            showContextMenu(e.clientX, e.clientY, workItemId);
+        }
+    }
+}
+
+/**
+ * Show the context menu at the specified position
+ */
+function showContextMenu(x, y, workItemId) {
+    if (!contextMenu) {
+        return;
+    }
+    
+    contextMenu.setAttribute('data-workitem-id', workItemId);
+    contextMenu.style.left = `${x}px`;
+    contextMenu.style.top = `${y}px`;
+    contextMenu.style.opacity = '1';
+    contextMenu.style.transform = 'scale(1)';
+    contextMenu.style.pointerEvents = 'all';
+    contextMenu.classList.add('show');
+    contextMenuVisible = true;
+    
+    setTimeout(() => {
+        const rect = contextMenu.getBoundingClientRect();
+        if (rect.right > window.innerWidth) {
+            contextMenu.style.left = `${x - rect.width}px`;
+        }
+        if (rect.bottom > window.innerHeight) {
+            contextMenu.style.top = `${y - rect.height}px`;
+        }
+    }, 0);
+}
+
+/**
+ * Hide the context menu
+ */
+function hideContextMenu() {
+    if (!contextMenu || !contextMenuVisible) {
+        return;
+    }
+    
+    contextMenu.style.opacity = '0';
+    contextMenu.style.transform = 'scale(0.95)';
+    contextMenu.style.pointerEvents = 'none';
+    contextMenu.classList.remove('show');
+    contextMenuVisible = false;
+    contextMenu.removeAttribute('data-workitem-id');
+}
+
+/**
+ * Handle context menu item clicks
+ */
+function handleContextMenuClick(e) {
+    const menuItem = e.target.closest('.context-menu-item');
+    
+    if (!menuItem) {
+        return;
+    }
+    
+    const action = menuItem.getAttribute('data-action');
+    const workItemId = parseInt(contextMenu.getAttribute('data-workitem-id'), 10);
+    
+    if (action === 'schedule' && workItemId > 0 && dotNetHelper) {
+        try {
+            dotNetHelper.invokeMethodAsync('OpenScheduleDialogFromJS', workItemId);
+        } catch (error) {
+            console.error('Error calling OpenScheduleDialogFromJS:', error);
+        }
+    }
+    
+    hideContextMenu();
 }
