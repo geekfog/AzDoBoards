@@ -140,7 +140,6 @@ public class ProcessServices(ConnectionFactory connectionFactory) : Base(connect
     {
         var connection = await _connectionFactory.GetConnectionAsync();
         var processClient = connection.GetClient<WorkItemTrackingProcessHttpClient>();
-        var workItemClient = connection.GetClient<Microsoft.TeamFoundation.WorkItemTracking.WebApi.WorkItemTrackingHttpClient>();
 
         // First, get all work item types to find the reference name
         var workItemTypes = await processClient.GetProcessWorkItemTypesAsync(processId);
@@ -158,80 +157,6 @@ public class ProcessServices(ConnectionFactory connectionFactory) : Base(connect
         // Get all fields for the work item type using reference name
         var fields = await processClient.GetAllWorkItemTypeFieldsAsync(processId, workItemTypeRefName);
 
-        // Get field allowed values by querying organization-level picklists
-        var fieldAllowedValues = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
-        
-        try
-        {
-            Console.WriteLine($"[ProcessServices] Loading picklists from Azure DevOps");
-            
-            // Get all picklists at the organization level (not process-specific)
-            var picklists = await processClient.GetListsMetadataAsync();
-            
-            Console.WriteLine($"[ProcessServices] Found {picklists.Count} picklists");
-            
-            foreach (var picklistMetadata in picklists)
-            {
-                try
-                {
-                    // Get the full picklist with items (use Guid.Empty since picklists are org-level)
-                    var picklist = await processClient.GetListAsync(picklistMetadata.Id);
-                    if (picklist?.Items != null && picklist.Items.Any())
-                    {
-                        var values = picklist.Items.ToList();
-                        
-                        // Map picklist to fields by name (picklist names often match field names)
-                        // Common mappings:
-                        var fieldMappings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-                        {
-                            { "Priority", "Microsoft.VSTS.Common.Priority" },
-                            { "Severity", "Microsoft.VSTS.Common.Severity" },
-                            { "Risk", "Microsoft.VSTS.Common.Risk" },
-                            { "Value Area", "Microsoft.VSTS.Common.ValueArea" },
-                            { "ValueArea", "Microsoft.VSTS.Common.ValueArea" },
-                            { "Activity", "Microsoft.VSTS.Common.Activity" }
-                        };
-                        
-                        if (fieldMappings.TryGetValue(picklist.Name, out var fieldReferenceName))
-                        {
-                            fieldAllowedValues[fieldReferenceName] = values;
-                            Console.WriteLine($"[ProcessServices] ✓ Loaded picklist '{picklist.Name}' with {values.Count} values");
-                        }
-                        else
-                        {
-                            Console.WriteLine($"[ProcessServices] ○ Found picklist '{picklist.Name}' but no field mapping");
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"[ProcessServices] Could not load picklist {picklistMetadata.Name}: {ex.Message}");
-                }
-            }
-            
-            Console.WriteLine($"[ProcessServices] Successfully loaded allowed values for {fieldAllowedValues.Count} fields");
-            
-            // If no picklists were loaded, use fallback
-            if (fieldAllowedValues.Count == 0)
-            {
-                throw new Exception("No picklists were successfully loaded");
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[ProcessServices] Error loading picklists: {ex.Message}");
-            Console.WriteLine($"[ProcessServices] Using hardcoded fallback values");
-            
-            fieldAllowedValues = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase)
-            {
-                { "Microsoft.VSTS.Common.Priority", ["1", "2", "3", "4"] },
-                { "Microsoft.VSTS.Common.Severity", ["1 - Critical", "2 - High", "3 - Medium", "4 - Low"] },
-                { "Microsoft.VSTS.Common.Risk", ["1 - High", "2 - Medium", "3 - Low"] },
-                { "Microsoft.VSTS.Common.ValueArea", ["Architectural", "Business"] },
-                { "Microsoft.VSTS.Common.Activity", ["Deployment", "Design", "Development", "Documentation", "Requirements", "Testing"] }
-            };
-        }
-
         // Get the layout (page structure with groups) using reference name
         var layout = await processClient.GetFormLayoutAsync(processId, workItemTypeRefName);
 
@@ -241,14 +166,6 @@ public class ProcessServices(ConnectionFactory connectionFactory) : Base(connect
         // Map fields to our model
         foreach (var field in fields)
         {
-            var allowedValues = field.AllowedValues?.Select(v => v.ToString() ?? string.Empty).ToList() ?? new List<string>();
-            
-            // If no allowed values from field definition, try to get from Work Item Tracking API field definitions
-            if (!allowedValues.Any() && fieldAllowedValues.TryGetValue(field.ReferenceName, out var trackedValues))
-            {
-                allowedValues = trackedValues;
-            }
-            
             var fieldDef = new WorkItemFieldDefinition
             {
                 ReferenceName = field.ReferenceName,
@@ -259,14 +176,8 @@ public class ProcessServices(ConnectionFactory connectionFactory) : Base(connect
                 IsReadOnly = field.ReadOnly,
                 IsCore = field.ReferenceName.StartsWith("System."),
                 DefaultValue = field.DefaultValue?.ToString(),
-                AllowedValues = allowedValues
+                AllowedValues = field.AllowedValues?.Select(v => v.ToString() ?? string.Empty).ToList() ?? new List<string>()
             };
-
-            // Log fields with allowed values for debugging
-            if (allowedValues.Any())
-            {
-                Console.WriteLine($"[ProcessServices] ✓ {field.Name}: {allowedValues.Count} values ({string.Join(", ", allowedValues.Take(3))}{(allowedValues.Count > 3 ? "..." : "")})");
-            }
 
             allFields.Add(fieldDef);
         }
