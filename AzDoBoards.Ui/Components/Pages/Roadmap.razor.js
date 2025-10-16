@@ -627,6 +627,39 @@ function createContextMenu() {
         display: block;
     `;
     
+    // Edit Work Item menu item
+    const editItem = document.createElement('div');
+    editItem.className = 'context-menu-item';
+    editItem.style.cssText = `
+        padding: 10px 16px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        color: ${textColor};
+        transition: background-color 0.15s ease;
+        user-select: none;
+    `;
+    editItem.innerHTML = `
+        <span class="icon" style="width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; color: ${textColor};">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+            </svg>
+        </span>
+        <span class="text" style="flex: 1; font-size: 14px; color: ${textColor};">Edit Work Item</span>
+    `;
+    editItem.setAttribute('data-action', 'edit');
+    
+    editItem.addEventListener('mouseenter', () => {
+        editItem.style.backgroundColor = hoverBg;
+    });
+    editItem.addEventListener('mouseleave', () => {
+        editItem.style.backgroundColor = 'transparent';
+    });
+    
+    contextMenu.appendChild(editItem);
+    
+    // Schedule menu item
     const scheduleItem = document.createElement('div');
     scheduleItem.className = 'context-menu-item';
     scheduleItem.style.cssText = `
@@ -739,13 +772,21 @@ function handleContextMenuClick(e) {
     const action = menuItem.getAttribute('data-action');
     const workItemId = parseInt(contextMenu.getAttribute('data-workitem-id'), 10);
     
-    if (action === 'schedule' && workItemId > 0 && dotNetHelper) {
-        try {
+    if (!dotNetHelper || workItemId <= 0) {
+        hideContextMenu();
+        return;
+    }
+    
+    try {
+        if (action === 'edit') {
+            dotNetHelper.invokeMethodAsync('OpenEditWorkItemDialogFromJS', workItemId);
+        } else if (action === 'schedule') {
             dotNetHelper.invokeMethodAsync('OpenScheduleDialogFromJS', workItemId);
-        } catch (error) {
-            console.error('Error calling OpenScheduleDialogFromJS:', error);
         }
+    } catch (error) {
+        console.error(`Error calling ${action} dialog:`, error);
     }
     
     hideContextMenu();
 }
+

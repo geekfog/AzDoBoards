@@ -1,0 +1,283 @@
+@using AzDoBoards.Client.Models
+@using AzDoBoards.Client.Services
+@using AzDoBoards.Client
+@using AzDoBoards.Utility
+@using MudBlazor
+@inject IServiceProvider ServiceProvider
+@inject ISnackbar Snackbar
+@inject ILogger<WorkItemDialog> Logger
+
+<MudDialog>
+    <DialogContent>
+        @if (isLoading)
+        {
+            <MudStack Row AlignItems="AlignItems.Center" Class="my-4">
+                <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+                <MudText Typo="Typo.body2" Class="ml-2">Loading work item...</MudText>
+            </MudStack>
+        }
+        else if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <MudAlert Severity="Severity.Error" Class="my-4">
+                @errorMessage
+            </MudAlert>
+        }
+        else if (workItem != null)
+        {
+            <MudStack Spacing="3">
+                <!-- Work Item Header -->
+                <MudPaper Class="pa-3" Elevation="0" Style="background-color: var(--mud-palette-background-grey);">
+                    <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
+                        <MudIcon Icon="@WorkItemHelper.GetWorkItemTypeSvgIcon(workItem.WorkItemType)" Size="Size.Medium" />
+                        <MudStack Spacing="0">
+                            <MudText Typo="Typo.h6">@workItem.WorkItemType @workItem.Id</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">@workItem.WorkItemType in @ProjectName</MudText>
+                        </MudStack>
+                    </MudStack>
+                </MudPaper>
+
+                <MudDivider />
+
+                <!-- Editable Fields (simplified for now) -->
+                <MudTextField @bind-Value="editedTitle"
+                              Label="Title"
+                              Variant="Variant.Outlined"
+                              Required="true" />
+                              
+                <MudSelect T="string" @bind-Value="editedState"
+                           Label="State"
+                           Variant="Variant.Outlined"
+                           Disabled="!availableStates.Any()">
+                    @foreach (var state in availableStates)
+                    {
+                        <MudSelectItem T="string" Value="@state">@state</MudSelectItem>
+                    }
+                </MudSelect>
+                
+                <MudDatePicker Label="Target Date"
+                               @bind-Date="editedTargetDate"
+                               Variant="Variant.Outlined"
+                               Clearable="true" />
+
+                @if (hasChanges)
+                {
+                    <MudAlert Severity="Severity.Info" Dense="true">
+                        You have unsaved changes
+                    </MudAlert>
+                }
+            </MudStack>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" 
+                   Variant="Variant.Filled" 
+                   OnClick="SaveAsync" 
+                   Disabled="isLoading || isSaving || !hasChanges">
+            @if (isSaving)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                <span>Saving...</span>
+            }
+            else
+            {
+                <span>Save</span>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] public MudBlazor.IDialogReference? DialogReference { get; set; }
+    
+    [Parameter] public int WorkItemId { get; set; }
+    [Parameter] public string ProcessId { get; set; } = string.Empty;
+    [Parameter] public string ProjectId { get; set; } = string.Empty;
+    [Parameter] public string ProjectName { get; set; } = string.Empty;
+
+    private bool isLoading = true;
+    private bool isSaving = false;
+    private string errorMessage = string.Empty;
+    private WorkItem? workItem;
+    private List<string> availableStates = new();
+    
+    // Editable fields
+    private string editedTitle = string.Empty;
+    private string editedState = string.Empty;
+    private DateTime? editedTargetDate;
+    
+    // Original values for change detection
+    private string originalTitle = string.Empty;
+    private string originalState = string.Empty;
+    private DateTime? originalTargetDate;
+    
+    private bool hasChanges => 
+        editedTitle != originalTitle ||
+        editedState != originalState ||
+        editedTargetDate != originalTargetDate;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadWorkItemAsync();
+    }
+
+    private async Task LoadWorkItemAsync()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = string.Empty;
+            StateHasChanged();
+
+            var workItemService = ServiceProvider.GetRequiredService<WorkItemServices>();
+            
+            // Load the work item
+            var filter = new WorkItemFilter
+            {
+                ProjectId = ProjectId,
+                Top = 1
+            };
+            
+            var workItems = await workItemService.GetWorkItemsAsync(filter);
+            workItem = workItems.FirstOrDefault(wi => wi.Id == WorkItemId);
+
+            if (workItem == null)
+            {
+                errorMessage = $"Work item {WorkItemId} not found.";
+                return;
+            }
+
+            // Load available states for the work item type
+            if (!string.IsNullOrEmpty(ProcessId) && Guid.TryParse(ProcessId, out var processGuid))
+            {
+                var stateService = ServiceProvider.GetRequiredService<WorkItemStateServices>();
+                var stateGroups = await stateService.GetWorkItemStatesForProcessAsync(processGuid);
+                
+                availableStates = stateGroups
+                    .SelectMany(group => group.States)
+                    .Where(state => state.WorkItemTypes.Contains(workItem.WorkItemType, StringComparer.OrdinalIgnoreCase))
+                    .OrderBy(state => state.Order)
+                    .Select(state => state.Name)
+                    .ToList();
+            }
+
+            // Initialize edited values
+            originalTitle = editedTitle = workItem.Title;
+            originalState = editedState = workItem.State;
+            originalTargetDate = editedTargetDate = workItem.TargetDate;
+            
+            Logger.LogInformation("Loaded work item {WorkItemId} for editing", WorkItemId);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading work item {WorkItemId}", WorkItemId);
+            errorMessage = $"Error loading work item: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task SaveAsync()
+    {
+        if (workItem == null || !hasChanges)
+        {
+            DialogReference?.Close(DialogResult.Ok(false));
+            return;
+        }
+
+        try
+        {
+            isSaving = true;
+            StateHasChanged();
+
+            var workItemService = ServiceProvider.GetRequiredService<WorkItemServices>();
+            var patchDocument = new Microsoft.VisualStudio.Services.WebApi.Patch.Json.JsonPatchDocument();
+
+            // Build patch document for changed fields
+            if (editedTitle != originalTitle)
+            {
+                patchDocument.Add(new Microsoft.VisualStudio.Services.WebApi.Patch.Json.JsonPatchOperation
+                {
+                    Operation = Microsoft.VisualStudio.Services.WebApi.Patch.Operation.Add,
+                    Path = "/fields/System.Title",
+                    Value = editedTitle
+                });
+            }
+
+            if (editedState != originalState)
+            {
+                patchDocument.Add(new Microsoft.VisualStudio.Services.WebApi.Patch.Json.JsonPatchOperation
+                {
+                    Operation = Microsoft.VisualStudio.Services.WebApi.Patch.Operation.Add,
+                    Path = "/fields/System.State",
+                    Value = editedState
+                });
+            }
+
+            if (editedTargetDate != originalTargetDate)
+            {
+                if (editedTargetDate.HasValue)
+                {
+                    patchDocument.Add(new Microsoft.VisualStudio.Services.WebApi.Patch.Json.JsonPatchOperation
+                    {
+                        Operation = Microsoft.VisualStudio.Services.WebApi.Patch.Operation.Add,
+                        Path = "/fields/Microsoft.VSTS.Scheduling.TargetDate",
+                        Value = editedTargetDate.Value.ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
+                    });
+                }
+                else
+                {
+                    patchDocument.Add(new Microsoft.VisualStudio.Services.WebApi.Patch.Json.JsonPatchOperation
+                    {
+                        Operation = Microsoft.VisualStudio.Services.WebApi.Patch.Operation.Remove,
+                        Path = "/fields/Microsoft.VSTS.Scheduling.TargetDate"
+                    });
+                }
+            }
+
+            if (patchDocument.Count == 0)
+            {
+                Logger.LogInformation("No changes detected for work item {WorkItemId}", WorkItemId);
+                DialogReference?.Close(DialogResult.Ok(false));
+                return;
+            }
+
+            // Update the work item
+            var connection = await ServiceProvider.GetRequiredService<ConnectionFactory>().GetConnectionAsync();
+            var workItemClient = connection.GetClient<Microsoft.TeamFoundation.WorkItemTracking.WebApi.WorkItemTrackingHttpClient>();
+            var updatedWorkItem = await workItemClient.UpdateWorkItemAsync(patchDocument, WorkItemId);
+
+            if (updatedWorkItem != null)
+            {
+                Logger.LogInformation("Successfully updated work item {WorkItemId}", WorkItemId);
+                Snackbar.Add($"Work item {WorkItemId} updated successfully", Severity.Success);
+                DialogReference?.Close(DialogResult.Ok(true));
+            }
+            else
+            {
+                errorMessage = "Failed to update work item";
+                Logger.LogError("Failed to update work item {WorkItemId}", WorkItemId);
+                Snackbar.Add($"Failed to update work item {WorkItemId}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error saving work item {WorkItemId}", WorkItemId);
+            errorMessage = $"Error saving work item: {ex.Message}";
+            Snackbar.Add($"Error saving work item: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+
+    private void Cancel()
+    {
+        DialogReference?.Close(DialogResult.Cancel());
+    }
+}

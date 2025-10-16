@@ -3,6 +3,7 @@
 @using AzDoBoards.Client.Models
 @using AzDoBoards.Client.Services
 @using AzDoBoards.Ui.Services
+@using AzDoBoards.Ui.Components.Dialogs
 @using AzDoBoards.Utility
 @using AzDoBoards.Models.Roadmap
 @using MudBlazor
@@ -11,6 +12,7 @@
 @inject ILogger<Roadmap> Logger
 @inject IJSRuntime JSRuntime
 @inject IServiceProvider _serviceProvider
+@inject IDialogService DialogService
 @implements IAsyncDisposable
 
 <PageTitle>Roadmap</PageTitle>
@@ -401,6 +403,25 @@
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error opening schedule dialog from JS for work item {WorkItemId}", workItemId);
+        }
+    }
+
+    [JSInvokable]
+    public async Task OpenEditWorkItemDialogFromJS(int workItemId)
+    {
+        try
+        {
+            Logger.LogInformation("Opening edit work item dialog from context menu for work item {WorkItemId}", workItemId);
+            
+            // Use InvokeAsync to ensure we're on the UI thread
+            await InvokeAsync(async () =>
+            {
+                await OpenEditWorkItemDialog(workItemId);
+            });
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error opening edit work item dialog from JS for work item {WorkItemId}", workItemId);
         }
     }
 
@@ -904,6 +925,64 @@
         else
         {
             Logger.LogWarning("Work item {WorkItemId} not found in allWorkItems collection", workItemId);
+        }
+    }
+
+    private async Task OpenEditWorkItemDialog(int workItemId)
+    {
+        // Prevent opening dialog if a resize or drag operation just completed
+        if (wasResizeOrDragOperation && (DateTime.UtcNow - lastResizeOrDragTime).TotalMilliseconds < 500)
+        {
+            Logger.LogInformation("Ignoring click event - resize/drag operation just completed");
+            wasResizeOrDragOperation = false;
+            return;
+        }
+
+        Logger.LogInformation("OpenEditWorkItemDialog called for work item {WorkItemId}", workItemId);
+
+        try
+        {
+            // Get project name for display
+            var projectsClient = _serviceProvider.GetRequiredService<ProjectServices>();
+            var projectName = currentProjectId;
+            
+            if (Guid.TryParse(currentProjectId, out var projectGuid))
+            {
+                var projects = await projectsClient.GetProjectInfoAsync(Guid.Parse(currentProcessId));
+                var project = projects?.FirstOrDefault(p => p.Id == projectGuid);
+                projectName = project?.Name ?? currentProjectId;
+            }
+
+            var parameters = new DialogParameters
+            {
+                { "WorkItemId", workItemId },
+                { "ProcessId", currentProcessId },
+                { "ProjectId", currentProjectId },
+                { "ProjectName", projectName }
+            };
+
+            var options = new DialogOptions
+            {
+                MaxWidth = MaxWidth.Medium,
+                FullWidth = true,
+                CloseOnEscapeKey = true,
+                CloseButton = true
+            };
+
+            var dialog = await DialogService.ShowAsync<WorkItemDialog>("Edit Work Item", parameters, options);
+            var result = await dialog.Result;
+
+            if (!result.Canceled && result.Data is bool wasUpdated && wasUpdated)
+            {
+                // Refresh the roadmap data to show the updated work item
+                Logger.LogInformation("Work item {WorkItemId} was updated, refreshing roadmap", workItemId);
+                await RefreshDataAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error opening edit work item dialog for work item {WorkItemId}", workItemId);
+            Snackbar.Add($"Error opening edit dialog: {ex.Message}", Severity.Error);
         }
     }
 
