@@ -266,11 +266,11 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
-        {
-            // Wait a bit for the DOM to settle
-            await Task.Delay(100);
-        }
+        // if (firstRender)
+        // {
+        //     // Wait a bit for the DOM to settle
+        //     await Task.Delay(100);
+        // }
         
         if (!isLoading && !jsModuleInitialized && (swimlanes?.Any() == true || unscheduledItems?.Any() == true))
         {
@@ -639,7 +639,7 @@
         if (jsModuleInitialized)
         {
             jsModuleInitialized = false;
-            await Task.Delay(100); // Wait for DOM to update
+            //await Task.Delay(100); // Wait for DOM to update
             await InitializeJavaScriptModule();
         }
     }
