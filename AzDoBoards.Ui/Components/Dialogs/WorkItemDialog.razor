@@ -180,12 +180,21 @@
 
         originalValues.Clear();
         editedValues.Clear();
-
+        
         foreach (var field in workItemLayout.AllFields.Where(f => !f.IsReadOnly))
         {
             var value = GetFieldValueAsString(field.ReferenceName);
             originalValues[field.ReferenceName] = value;
             editedValues[field.ReferenceName] = value;
+        }
+        
+        // Log summary of dropdown fields
+        var dropdownFields = workItemLayout.AllFields.Where(f => !f.IsReadOnly && f.AllowedValues?.Any() == true).ToList();
+        if (dropdownFields.Any())
+        {
+            Logger.LogInformation("Loaded {Count} dropdown fields: {Fields}", 
+                dropdownFields.Count, 
+                string.Join(", ", dropdownFields.Select(f => f.Name)));
         }
     }
 
@@ -269,27 +278,35 @@
             return;
         }
 
+        // Check for dropdown fields FIRST (any field with allowed values should be a dropdown)
+        if (field.AllowedValues.Any())
+        {
+            // Dropdown for fields with allowed values
+            <MudSelect T="string" 
+                       @bind-Value="editedValues[field.ReferenceName]"
+                       Label="@field.Name"
+                       Variant="Variant.Outlined"
+                       Required="@field.IsRequired"
+                       HelperText="@field.HelpText"
+                       Clearable="!field.IsRequired">
+                @if (!field.IsRequired)
+                {
+                    <MudSelectItem T="string" Value="@string.Empty">(None)</MudSelectItem>
+                }
+                @foreach (var allowedValue in field.AllowedValues)
+                {
+                    <MudSelectItem T="string" Value="@allowedValue">@allowedValue</MudSelectItem>
+                }
+            </MudSelect>
+            return;
+        }
+
         // Determine field type and render appropriate control
         switch (field.FieldType.ToLowerInvariant())
         {
             case "string":
             case "plaintext":
-                if (field.AllowedValues.Any())
-                {
-                    // Dropdown for fields with allowed values
-                    <MudSelect T="string" 
-                               @bind-Value="editedValues[field.ReferenceName]"
-                               Label="@field.Name"
-                               Variant="Variant.Outlined"
-                               Required="@field.IsRequired"
-                               HelperText="@field.HelpText">
-                        @foreach (var allowedValue in field.AllowedValues)
-                        {
-                            <MudSelectItem T="string" Value="@allowedValue">@allowedValue</MudSelectItem>
-                        }
-                    </MudSelect>
-                }
-                else if (field.ReferenceName == "System.Tags")
+                if (field.ReferenceName == "System.Tags")
                 {
                     <MudTextField @bind-Value="editedValues[field.ReferenceName]"
                                   Label="@field.Name"
