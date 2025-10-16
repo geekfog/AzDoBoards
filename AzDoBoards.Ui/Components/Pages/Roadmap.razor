@@ -220,6 +220,8 @@
     // Drag and drop state
     private int? draggedWorkItemId;
     private DateTime? dropTargetDate;
+    private bool wasResizeOrDragOperation = false;
+    private DateTime lastResizeOrDragTime = DateTime.MinValue;
 
     // JavaScript interop
     private IJSObjectReference? jsModule;
@@ -391,6 +393,10 @@
             {
                 Logger.LogInformation("Successfully updated start date for work item {WorkItemId}", workItemId);
                 Snackbar.Add($"Work item {workItemId} start date updated to {newStartDate:M/d/yyyy}", Severity.Success);
+                
+                // Mark that a resize operation occurred
+                wasResizeOrDragOperation = true;
+                lastResizeOrDragTime = DateTime.UtcNow;
             }
             else
             {
@@ -471,6 +477,10 @@
                     ? $"Work item {workItemId} updated: {currentStartDate.Value:M/d/yyyy} - {newTargetDate:M/d/yyyy}"
                     : $"Work item {workItemId} target date updated to {newTargetDate:M/d/yyyy}";
                 Snackbar.Add(message, Severity.Success);
+                
+                // Mark that a resize operation occurred
+                wasResizeOrDragOperation = true;
+                lastResizeOrDragTime = DateTime.UtcNow;
             }
             else
             {
@@ -696,6 +706,10 @@
                     : $"Work item {draggedWorkItemId.Value} scheduled to {dropTargetDate.Value:M/d/yyyy}";
                 
                 Snackbar.Add(message, Severity.Success);
+                
+                // Mark that a drag operation occurred
+                wasResizeOrDragOperation = true;
+                lastResizeOrDragTime = DateTime.UtcNow;
             }
             else
             {
@@ -756,6 +770,10 @@
             if (success)
             {
                 Snackbar.Add($"Work item {draggedWorkItemId.Value} unscheduled successfully", Severity.Success);
+                
+                // Mark that a drag operation occurred
+                wasResizeOrDragOperation = true;
+                lastResizeOrDragTime = DateTime.UtcNow;
             }
             else
             {
@@ -783,6 +801,15 @@
 
     private async Task OpenScheduleDialog(int workItemId)
     {
+        // Prevent opening dialog if a resize or drag operation just completed
+        // (within 500ms to account for the time between mouseup and click events)
+        if (wasResizeOrDragOperation && (DateTime.UtcNow - lastResizeOrDragTime).TotalMilliseconds < 500)
+        {
+            Logger.LogInformation("Ignoring click event - resize/drag operation just completed");
+            wasResizeOrDragOperation = false;
+            return;
+        }
+        
         selectedWorkItemId = workItemId;
         selectedWorkItem = allWorkItems?.FirstOrDefault(wi => wi.Id == workItemId);
 
@@ -1246,7 +1273,7 @@
                         var itemClass = draggedWorkItemId == item.WorkItemId ? "timeline-item dragging" : "timeline-item";
                         var dateRange = GetDateRangeDisplay(item);
                         
-                        <div class="@itemClass" style="@itemStyle" title="@($"{item.Title} - {dateRange}")" draggable="true" @ondragstart="@(() => OnDragStart(item.WorkItemId))" @ondragend="@OnDragEnd" @onclick="@(async () => await OpenScheduleDialog(item.WorkItemId))">
+                        <div class="@itemClass" style="@itemStyle" title="@($"{item.Title} - {dateRange}")" draggable="true" @ondragstart="@(() => OnDragStart(item.WorkItemId))" @ondragend="@OnDragEnd" @ondblclick="@(async () => await OpenScheduleDialog(item.WorkItemId))">
                             <MudStack Spacing="0" Style="padding: 2px 4px;">
                                 <MudText Typo="Typo.caption" Style="color: white; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500;">
                                     @item.WorkItemId - @item.Title
