@@ -1,6 +1,7 @@
 @page "/roadmap"
 @using Microsoft.AspNetCore.Components.Authorization
 @using AzDoBoards.Client.Models
+@using AzDoBoards.Client.Services
 @using AzDoBoards.Ui.Services
 @using AzDoBoards.Utility
 @using AzDoBoards.Models.Roadmap
@@ -9,6 +10,7 @@
 @inject ISnackbar Snackbar
 @inject ILogger<Roadmap> Logger
 @inject IJSRuntime JSRuntime
+@inject IServiceProvider _serviceProvider
 @implements IAsyncDisposable
 
 <PageTitle>Roadmap</PageTitle>
@@ -81,26 +83,30 @@
                     {
                         @foreach (var item in unscheduledItems)
                         {
-                            <div class="unscheduled-work-item pa-2 mb-2" style="@GetUnscheduledItemStyle(item)" draggable="true" @ondragstart="@(() => OnDragStart(item.WorkItemId))" @ondragend="@OnDragEnd">
+                            var bgColor = GetStateColor(item.State);
+                            var textColor = GetContrastTextColor(bgColor);
+                            var itemStyle = GetUnscheduledItemStyle(item);
+                            
+                            <div class="unscheduled-work-item pa-2 mb-2" style="@itemStyle" draggable="true" @ondragstart="@(() => OnDragStart(item.WorkItemId))" @ondragend="@OnDragEnd">
                                 <MudStack Spacing="1">
                                     <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
                                         <MudStack Row AlignItems="AlignItems.Center" Spacing="1">
-                                            <MudIcon Icon="@WorkItemHelper.GetWorkItemTypeSvgIcon(item.WorkItemType)" Size="Size.Small" />
-                                            <MudText Typo="Typo.caption" Style="font-weight: 600; color: white;">@item.WorkItemId</MudText>
+                                            <MudIcon Icon="@WorkItemHelper.GetWorkItemTypeSvgIcon(item.WorkItemType)" Size="Size.Small" Style="@($"color: {textColor};")" />
+                                            <MudText Typo="Typo.caption" Style="@($"font-weight: 600; color: {textColor};")">@item.WorkItemId</MudText>
                                         </MudStack>
-                                        <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" OnClick="@(async () => await OpenScheduleDialog(item.WorkItemId))" Style="color: white;" />
+                                        <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" OnClick="@(async () => await OpenScheduleDialog(item.WorkItemId))" Style="@($"color: {textColor};")" />
                                     </MudStack>
-                                    <MudText Typo="Typo.body2" Style="font-weight: 500; color: white;">@item.Title</MudText>
+                                    <MudText Typo="Typo.body2" Style="@($"font-weight: 500; color: {textColor};")">@item.Title</MudText>
                                     @if (!string.IsNullOrEmpty(item.ParentTitle))
                                     {
-                                        <MudText Typo="Typo.caption" Style="color: rgba(255,255,255,0.8);">
+                                        <MudText Typo="Typo.caption" Style="@($"color: {textColor}; opacity: 0.8;")">
                                             Parent: @item.ParentTitle
                                         </MudText>
                                     }
                                     @if (!string.IsNullOrEmpty(item.AssignedTo))
                                     {
-                                        <MudText Typo="Typo.caption" Style="color: rgba(255,255,255,0.8);">
-                                            <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" />
+                                        <MudText Typo="Typo.caption" Style="@($"color: {textColor}; opacity: 0.8;")">
+                                            <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" Style="@($"color: {textColor};")" />
                                             @item.AssignedTo
                                         </MudText>
                                     }
@@ -233,6 +239,9 @@
     private List<WorkItem>? allWorkItems;
     private string currentProcessId = string.Empty;
     private string currentProjectId = string.Empty;
+    
+    // State category colors mapping
+    private Dictionary<string, string> stateCategoryColors = new();
 
     // Drag and drop state
     private int? draggedWorkItemId;
@@ -570,6 +579,9 @@
             }
 
             allWorkItems = await RoadmapService.LoadRoadmapWorkItemsAsync(currentProjectId, currentProcessId);
+
+            // Load state category colors
+            await LoadStateCategoryColorsAsync();
 
             if (allWorkItems?.Count > 0)
             {
@@ -1141,6 +1153,118 @@
         }
     }
 
+    private async Task LoadStateCategoryColorsAsync()
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(currentProcessId) || !Guid.TryParse(currentProcessId, out var processGuid))
+            {
+                // Use default colors if no process ID
+                stateCategoryColors = GetDefaultStateCategoryColors();
+                return;
+            }
+
+            var stateService = _serviceProvider.GetRequiredService<WorkItemStateServices>();
+            var stateGroups = await stateService.GetWorkItemStatesForProcessAsync(processGuid);
+            
+            // Build a mapping of state name -> category color for all states
+            stateCategoryColors = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            
+            foreach (var group in stateGroups)
+            {
+                var categoryColor = GetCategoryColorForCategory(group.Category);
+                
+                foreach (var state in group.States)
+                {
+                    // Map each state name to its category color
+                    if (!stateCategoryColors.ContainsKey(state.Name))
+                    {
+                        stateCategoryColors[state.Name] = categoryColor;
+                    }
+                }
+            }
+            
+            Logger.LogInformation("Loaded {StateCount} state category color mappings", stateCategoryColors.Count);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading state category colors, using defaults");
+            stateCategoryColors = GetDefaultStateCategoryColors();
+        }
+    }
+
+    private Dictionary<string, string> GetDefaultStateCategoryColors()
+    {
+        return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            // Proposed states
+            { "New", "#FF7B00" },
+            { "Proposed", "#FF7B00" },
+            { "To Do", "#FF7B00" },
+            { "Open", "#FF7B00" },
+            
+            // InProgress states
+            { "Active", "#339947" },
+            { "In Progress", "#339947" },
+            { "Committed", "#339947" },
+            { "Doing", "#339947" },
+            { "Approved", "#339947" },
+            
+            // Completed states
+            { "Done", "#773B93" },
+            { "Closed", "#773B93" },
+            { "Resolved", "#773B93" },
+            { "Completed", "#773B93" },
+            
+            // Removed states
+            { "Removed", "#E60017" },
+            { "Rejected", "#E60017" },
+            { "Abandoned", "#E60017" }
+        };
+    }
+
+    private string GetCategoryColorForCategory(string category)
+    {
+        return category switch
+        {
+            "Proposed" => "#FF7B00",
+            "InProgress" => "#339947",
+            "Completed" => "#773B93",
+            "Removed" => "#E60017",
+            _ => "#1976d2"
+        };
+    }
+
+    private string GetStateColor(string? state)
+    {
+        if (string.IsNullOrEmpty(state))
+            return "#6C757D"; // Default gray
+            
+        return stateCategoryColors.TryGetValue(state, out var color) ? color : "#6C757D";
+    }
+
+    private string GetContrastTextColor(string hexColor)
+    {
+        // Remove # if present
+        hexColor = hexColor.TrimStart('#');
+        
+        // Convert hex to RGB
+        if (hexColor.Length == 6)
+        {
+            var r = Convert.ToInt32(hexColor.Substring(0, 2), 16);
+            var g = Convert.ToInt32(hexColor.Substring(2, 2), 16);
+            var b = Convert.ToInt32(hexColor.Substring(4, 2), 16);
+            
+            // Calculate relative luminance using W3C formula
+            var luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+            
+            // Return white for dark backgrounds, black for light backgrounds
+            return luminance > 0.5 ? "#000000" : "#FFFFFF";
+        }
+        
+        return "#FFFFFF"; // Default to white if hex parsing fails
+    }
+
     private int GetPixelsPerDay() => config.TimeUnit switch
     {
         TimeUnit.Week => 10,
@@ -1150,7 +1274,14 @@
     };
 
     private string GetColorWithFallback(string? color) => !string.IsNullOrEmpty(color) ? color : "#6C757D";
-    private string GetUnscheduledItemStyle(UnscheduledWorkItem item) => $"background-color: {GetColorWithFallback(item.Color)}; border-radius: 4px; cursor: move;";
+    
+    private string GetUnscheduledItemStyle(UnscheduledWorkItem item)
+    {
+        var bgColor = GetStateColor(item.State);
+        var textColor = GetContrastTextColor(bgColor);
+        return $"background-color: {bgColor}; color: {textColor}; border-radius: 4px; cursor: move;";
+    }
+    
     private string GetPeriodStyle(TimelinePeriod period) => $"width: {period.Width}px; min-width: {period.Width}px;";
     private bool HasChildren(SwimLane swimlane) => swimlane.Children?.Any() == true;
 
@@ -1289,16 +1420,18 @@
                         var position = CalculateItemPosition(item);
                         if (position.Width == 0) continue;
                         
-                        var itemStyle = $"left: {position.Left}px; width: {position.Width}px; background-color: {item.Color};";
+                        var bgColor = GetStateColor(item.State);
+                        var textColor = GetContrastTextColor(bgColor);
+                        var itemStyle = $"left: {position.Left}px; width: {position.Width}px; background-color: {bgColor};";
                         var itemClass = draggedWorkItemId == item.WorkItemId ? "timeline-item dragging" : "timeline-item";
                         var dateRange = GetDateRangeDisplay(item);
                         
                         <div class="@itemClass" style="@itemStyle" title="@($"{item.Title} - {dateRange}")" draggable="true" @ondragstart="@(() => OnDragStart(item.WorkItemId))" @ondragend="@OnDragEnd" @ondblclick="@(async () => await OpenScheduleDialog(item.WorkItemId))">
                             <MudStack Spacing="0" Style="padding: 2px 4px;">
-                                <MudText Typo="Typo.caption" Style="color: white; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500;">
+                                <MudText Typo="Typo.caption" Style="@($"color: {textColor}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500;")">
                                     @item.WorkItemId - @item.Title
                                 </MudText>
-                                <MudText Typo="Typo.caption" Style="color: rgba(255,255,255,0.9); font-size: 0.65rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                <MudText Typo="Typo.caption" Style="@($"color: {textColor}; opacity: 0.9; font-size: 0.65rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;")">
                                     @dateRange
                                 </MudText>
                             </MudStack>
