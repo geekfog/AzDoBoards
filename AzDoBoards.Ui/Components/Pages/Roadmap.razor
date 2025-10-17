@@ -963,10 +963,7 @@
 
             var options = new DialogOptions
             {
-                MaxWidth = MaxWidth.Medium,
-                FullWidth = true,
-                CloseOnEscapeKey = true,
-                CloseButton = true
+                CloseButton = true // TODO: Once cancel button works, set this to false
             };
 
             var dialog = await DialogService.ShowAsync<WorkItemDialog>("Edit Work Item", parameters, options);

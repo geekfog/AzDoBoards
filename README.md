@@ -11,6 +11,7 @@ This supports a custom-defined work item hierarchy based on work item types (e.g
 ## Future Action Items
 
 1. Add support for certificates in place of Client Secret for the App Registration and Azure DevOps downstream API support.
+1. Is there a way for Transitive NuGet Packages to get updated if a new version is a Top-Level in a dependent project?
 
 # Definitions
 

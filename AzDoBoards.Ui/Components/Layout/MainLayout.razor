@@ -3,7 +3,14 @@
 
 <MudThemeProvider @ref="_mudThemeProvider" @bind-IsDarkMode="_isDarkMode" />
 <MudPopoverProvider />
-<MudDialogProvider />
+<MudDialogProvider 
+    NoHeader="false"
+    Position="DialogPosition.Center"
+    MaxWidth="MaxWidth.Medium"
+    FullWidth="true"
+    CloseOnEscapeKey="true"
+    BackdropClick="false"
+    CloseButton="true" />
 <MudSnackbarProvider />
 
 <div class="page">

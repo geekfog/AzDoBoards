@@ -8,9 +8,9 @@
 
   <ItemGroup>
 	<PackageReference Include="Azure.Data.Tables" Version="12.11.0" />
-	<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.9" />
-	<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.9" />
-	<PackageReference Include="Microsoft.Extensions.Options" Version="9.0.9" />
+	<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.10" />
+	<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.10" />
+	<PackageReference Include="Microsoft.Extensions.Options" Version="9.0.10" />
   </ItemGroup>
 
   <ItemGroup>

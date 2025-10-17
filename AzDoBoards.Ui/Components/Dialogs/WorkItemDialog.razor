@@ -62,11 +62,8 @@
         }
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Cancel">Cancel</MudButton>
-        <MudButton Color="Color.Primary" 
-                   Variant="Variant.Filled" 
-                   OnClick="SaveAsync" 
-                   Disabled="isLoading || isSaving || !hasChanges || HasValidationErrors()">
+        <MudButton OnClick="Cancel" Disabled="isLoading || isSaving">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="SaveAsync" Disabled="isLoading || isSaving || !hasChanges || HasValidationErrors()">
             @if (isSaving)
             {
                 <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
@@ -81,8 +78,8 @@
 </MudDialog>
 
 @code {
-    [CascadingParameter] public MudBlazor.IDialogReference? DialogReference { get; set; }
-    
+    [CascadingParameter] private MudBlazor.IDialogReference MudDialog { get; set; }
+
     [Parameter] public int WorkItemId { get; set; }
     [Parameter] public string ProcessId { get; set; } = string.Empty;
     [Parameter] public string ProjectId { get; set; } = string.Empty;
@@ -93,11 +90,11 @@
     private string errorMessage = string.Empty;
     private WorkItem? workItem;
     private WorkItemTypeLayout? workItemLayout;
-    
+
     // Dynamic field values storage
     private Dictionary<string, string> editedValues = new();
     private Dictionary<string, string> originalValues = new();
-    
+
     private bool hasChanges => !editedValues.SequenceEqual(originalValues);
 
     // Core fields that should be shown even if read-only
@@ -121,6 +118,14 @@
     protected override async Task OnInitializedAsync()
     {
         await LoadWorkItemAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && MudDialog != null)
+        {      
+            Logger.LogInformation(MudDialog.Id.ToString());
+        }
     }
 
     private async Task LoadWorkItemAsync()
@@ -377,7 +382,7 @@
     {
         if (workItem == null || workItemLayout == null || !hasChanges)
         {
-            DialogReference?.Close(DialogResult.Ok(false));
+            MudDialog.Close(DialogResult.Ok(false));
             return;
         }
 
@@ -451,7 +456,7 @@
             if (patchDocument.Count == 0)
             {
                 Logger.LogInformation("No changes detected for work item {WorkItemId}", WorkItemId);
-                DialogReference?.Close(DialogResult.Ok(false));
+                MudDialog.Close(DialogResult.Ok(false));
                 return;
             }
 
@@ -467,7 +472,7 @@
             {
                 Logger.LogInformation("Successfully updated work item {WorkItemId}", WorkItemId);
                 Snackbar.Add($"Work item {WorkItemId} updated successfully ({patchDocument.Count} fields changed)", Severity.Success);
-                DialogReference?.Close(DialogResult.Ok(true));
+                MudDialog.Close(DialogResult.Ok(true));
             }
             else
             {
@@ -491,7 +496,7 @@
 
     private void Cancel()
     {
-        DialogReference?.Close(DialogResult.Cancel());
+        MudDialog.Close(DialogResult.Cancel());
     }
 }
 
