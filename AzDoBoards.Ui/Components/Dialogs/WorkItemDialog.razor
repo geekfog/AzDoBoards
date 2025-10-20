@@ -198,22 +198,11 @@
     private string GetFieldValueAsString(string fieldReferenceName)
     {
         if (workItem == null) return string.Empty;
-
-        // Handle special core fields
-        if (fieldReferenceName == "System.Title")
-            return workItem.Title;
-
-        if (fieldReferenceName == "System.State")
-            return workItem.State;
-
-        if (fieldReferenceName == "System.AssignedTo")
-            return workItem.AssignedToDisplayName;
-
-        if (fieldReferenceName == "Microsoft.VSTS.Scheduling.TargetDate" && workItem.TargetDate.HasValue)
-            return workItem.TargetDate.Value.ToString("yyyy-MM-dd");
-
-        if (fieldReferenceName == "System.Tags")
-            return string.Join("; ", workItem.Tags);
+        if (fieldReferenceName == "System.Title") return workItem.Title;
+        if (fieldReferenceName == "System.State") return workItem.State;
+        if (fieldReferenceName == "System.AssignedTo") return workItem.AssignedToDisplayName;
+        if (fieldReferenceName == "Microsoft.VSTS.Scheduling.TargetDate" && workItem.TargetDate.HasValue) return workItem.TargetDate.Value.ToString("yyyy-MM-dd");
+        if (fieldReferenceName == "System.Tags") return string.Join("; ", workItem.Tags);
 
         // Try to get from Fields dictionary
         if (workItem.Fields.TryGetValue(fieldReferenceName, out var value))
@@ -235,11 +224,7 @@
         return ImportantReadOnlyFields.Contains(field.ReferenceName);
     }
 
-    private bool IsFullWidthField(WorkItemFieldDefinition field)
-    {
-        return FullWidthFields.Contains(field.ReferenceName) || 
-               field.FieldType.Equals("Html", StringComparison.OrdinalIgnoreCase);
-    }
+    private bool IsFullWidthField(WorkItemFieldDefinition field) => FullWidthFields.Contains(field.ReferenceName) || field.FieldType.Equals("Html", StringComparison.OrdinalIgnoreCase);
 
     private bool HasValidationErrors()
     {
@@ -259,9 +244,9 @@
     private RenderFragment RenderField(WorkItemFieldDefinition field) => __builder =>
     {
         if (!editedValues.ContainsKey(field.ReferenceName))
-        {
             editedValues[field.ReferenceName] = string.Empty;
-        }
+
+		var helperText = field.Description ?? field.HelpText;
 
         // Read-only fields
         if (field.IsReadOnly)
@@ -271,7 +256,7 @@
                           Variant="Variant.Outlined"
                           ReadOnly="true"
                           Disabled="true"
-                          HelperText="@(field.HelpText ?? "Read-only field")" />
+                          HelperText="@helperText" />
             return;
         }
 
@@ -288,7 +273,7 @@
                                Label="@field.Name"
                                Variant="Variant.Outlined"
                                Required="@field.IsRequired"
-                               HelperText="@field.HelpText">
+                               HelperText="@helperText">
                         @foreach (var allowedValue in field.AllowedValues)
                         {
                             <MudSelectItem T="string" Value="@allowedValue">@allowedValue</MudSelectItem>
@@ -301,7 +286,7 @@
                                   Label="@field.Name"
                                   Variant="Variant.Outlined"
                                   Required="@field.IsRequired"
-                                  HelperText="@(field.HelpText ?? "Separate tags with semicolons")" />
+                                  HelperText="@(@helperText ?? "Separate tags with semicolons")" />
                 }
                 else
                 {
@@ -309,7 +294,7 @@
                                   Label="@field.Name"
                                   Variant="Variant.Outlined"
                                   Required="@field.IsRequired"
-                                  HelperText="@field.HelpText" />
+                                  HelperText="@@helperText" />
                 }
                 break;
 
@@ -317,7 +302,7 @@
                 <HtmlEditor @bind-Value="editedValues[field.ReferenceName]"
                             Label="@field.Name"
                             Required="@field.IsRequired"
-                            HelperText="@(field.HelpText ?? "HTML content")"
+                            HelperText="@helperText"
                             Height="400" />
                 break;
 
@@ -334,7 +319,7 @@
                                Variant="Variant.Outlined"
                                Clearable="!field.IsRequired"
                                Required="@field.IsRequired"
-                               HelperText="@field.HelpText" />
+                               HelperText="@helperText" />
                 break;
 
             case "integer":
@@ -342,7 +327,7 @@
                                  Label="@field.Name"
                                  Variant="Variant.Outlined"
                                  Required="@field.IsRequired"
-                                 HelperText="@field.HelpText" />
+                                 HelperText="@helperText" />
                 break;
 
             case "double":
@@ -350,7 +335,7 @@
                                  Label="@field.Name"
                                  Variant="Variant.Outlined"
                                  Required="@field.IsRequired"
-                                 HelperText="@field.HelpText" />
+                                 HelperText="@helperText" />
                 break;
 
             case "boolean":
@@ -362,7 +347,7 @@
                 </MudSwitch>
                 @if (!string.IsNullOrEmpty(field.HelpText))
                 {
-                    <MudText Typo="Typo.caption" Class="ml-2">@field.HelpText</MudText>
+                    <MudText Typo="Typo.caption" Class="ml-2">@helperText</MudText>
                 }
                 break;
 
@@ -373,7 +358,7 @@
                               Label="@field.Name"
                               Variant="Variant.Outlined"
                               Required="@field.IsRequired"
-                              HelperText="@(field.HelpText ?? field.FieldType)" />
+                              HelperText="@(helperText ?? field.FieldType)" />
                 break;
         }
     };
@@ -423,24 +408,15 @@
                             break;
 
                         case "integer":
-                            if (!string.IsNullOrEmpty(newValue) && int.TryParse(newValue, out var intValue))
-                            {
-                                patchValue = intValue;
-                            }
+                            if (!string.IsNullOrEmpty(newValue) && int.TryParse(newValue, out var intValue)) patchValue = intValue;
                             break;
 
                         case "double":
-                            if (!string.IsNullOrEmpty(newValue) && double.TryParse(newValue, out var doubleValue))
-                            {
-                                patchValue = doubleValue;
-                            }
+                            if (!string.IsNullOrEmpty(newValue) && double.TryParse(newValue, out var doubleValue)) patchValue = doubleValue;
                             break;
 
                         case "boolean":
-                            if (bool.TryParse(newValue, out var boolValue))
-                            {
-                                patchValue = boolValue;
-                            }
+                            if (bool.TryParse(newValue, out var boolValue)) patchValue = boolValue;
                             break;
                     }
 
@@ -460,8 +436,7 @@
                 return;
             }
 
-            Logger.LogInformation("Updating work item {WorkItemId} with {ChangeCount} field changes", 
-                WorkItemId, patchDocument.Count);
+            Logger.LogInformation("Updating work item {WorkItemId} with {ChangeCount} field changes", WorkItemId, patchDocument.Count);
 
             // Update the work item
             var connection = await ServiceProvider.GetRequiredService<ConnectionFactory>().GetConnectionAsync();
