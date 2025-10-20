@@ -7,6 +7,7 @@
 @inject IServiceProvider ServiceProvider
 @inject ISnackbar Snackbar
 @inject ILogger<WorkItemDialog> Logger
+@inject IDialogService DialogService
 
 <MudDialog>
     <DialogContent>
@@ -79,12 +80,12 @@
 </MudDialog>
 
 @code {
-    [CascadingParameter] private MudBlazor.IDialogReference MudDialog { get; set; }
+[CascadingParameter] MudBlazor.IMudDialogInstance MudDialog { get; set; }
 
-    [Parameter] public int WorkItemId { get; set; }
-    [Parameter] public string ProcessId { get; set; } = string.Empty;
-    [Parameter] public string ProjectId { get; set; } = string.Empty;
-    [Parameter] public string ProjectName { get; set; } = string.Empty;
+[Parameter] public int WorkItemId { get; set; }
+[Parameter] public string ProcessId { get; set; } = string.Empty;
+[Parameter] public string ProjectId { get; set; } = string.Empty;
+[Parameter] public string ProjectName { get; set; } = string.Empty;
 
     private bool isLoading = true;
     private bool isSaving = false;
@@ -119,14 +120,6 @@
     protected override async Task OnInitializedAsync()
     {
         await LoadWorkItemAsync();
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender && MudDialog != null)
-        {      
-            Logger.LogInformation(MudDialog.Id.ToString());
-        }
     }
 
     private async Task LoadWorkItemAsync()
