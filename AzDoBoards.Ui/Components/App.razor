@@ -8,6 +8,7 @@
     <ResourcePreloader />
     <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="@Assets["_content/MudBlazor/MudBlazor.min.css"]" />
+    <link id="radzen-theme" rel="stylesheet" href="@Assets["_content/Radzen.Blazor/css/material-base.css"]" />
     <link rel="stylesheet" href="@Assets["lib/bootstrap/dist/css/bootstrap.min.css"]" />
     <link rel="stylesheet" href="@Assets["app.css"]" />
     <link rel="stylesheet" href="@Assets["AzDoBoards.Ui.styles.css"]" />
@@ -26,7 +27,39 @@
     <Routes @rendermode="InteractiveServer" />
     <ReconnectModal />
     <script src="@Assets["_content/MudBlazor/MudBlazor.min.js"]"></script>
+    <script src="@Assets["_content/Radzen.Blazor/Radzen.Blazor.js"]"></script>
     <script src="@Assets["_framework/blazor.web.js"]"></script>
+    <script>
+        // Sync Radzen theme with MudBlazor dark mode
+        (function() {
+            function updateRadzenTheme() {
+                var isDark = document.documentElement.classList.contains('mud-theme-dark');
+                var link = document.getElementById('radzen-theme');
+                if (link) {
+                    var newTheme = isDark 
+                        ? '_content/Radzen.Blazor/css/material-dark-base.css'
+                        : '_content/Radzen.Blazor/css/material-base.css';
+                    if (link.href.indexOf(newTheme) === -1) {
+                        link.href = newTheme;
+                    }
+                }
+            }
+            
+            // Initial theme set
+            updateRadzenTheme();
+            
+            // Watch for theme changes
+            var observer = new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
+                    if (mutation.attributeName === 'class') {
+                        updateRadzenTheme();
+                    }
+                });
+            });
+            
+            observer.observe(document.documentElement, { attributes: true });
+        })();
+    </script>
 </body>
 
 </html>

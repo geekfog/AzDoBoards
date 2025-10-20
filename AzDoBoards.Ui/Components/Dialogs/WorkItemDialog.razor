@@ -2,6 +2,7 @@
 @using AzDoBoards.Client.Services
 @using AzDoBoards.Client
 @using AzDoBoards.Utility
+@using AzDoBoards.Ui.Components.Controls
 @using MudBlazor
 @inject IServiceProvider ServiceProvider
 @inject ISnackbar Snackbar
@@ -313,12 +314,11 @@
                 break;
 
             case "html":
-                <MudTextField @bind-Value="editedValues[field.ReferenceName]"
-                              Label="@field.Name"
-                              Variant="Variant.Outlined"
-                              Lines="5"
-                              Required="@field.IsRequired"
-                              HelperText="@(field.HelpText ?? "HTML content")" />
+                <HtmlEditor @bind-Value="editedValues[field.ReferenceName]"
+                            Label="@field.Name"
+                            Required="@field.IsRequired"
+                            HelperText="@(field.HelpText ?? "HTML content")"
+                            Height="400" />
                 break;
 
             case "datetime":

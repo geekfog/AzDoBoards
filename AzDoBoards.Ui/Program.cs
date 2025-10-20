@@ -8,6 +8,7 @@ using Azure.Identity;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.Identity.Web;
 using MudBlazor.Services;
+using Radzen;
 using Serilog;
 using StackExchange.Redis;
 
@@ -56,6 +57,9 @@ public class Program
 
         // Add Mudblazor
         builder.Services.AddMudServices();
+
+        // Add Radzen Services
+        builder.Services.AddRadzenComponents();
 
         // Add Redis Cache
         var redisConnectionString = builder.Configuration[Utility.Constants.Redis_ConfigConnectionString] ?? Utility.Constants.Redis_DefaultConnectionString;

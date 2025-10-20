@@ -1,0 +1,97 @@
+@using Radzen
+@using Radzen.Blazor
+
+<div class="html-editor-wrapper">
+    <MudText Typo="Typo.body2" Class="mb-2" Style="@(string.IsNullOrEmpty(Label) ? "display: none;" : "")">
+        @Label
+        @if (Required)
+        {
+            <span style="color: var(--mud-palette-error);">*</span>
+        }
+    </MudText>
+    
+    <RadzenHtmlEditor @bind-Value="@CurrentValue"
+                      Style="@EditorStyle"
+                      UploadUrl="upload/image"
+                      Change="@OnValueChanged">
+        <RadzenHtmlEditorUndo />
+        <RadzenHtmlEditorRedo />
+        <RadzenHtmlEditorSeparator />
+        <RadzenHtmlEditorBold />
+        <RadzenHtmlEditorItalic />
+        <RadzenHtmlEditorUnderline />
+        <RadzenHtmlEditorStrikeThrough />
+        <RadzenHtmlEditorSeparator />
+        <RadzenHtmlEditorColor />
+        <RadzenHtmlEditorBackground />
+        <RadzenHtmlEditorRemoveFormat />
+        <RadzenHtmlEditorSeparator />
+        <RadzenHtmlEditorAlignLeft />
+        <RadzenHtmlEditorAlignCenter />
+        <RadzenHtmlEditorAlignRight />
+        <RadzenHtmlEditorJustify />
+        <RadzenHtmlEditorSeparator />
+        <RadzenHtmlEditorIndent />
+        <RadzenHtmlEditorOutdent />
+        <RadzenHtmlEditorSeparator />
+        <RadzenHtmlEditorUnorderedList />
+        <RadzenHtmlEditorOrderedList />
+        <RadzenHtmlEditorSeparator />
+        <RadzenHtmlEditorLink />
+        <RadzenHtmlEditorUnlink />
+        <RadzenHtmlEditorSeparator />
+        <RadzenHtmlEditorSubscript />
+        <RadzenHtmlEditorSuperscript />
+        <RadzenHtmlEditorSeparator />
+        <RadzenHtmlEditorFontName />
+        <RadzenHtmlEditorFontSize />
+        <RadzenHtmlEditorFormatBlock />
+    </RadzenHtmlEditor>
+    
+    @if (!string.IsNullOrEmpty(HelperText))
+    {
+        <MudText Typo="Typo.caption" Class="mt-1" Style="opacity: 0.7;">
+            @HelperText
+        </MudText>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public string? Value { get; set; }
+
+    [Parameter]
+    public EventCallback<string?> ValueChanged { get; set; }
+
+    [Parameter]
+    public string? Label { get; set; }
+
+    [Parameter]
+    public string? HelperText { get; set; }
+
+    [Parameter]
+    public bool Required { get; set; }
+
+    [Parameter]
+    public int Height { get; set; } = 300;
+
+    private string? CurrentValue
+    {
+        get => Value;
+        set
+        {
+            if (Value != value)
+            {
+                Value = value;
+                ValueChanged.InvokeAsync(value);
+            }
+        }
+    }
+
+    private string EditorStyle => $"height: {Height}px; border: 1px solid rgba(0, 0, 0, 0.12); border-radius: 4px;";
+
+    private void OnValueChanged()
+    {
+        ValueChanged.InvokeAsync(CurrentValue);
+    }
+}
