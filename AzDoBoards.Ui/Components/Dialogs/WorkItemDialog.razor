@@ -240,22 +240,10 @@
 
 		var helperText = field.Description ?? field.HelpText;
 
-        // Debug: Log fields with AllowedValues
-        if (field.AllowedValues.Any())
-        {
-            Logger.LogInformation("Field {FieldName} ({FieldType}) has {Count} allowed values: {Values}", 
-                field.Name, field.FieldType, field.AllowedValues.Count, string.Join(", ", field.AllowedValues));
-        }
-
         // Read-only fields
         if (field.IsReadOnly)
         {
-            <MudTextField Value="@GetFieldValueAsString(field.ReferenceName)"
-                          Label="@field.Name"
-                          Variant="Variant.Outlined"
-                          ReadOnly="true"
-                          Disabled="true"
-                          HelperText="@helperText" />
+            <MudTextField Value="@GetFieldValueAsString(field.ReferenceName)" Label="@field.Name" Variant="Variant.Outlined" ReadOnly="true" Disabled="true" HelperText="@helperText" />
             return;
         }
 
@@ -267,12 +255,7 @@
                 if (field.AllowedValues.Any())
                 {
                     // Dropdown for fields with allowed values
-                    <MudSelect T="string" 
-                               @bind-Value="editedValues[field.ReferenceName]"
-                               Label="@field.Name"
-                               Variant="Variant.Outlined"
-                               Required="@field.IsRequired"
-                               HelperText="@helperText">
+                    <MudSelect T="string" @bind-Value="editedValues[field.ReferenceName]" Label="@field.Name" Variant="Variant.Outlined" Required="@field.IsRequired" HelperText="@helperText">
                         @foreach (var allowedValue in field.AllowedValues)
                         {
                             <MudSelectItem T="string" Value="@allowedValue">@allowedValue</MudSelectItem>
@@ -281,28 +264,16 @@
                 }
                 else if (field.ReferenceName == "System.Tags")
                 {
-                    <MudTextField @bind-Value="editedValues[field.ReferenceName]"
-                                  Label="@field.Name"
-                                  Variant="Variant.Outlined"
-                                  Required="@field.IsRequired"
-                                  HelperText="@(@helperText ?? "Separate tags with semicolons")" />
+                    <MudTextField @bind-Value="editedValues[field.ReferenceName]" Label="@field.Name" Variant="Variant.Outlined" Required="@field.IsRequired" HelperText="@(@helperText ?? "Separate tags with semicolons")" />
                 }
                 else
                 {
-                    <MudTextField @bind-Value="editedValues[field.ReferenceName]"
-                                  Label="@field.Name"
-                                  Variant="Variant.Outlined"
-                                  Required="@field.IsRequired"
-                                  HelperText="@helperText" />
+                    <MudTextField @bind-Value="editedValues[field.ReferenceName]" Label="@field.Name" Variant="Variant.Outlined" Required="@field.IsRequired" HelperText="@helperText" />
                 }
                 break;
 
             case "html":
-                <HtmlEditor @bind-Value="editedValues[field.ReferenceName]"
-                            Label="@field.Name"
-                            Required="@field.IsRequired"
-                            HelperText="@helperText"
-                            Height="400" />
+                <HtmlEditor @bind-Value="editedValues[field.ReferenceName]" Label="@field.Name" Required="@field.IsRequired" HelperText="@helperText" Height="400" />
                 break;
 
             case "datetime":
@@ -312,13 +283,7 @@
                 {
                     dateValue = parsedDate;
                 }
-                <MudDatePicker Label="@field.Name"
-                               Date="@dateValue"
-                               DateChanged="@((DateTime? d) => editedValues[field.ReferenceName] = d?.ToString("yyyy-MM-dd") ?? string.Empty)"
-                               Variant="Variant.Outlined"
-                               Clearable="!field.IsRequired"
-                               Required="@field.IsRequired"
-                               HelperText="@helperText" />
+                <MudDatePicker Label="@field.Name" Date="@dateValue" DateChanged="@((DateTime? d) => editedValues[field.ReferenceName] = d?.ToString("yyyy-MM-dd") ?? string.Empty)" Variant="Variant.Outlined" Clearable="!field.IsRequired" Required="@field.IsRequired" HelperText="@helperText" />
                 break;
 
             case "integer":
@@ -334,29 +299,17 @@
                 }
                 else
                 {
-                    <MudNumericField @bind-Value="editedValues[field.ReferenceName]"
-                                     Label="@field.Name"
-                                     Variant="Variant.Outlined"
-                                     Required="@field.IsRequired"
-                                     HelperText="@helperText" />
+                    <MudNumericField @bind-Value="editedValues[field.ReferenceName]" Label="@field.Name" Variant="Variant.Outlined" Required="@field.IsRequired" HelperText="@helperText" />
                 }
                 break;
 
             case "double":
-                <MudNumericField @bind-Value="editedValues[field.ReferenceName]"
-                                    Label="@field.Name"
-                                    Variant="Variant.Outlined"
-                                    Required="@field.IsRequired"
-                                    HelperText="@helperText" />
+                <MudNumericField @bind-Value="editedValues[field.ReferenceName]" Label="@field.Name" Variant="Variant.Outlined" Required="@field.IsRequired" HelperText="@helperText" />
                 break;
 
             case "boolean":
                 bool boolValue = bool.TryParse(editedValues[field.ReferenceName], out var parsed) && parsed;
-                <MudSwitch Value="@boolValue"
-                           ValueChanged="@((bool v) => { editedValues[field.ReferenceName] = v.ToString(); StateHasChanged(); })"
-                           Label="@field.Name"
-                           Color="Color.Primary">
-                </MudSwitch>
+                <MudSwitch Value="@boolValue" ValueChanged="@((bool v) => { editedValues[field.ReferenceName] = v.ToString(); StateHasChanged(); })" Label="@field.Name" Color="Color.Primary"></MudSwitch>
                 @if (!string.IsNullOrEmpty(helperText))
                 {
                     <MudText Typo="Typo.caption" Class="ml-2">@helperText</MudText>
@@ -369,13 +322,7 @@
                 // For unknown types, check if there are allowed values
                 if (field.AllowedValues.Any())
                 {
-                    <MudSelect T="string" 
-                               @bind-Value="editedValues[field.ReferenceName]"
-                               Label="@field.Name"
-                               Variant="Variant.Outlined"
-                               Required="@field.IsRequired"
-                               Clearable="!field.IsRequired"
-                               HelperText="@helperText">
+                    <MudSelect T="string" @bind-Value="editedValues[field.ReferenceName]" Label="@field.Name" Variant="Variant.Outlined" Required="@field.IsRequired" Clearable="!field.IsRequired" HelperText="@helperText">
                         @foreach (var allowedValue in field.AllowedValues)
                         {
                             <MudSelectItem T="string" Value="@allowedValue">@allowedValue</MudSelectItem>
@@ -384,11 +331,7 @@
                 }
                 else
                 {
-                    <MudTextField @bind-Value="editedValues[field.ReferenceName]"
-                                  Label="@field.Name"
-                                  Variant="Variant.Outlined"
-                                  Required="@field.IsRequired"
-                                  HelperText="@(helperText ?? field.FieldType)" />
+                    <MudTextField @bind-Value="editedValues[field.ReferenceName]" Label="@field.Name" Variant="Variant.Outlined" Required="@field.IsRequired" HelperText="@(helperText ?? field.FieldType)" />
                 }
                 break;
         }
