@@ -240,6 +240,13 @@
 
 		var helperText = field.Description ?? field.HelpText;
 
+        // Debug: Log fields with AllowedValues
+        if (field.AllowedValues.Any())
+        {
+            Logger.LogInformation("Field {FieldName} ({FieldType}) has {Count} allowed values: {Values}", 
+                field.Name, field.FieldType, field.AllowedValues.Count, string.Join(", ", field.AllowedValues));
+        }
+
         // Read-only fields
         if (field.IsReadOnly)
         {
@@ -315,19 +322,32 @@
                 break;
 
             case "integer":
-                <MudNumericField @bind-Value="editedValues[field.ReferenceName]"
-                                 Label="@field.Name"
-                                 Variant="Variant.Outlined"
-                                 Required="@field.IsRequired"
-                                 HelperText="@helperText" />
+                // Check for picklist first (integer fields with allowed values)
+                if (field.AllowedValues.Any())
+                {
+                    <MudSelect T="string" @bind-Value="editedValues[field.ReferenceName]" Label="@field.Name" Variant="Variant.Outlined" Required="@field.IsRequired" Clearable="!field.IsRequired" HelperText="@helperText">
+                        @foreach (var allowedValue in field.AllowedValues)
+                        {
+                            <MudSelectItem T="string" Value="@allowedValue">@allowedValue</MudSelectItem>
+                        }
+                    </MudSelect>
+                }
+                else
+                {
+                    <MudNumericField @bind-Value="editedValues[field.ReferenceName]"
+                                     Label="@field.Name"
+                                     Variant="Variant.Outlined"
+                                     Required="@field.IsRequired"
+                                     HelperText="@helperText" />
+                }
                 break;
 
             case "double":
                 <MudNumericField @bind-Value="editedValues[field.ReferenceName]"
-                                 Label="@field.Name"
-                                 Variant="Variant.Outlined"
-                                 Required="@field.IsRequired"
-                                 HelperText="@helperText" />
+                                    Label="@field.Name"
+                                    Variant="Variant.Outlined"
+                                    Required="@field.IsRequired"
+                                    HelperText="@helperText" />
                 break;
 
             case "boolean":
@@ -337,7 +357,7 @@
                            Label="@field.Name"
                            Color="Color.Primary">
                 </MudSwitch>
-                @if (!string.IsNullOrEmpty(field.HelpText))
+                @if (!string.IsNullOrEmpty(helperText))
                 {
                     <MudText Typo="Typo.caption" Class="ml-2">@helperText</MudText>
                 }
@@ -345,11 +365,8 @@
 
             case "treepath":
             case "identity":
-            case "picklistinteger":
-            case "picklistdouble":
-            case "pickliststring":
             default:
-                // Check if this field has allowed values (lookup/picklist fields)
+                // For unknown types, check if there are allowed values
                 if (field.AllowedValues.Any())
                 {
                     <MudSelect T="string" 
