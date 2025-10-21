@@ -148,17 +148,19 @@ public class ProcessServices(ConnectionFactory connectionFactory) : Base(connect
         // Use the reference name for API calls
         var workItemTypeRefName = workItemTypeInfo.ReferenceName;
 
-        // Get all fields for the work item type using reference name (Note: GetAllWorkItemTypeFieldsAsync doesn't populate AllowedValues, so we query each field individually with ProcessWorkItemTypeFieldsExpandLevel.AllowedValues to get picklist values)
+        // Get all fields for the work item type
         var fields = await processClient.GetAllWorkItemTypeFieldsAsync(processId, workItemTypeRefName);
 
-        // Get the layout (page structure with groups) using reference name
+        // Get the layout (page structure with groups)
         var layout = await processClient.GetFormLayoutAsync(processId, workItemTypeRefName);
 
         var fieldGroups = new List<WorkItemFieldGroup>();
         var allFields = new List<WorkItemFieldDefinition>();
 
         // Map fields to our model
-        foreach (var field in fields)
+        // Note: GetAllWorkItemTypeFieldsAsync doesn't support expand parameter, so we must make
+        // individual API calls. We optimize by making all calls concurrently using Task.WhenAll
+        var fieldTasks = fields.Select(async field =>
         {
             var fieldDef = new WorkItemFieldDefinition
             {
@@ -173,12 +175,17 @@ public class ProcessServices(ConnectionFactory connectionFactory) : Base(connect
                 AllowedValues = new List<string>()
             };
 
-            // For non-readonly fields, get AllowedValues using the expand parameter
+            // For non-readonly fields, get AllowedValues concurrently
             if (!fieldDef.IsReadOnly)
             {
                 try
                 {
-                    var fieldDetail = await processClient.GetWorkItemTypeFieldAsync(processId, workItemTypeRefName, field.ReferenceName, Microsoft.TeamFoundation.WorkItemTracking.Process.WebApi.Models.ProcessWorkItemTypeFieldsExpandLevel.AllowedValues);
+                    var fieldDetail = await processClient.GetWorkItemTypeFieldAsync(
+                        processId,
+                        workItemTypeRefName,
+                        field.ReferenceName,
+                        Microsoft.TeamFoundation.WorkItemTracking.Process.WebApi.Models.ProcessWorkItemTypeFieldsExpandLevel.AllowedValues);
+
                     if (fieldDetail?.AllowedValues != null && fieldDetail.AllowedValues.Length > 0)
                     {
                         fieldDef.AllowedValues = fieldDetail.AllowedValues
@@ -190,12 +197,14 @@ public class ProcessServices(ConnectionFactory connectionFactory) : Base(connect
                 }
                 catch
                 {
-                    // If we can't get field details, continue with empty AllowedValues
+                    // If field details can't be retrieved, continue with empty AllowedValues
                 }
             }
 
-            allFields.Add(fieldDef);
-        }
+            return fieldDef;
+        });
+
+        allFields = (await Task.WhenAll(fieldTasks)).ToList();
 
         // Parse layout to get field groups
         if (layout?.Pages?.Any() == true)
