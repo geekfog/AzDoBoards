@@ -143,18 +143,12 @@ public class ProcessServices(ConnectionFactory connectionFactory) : Base(connect
 
         // First, get all work item types to find the reference name
         var workItemTypes = await processClient.GetProcessWorkItemTypesAsync(processId);
-        var workItemTypeInfo = workItemTypes.FirstOrDefault(wit => 
-            wit.Name.Equals(workItemType, StringComparison.OrdinalIgnoreCase));
-
-        if (workItemTypeInfo == null)
-        {
-            throw new InvalidOperationException($"Work item type '{workItemType}' not found in process {processId}");
-        }
+        var workItemTypeInfo = workItemTypes.FirstOrDefault(wit => wit.Name.Equals(workItemType, StringComparison.OrdinalIgnoreCase)) ?? throw new InvalidOperationException($"Work item type '{workItemType}' not found in process {processId}");
 
         // Use the reference name for API calls
         var workItemTypeRefName = workItemTypeInfo.ReferenceName;
 
-        // Get all fields for the work item type using reference name
+        // Get all fields for the work item type using reference name (Note: GetAllWorkItemTypeFieldsAsync doesn't populate AllowedValues, so we query each field individually with ProcessWorkItemTypeFieldsExpandLevel.AllowedValues to get picklist values)
         var fields = await processClient.GetAllWorkItemTypeFieldsAsync(processId, workItemTypeRefName);
 
         // Get the layout (page structure with groups) using reference name
@@ -176,8 +170,29 @@ public class ProcessServices(ConnectionFactory connectionFactory) : Base(connect
                 IsReadOnly = field.ReadOnly,
                 IsCore = field.ReferenceName.StartsWith("System."),
                 DefaultValue = field.DefaultValue?.ToString(),
-                AllowedValues = field.AllowedValues?.Select(v => v.ToString() ?? string.Empty).ToList() ?? new List<string>()
+                AllowedValues = new List<string>()
             };
+
+            // For non-readonly fields, get AllowedValues using the expand parameter
+            if (!fieldDef.IsReadOnly)
+            {
+                try
+                {
+                    var fieldDetail = await processClient.GetWorkItemTypeFieldAsync(processId, workItemTypeRefName, field.ReferenceName, Microsoft.TeamFoundation.WorkItemTracking.Process.WebApi.Models.ProcessWorkItemTypeFieldsExpandLevel.AllowedValues);
+                    if (fieldDetail?.AllowedValues != null && fieldDetail.AllowedValues.Length > 0)
+                    {
+                        fieldDef.AllowedValues = fieldDetail.AllowedValues
+                            .Where(v => v != null)
+                            .Select(v => v.ToString() ?? string.Empty)
+                            .Where(s => !string.IsNullOrEmpty(s))
+                            .ToList();
+                    }
+                }
+                catch
+                {
+                    // If we can't get field details, continue with empty AllowedValues
+                }
+            }
 
             allFields.Add(fieldDef);
         }

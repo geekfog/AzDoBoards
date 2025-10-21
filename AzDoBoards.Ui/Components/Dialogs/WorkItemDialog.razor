@@ -158,8 +158,7 @@
             // Initialize edited values from work item
             InitializeEditedValues();
             
-            Logger.LogInformation("Loaded work item {WorkItemId} with {FieldCount} fields for editing", 
-                WorkItemId, workItemLayout?.AllFields.Count ?? 0);
+            Logger.LogInformation("Loaded work item {WorkItemId} with {FieldCount} fields for editing", WorkItemId, workItemLayout?.AllFields.Count ?? 0);
         }
         catch (Exception ex)
         {
@@ -346,12 +345,34 @@
 
             case "treepath":
             case "identity":
+            case "picklistinteger":
+            case "picklistdouble":
+            case "pickliststring":
             default:
-                <MudTextField @bind-Value="editedValues[field.ReferenceName]"
-                              Label="@field.Name"
-                              Variant="Variant.Outlined"
-                              Required="@field.IsRequired"
-                              HelperText="@(helperText ?? field.FieldType)" />
+                // Check if this field has allowed values (lookup/picklist fields)
+                if (field.AllowedValues.Any())
+                {
+                    <MudSelect T="string" 
+                               @bind-Value="editedValues[field.ReferenceName]"
+                               Label="@field.Name"
+                               Variant="Variant.Outlined"
+                               Required="@field.IsRequired"
+                               Clearable="!field.IsRequired"
+                               HelperText="@helperText">
+                        @foreach (var allowedValue in field.AllowedValues)
+                        {
+                            <MudSelectItem T="string" Value="@allowedValue">@allowedValue</MudSelectItem>
+                        }
+                    </MudSelect>
+                }
+                else
+                {
+                    <MudTextField @bind-Value="editedValues[field.ReferenceName]"
+                                  Label="@field.Name"
+                                  Variant="Variant.Outlined"
+                                  Required="@field.IsRequired"
+                                  HelperText="@(helperText ?? field.FieldType)" />
+                }
                 break;
         }
     };
@@ -401,10 +422,12 @@
                             break;
 
                         case "integer":
+                        case "picklistinteger":
                             if (!string.IsNullOrEmpty(newValue) && int.TryParse(newValue, out var intValue)) patchValue = intValue;
                             break;
 
                         case "double":
+                        case "picklistdouble":
                             if (!string.IsNullOrEmpty(newValue) && double.TryParse(newValue, out var doubleValue)) patchValue = doubleValue;
                             break;
 
