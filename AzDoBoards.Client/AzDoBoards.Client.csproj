@@ -9,8 +9,8 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Identity.Client" Version="4.79.2" />
     <PackageReference Include="Microsoft.Identity.Web" Version="4.1.1" />
-    <PackageReference Include="Microsoft.TeamFoundationServer.Client" Version="19.225.1" />
-    <PackageReference Include="Microsoft.VisualStudio.Services.InteractiveClient" Version="19.225.1" />
+    <PackageReference Include="Microsoft.TeamFoundationServer.Client" Version="20.264.0-preview" />
+    <PackageReference Include="Microsoft.VisualStudio.Services.InteractiveClient" Version="20.264.0-preview" />
     <PackageReference Include="System.Data.SqlClient" Version="4.9.0" />
   </ItemGroup>
 

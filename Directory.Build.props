@@ -13,7 +13,7 @@
 	 <Product>AzDoBoards</Product>
 	 <RepositoryType>Git</RepositoryType>
 	 <RepositoryUrl>https://github.com/geekfog/AzDoBoards.git</RepositoryUrl>
-	 <VersionPrefix>01.10.02</VersionPrefix>
+	 <VersionPrefix>01.10.03</VersionPrefix>
  </PropertyGroup>
 
   <ItemGroup>
