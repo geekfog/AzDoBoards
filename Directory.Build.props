@@ -5,7 +5,7 @@
 	 <ApplicationIcon>$(MSBuildThisFileDirectory)Images\favicon.ico</ApplicationIcon>
 	 <Authors>Hans Dickel</Authors>
 	 <Company>Aeriden</Company>
-	 <Copyright>Copyright © 2025, All Rights Reserved</Copyright>
+	 <Copyright>Copyright Â© 2025, All Rights Reserved</Copyright>
 	 <Description>Azure DevOps Boards Project Planning</Description>
 	 <PackageLicenseExpression>GPL-3.0-only</PackageLicenseExpression>
 	 <PackageProjectURL>https://github.com/geekfog/AzDoBoards</PackageProjectURL>
@@ -13,7 +13,7 @@
 	 <Product>AzDoBoards</Product>
 	 <RepositoryType>Git</RepositoryType>
 	 <RepositoryUrl>https://github.com/geekfog/AzDoBoards.git</RepositoryUrl>
-	 <VersionPrefix>01.10.01</VersionPrefix>
+	 <VersionPrefix>01.10.02</VersionPrefix>
  </PropertyGroup>
 
   <ItemGroup>
