@@ -1,0 +1,12 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Launch AzDoBoards.Ui",
+      "type": "blazorwasm",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/AzDoBoards.Ui",
+      "url": "http://localhost:5039"
+    }
+  ]
+}

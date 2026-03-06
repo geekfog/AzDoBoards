@@ -1,0 +1,295 @@
+# VARIABLE NAMING
+# a_VarName           Variable passed as an argument, such as via Azure Pipeline variable group (evaluated at runtime)
+# g_VarName           Global variable across YAML files (evaluated at compile time or initial runtime)
+# p_VarName           Parameter passed for use only within a file
+# v_VarName           Local variable intended within a file
+# o_VarName           Output variable from a job or step (dynamic evaluation at runtime)
+# *_IsStrVarName      Is/Has String (used for expressions) - not really boolean, but eq(*_isStrVarName, true) works through coercion
+# *_IsVariable        Is/Has Boolean (used for expressions directly)
+trigger:
+  branches:
+    include:
+      - release/*
+      - feature/*
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  g_BuildConfiguration: Release
+  g_PublishEnvironmentBaseName: AzDoBoards
+  a_SwaSkuName: Standard # default value unless overridden in variable group
+  v_IsReleaseBranch: $[startsWith(variables['Build.SourceBranch'], 'refs/heads/release/')]
+  v_IsFeatureBuildBranch: $[and(startsWith(variables['Build.SourceBranch'], 'refs/heads/feature/'), contains(variables['Build.SourceBranch'], '/build/'))]
+  # Shared variable group 'azdoboards-config' containing:
+  #   a_AzureServiceConnection  - Name of your Azure service connection
+  #   a_SubscriptionId          - Azure subscription ID
+  # Per-environment variable groups ('azdoboards-config-dev', 'azdoboards-config-uat', 'azdoboards-config-prd') each containing:
+  #   a_ResourceGroup           - Resource group to deploy into
+  #   a_ResourceGroupLocation   - Azure region of the resource group (e.g. eastus)
+  #   a_SwaName                 - Name for the Static Web App resource
+  #   a_SwaSkuName              - (optional) Override SKU; defaults to Standard
+  # These are transform variables used by FileTransform to substitute values into appsettings.json;
+  # variable names must exactly match the JSON key path (dot-notation) and cannot carry a prefix
+  #   AzureAd.Authority         - https://login.microsoftonline.com/<tenant-id>
+  #   AzureAd.ClientId          - <your-app-registration-client-id>
+  #   AzureDevOps.OrgUrl        - https://dev.azure.com/<your-org>
+- group: azdoboards-config
+
+stages:
+  - stage: Build
+    displayName: Build
+    jobs:
+      - job: Build
+        displayName: Build and Publish
+        steps:
+          - task: UseDotNet@2
+            displayName: Use .NET 10
+            inputs:
+              packageType: sdk
+              version: 10.x
+
+          - task: DotNetCoreCLI@2
+            displayName: Publish
+            inputs:
+              command: publish
+              publishWebProjects: false
+              projects: AzDoBoards.Ui/AzDoBoards.Ui.csproj
+              arguments: -c $(g_BuildConfiguration) -o $(Build.ArtifactStagingDirectory)/publish
+              zipAfterPublish: false
+
+          - task: PublishBuildArtifacts@1
+            displayName: Publish App Artifact
+            inputs:
+              pathToPublish: $(Build.ArtifactStagingDirectory)/publish/wwwroot
+              artifactName: wwwroot
+
+          - task: PublishBuildArtifacts@1
+            displayName: Publish Bicep Artifact
+            inputs:
+              pathToPublish: azure-resources.bicep
+              artifactName: bicep
+
+  - stage: DEV
+    displayName: Deploy DEV
+    dependsOn: Build
+    condition: and(succeeded(), or(eq(variables.v_IsReleaseBranch, true), eq(variables.v_IsFeatureBuildBranch, true)))
+    variables:
+      - group: azdoboards-config
+      - group: azdoboards-config-dev
+    jobs:
+      - deployment: Infrastructure
+        displayName: Deploy Infrastructure
+        environment: ${{ variables.g_PublishEnvironmentBaseName }} DEV
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - task: DownloadBuildArtifacts@1
+                  displayName: Download Bicep Artifact
+                  inputs:
+                    artifactName: bicep
+                    downloadPath: $(Pipeline.Workspace)
+
+                - task: AzureResourceManagerTemplateDeployment@3
+                  displayName: Deploy Static Web App
+                  inputs:
+                    azureResourceManagerConnection: $(a_AzureServiceConnection)
+                    subscriptionId: $(a_SubscriptionId)
+                    resourceGroupName: $(a_ResourceGroup)
+                    location: $(a_ResourceGroupLocation)
+                    templateLocation: Linked artifact
+                    csmFile: $(Pipeline.Workspace)/bicep/azure-resources.bicep
+                    overrideParameters: -name $(a_SwaName) -sku $(a_SwaSkuName)
+                    deploymentMode: Incremental
+
+      - deployment: App
+        displayName: Deploy Application
+        dependsOn: Infrastructure
+        environment: ${{ variables.g_PublishEnvironmentBaseName }} DEV
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - task: DownloadBuildArtifacts@1
+                  displayName: Download App Artifact
+                  inputs:
+                    artifactName: wwwroot
+                    downloadPath: $(Pipeline.Workspace)
+
+                - task: FileTransform@2
+                  displayName: Substitute appsettings.json values
+                  inputs:
+                    folderPath: $(Pipeline.Workspace)/wwwroot
+                    jsonTargetFiles: appsettings.json
+
+                - task: AzureCLI@2
+                  displayName: Get SWA Deployment Token
+                  inputs:
+                    azureSubscription: $(a_AzureServiceConnection)
+                    scriptType: bash
+                    scriptLocation: inlineScript
+                    inlineScript: |
+                      token=$(az staticwebapp secrets list \
+                        --name $(a_SwaName) \
+                        --resource-group $(a_ResourceGroup) \
+                        --query "properties.apiKey" -o tsv)
+                      echo "##vso[task.setvariable variable=o_SwaDeployToken;isSecret=true]$token"
+
+                - task: AzureStaticWebApp@0
+                  displayName: Deploy to Static Web App
+                  inputs:
+                    app_location: $(Pipeline.Workspace)/wwwroot
+                    skip_app_build: true
+                  env:
+                    AZURE_STATIC_WEB_APPS_API_TOKEN: $(o_SwaDeployToken)
+
+  - stage: UAT
+    displayName: Deploy UAT
+    dependsOn: DEV
+    condition: and(succeeded(), eq(variables.v_IsReleaseBranch, true))
+    variables:
+      - group: azdoboards-config
+      - group: azdoboards-config-uat
+    jobs:
+      - deployment: Infrastructure
+        displayName: Deploy Infrastructure
+        environment: ${{ variables.g_PublishEnvironmentBaseName }} UAT
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - task: DownloadBuildArtifacts@1
+                  displayName: Download Bicep Artifact
+                  inputs:
+                    artifactName: bicep
+                    downloadPath: $(Pipeline.Workspace)
+
+                - task: AzureResourceManagerTemplateDeployment@3
+                  displayName: Deploy Static Web App
+                  inputs:
+                    azureResourceManagerConnection: $(a_AzureServiceConnection)
+                    subscriptionId: $(a_SubscriptionId)
+                    resourceGroupName: $(a_ResourceGroup)
+                    location: $(a_ResourceGroupLocation)
+                    templateLocation: Linked artifact
+                    csmFile: $(Pipeline.Workspace)/bicep/azure-resources.bicep
+                    overrideParameters: -name $(a_SwaName) -sku $(a_SwaSkuName)
+                    deploymentMode: Incremental
+
+      - deployment: App
+        displayName: Deploy Application
+        dependsOn: Infrastructure
+        environment: ${{ variables.g_PublishEnvironmentBaseName }} UAT
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - task: DownloadBuildArtifacts@1
+                  displayName: Download App Artifact
+                  inputs:
+                    artifactName: wwwroot
+                    downloadPath: $(Pipeline.Workspace)
+
+                - task: FileTransform@2
+                  displayName: Substitute appsettings.json values
+                  inputs:
+                    folderPath: $(Pipeline.Workspace)/wwwroot
+                    jsonTargetFiles: appsettings.json
+
+                - task: AzureCLI@2
+                  displayName: Get SWA Deployment Token
+                  inputs:
+                    azureSubscription: $(a_AzureServiceConnection)
+                    scriptType: bash
+                    scriptLocation: inlineScript
+                    inlineScript: |
+                      token=$(az staticwebapp secrets list \
+                        --name $(a_SwaName) \
+                        --resource-group $(a_ResourceGroup) \
+                        --query "properties.apiKey" -o tsv)
+                      echo "##vso[task.setvariable variable=o_SwaDeployToken;isSecret=true]$token"
+
+                - task: AzureStaticWebApp@0
+                  displayName: Deploy to Static Web App
+                  inputs:
+                    app_location: $(Pipeline.Workspace)/wwwroot
+                    skip_app_build: true
+                  env:
+                    AZURE_STATIC_WEB_APPS_API_TOKEN: $(o_SwaDeployToken)
+
+  - stage: PRD
+    displayName: Deploy PRD
+    dependsOn: UAT
+    condition: and(succeeded(), eq(variables.v_IsReleaseBranch, true))
+    variables:
+      - group: azdoboards-config
+      - group: azdoboards-config-prd
+    jobs:
+      - deployment: Infrastructure
+        displayName: Deploy Infrastructure
+        environment: ${{ variables.g_PublishEnvironmentBaseName }} PRD
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - task: DownloadBuildArtifacts@1
+                  displayName: Download Bicep Artifact
+                  inputs:
+                    artifactName: bicep
+                    downloadPath: $(Pipeline.Workspace)
+
+                - task: AzureResourceManagerTemplateDeployment@3
+                  displayName: Deploy Static Web App
+                  inputs:
+                    azureResourceManagerConnection: $(a_AzureServiceConnection)
+                    subscriptionId: $(a_SubscriptionId)
+                    resourceGroupName: $(a_ResourceGroup)
+                    location: $(a_ResourceGroupLocation)
+                    templateLocation: Linked artifact
+                    csmFile: $(Pipeline.Workspace)/bicep/azure-resources.bicep
+                    overrideParameters: -name $(a_SwaName) -sku $(a_SwaSkuName)
+                    deploymentMode: Incremental
+
+      - deployment: App
+        displayName: Deploy Application
+        dependsOn: Infrastructure
+        environment: ${{ variables.g_PublishEnvironmentBaseName }} PRD
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - task: DownloadBuildArtifacts@1
+                  displayName: Download App Artifact
+                  inputs:
+                    artifactName: wwwroot
+                    downloadPath: $(Pipeline.Workspace)
+
+                - task: FileTransform@2
+                  displayName: Substitute appsettings.json values
+                  inputs:
+                    folderPath: $(Pipeline.Workspace)/wwwroot
+                    jsonTargetFiles: appsettings.json
+
+                - task: AzureCLI@2
+                  displayName: Get SWA Deployment Token
+                  inputs:
+                    azureSubscription: $(a_AzureServiceConnection)
+                    scriptType: bash
+                    scriptLocation: inlineScript
+                    inlineScript: |
+                      token=$(az staticwebapp secrets list \
+                        --name $(a_SwaName) \
+                        --resource-group $(a_ResourceGroup) \
+                        --query "properties.apiKey" -o tsv)
+                      echo "##vso[task.setvariable variable=o_SwaDeployToken;isSecret=true]$token"
+
+                - task: AzureStaticWebApp@0
+                  displayName: Deploy to Static Web App
+                  inputs:
+                    app_location: $(Pipeline.Workspace)/wwwroot
+                    skip_app_build: true
+                  env:
+                    AZURE_STATIC_WEB_APPS_API_TOKEN: $(o_SwaDeployToken)
+
+# ~END~

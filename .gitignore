@@ -1,0 +1,42 @@
+# Build outputs
+bin/
+obj/
+
+# Visual Studio / VS Code
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.vscode/settings.json
+
+# NuGet
+*.nupkg
+*.snupkg
+packages/
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# .NET
+*.dbmdl
+*.jfm
+
+# Blazor WASM
+wwwroot/service-worker-assets.js
+
+# Local configuration (never commit real values)
+**/wwwroot/appsettings.Development.json
+
+# Azure
+.azure/
+local.settings.json
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# JetBrains Rider
+.idea/
+*.sln.iml
