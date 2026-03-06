@@ -6,6 +6,9 @@ var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
+if (builder.HostEnvironment.IsDevelopment())
+    builder.Configuration.AddJsonFile("appsettings.Secrets.json", optional: true);
+
 builder.Services.AddMsalAuthentication(options =>
 {
     builder.Configuration.Bind("AzureAd", options.ProviderOptions.Authentication);

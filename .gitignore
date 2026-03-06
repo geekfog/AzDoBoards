@@ -26,7 +26,7 @@ artifacts/
 wwwroot/service-worker-assets.js
 
 # Local configuration (never commit real values)
-**/wwwroot/appsettings.Development.json
+**/wwwroot/appsettings.Secrets.json
 
 # Azure
 .azure/

@@ -59,7 +59,7 @@ Configuration values (tenant ID, client ID, org URL) are substituted into `appse
 
 ## Local Development
 
-1. Fill in your real values in `AzDoBoards.Ui/wwwroot/appsettings.Development.json`:
+1. Fill in your real values in `AzDoBoards.Ui/wwwroot/appsettings.Secrets.json`:
 
 ```json
 {
@@ -80,7 +80,7 @@ Configuration values (tenant ID, client ID, org URL) are substituted into `appse
 
 ## Infrastructure Deployment
 
-Infrastructure is defined in Bicep under `infra/`.
+Infrastructure is defined in `azure-resources.bicep` at the repository root.
 
 ```bash
 az login
