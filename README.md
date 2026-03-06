@@ -1,8 +1,18 @@
-# AzDoBoards
+# AzDo Boards Project Management Tool
+
+***NOTE**: This is under heavy development. In short, it is very incomplete. This is an idea that has been noodled for a while. Now this is being attempted for future project efficiency, to give back, to see if there is interest within the open source community, and to explore potential business opportunities. The goal is to try different items to see what looks and feels right. The goal is to make a usable product and remove this banner. Perhaps this could be commercially viable as a subscription, with enterprise-scale multi-tenant support based on the open-source version.*
+
+## Overview
+
+<img src="Images/favicon-0512.png" alt="AzDo Boards Icon" style="zoom:25%; float:right;" />AzDo Boards (pronounced "As Doe Boards") is to be a tool to assist with project management within Azure DevOps Boards. The UI in Azure DevOps Boards is clunky for project management and for quickly adding or updating information. 
+
+This supports a custom-defined work item hierarchy based on work item types (e.g., Initiative > Epic > Feature > User Story / Bug / Research > Tasks). This helps with reporting, tracking, and querying.
+
+# Architecture
 
 A Blazor WebAssembly application for viewing Azure DevOps boards. Users authenticate via Entra ID and access Azure DevOps resources using their own permissions — no backend required.
 
-## Architecture
+## Authentication
 
 ```
 Browser (Blazor WASM)
@@ -128,3 +138,5 @@ Configure approval gates and branch controls under **Pipelines → Environments*
 | `AzDoBoards DEV` | Optional | `release/*`, `feature/*/build/*` |
 | `AzDoBoards UAT` | Required | `release/*` |
 | `AzDoBoards PRD` | Required | `release/*` |
+
+\~END~
