@@ -16,11 +16,6 @@ pool:
   vmImage: ubuntu-latest
 
 variables:
-  g_BuildConfiguration: Release
-  g_PublishEnvironmentBaseName: AzDoBoards
-  a_SwaSkuName: Standard # default value unless overridden in variable group
-  v_IsReleaseBranch: $[startsWith(variables['Build.SourceBranch'], 'refs/heads/release/')]
-  v_IsFeatureBuildBranch: $[and(startsWith(variables['Build.SourceBranch'], 'refs/heads/feature/'), contains(variables['Build.SourceBranch'], '/build/'))]
   # Shared variable group 'azdoboards-config' containing:
   #   a_AzureServiceConnection  - Name of your Azure service connection
   #   a_SubscriptionId          - Azure subscription ID
@@ -34,7 +29,17 @@ variables:
   #   AzureAd.Authority         - https://login.microsoftonline.com/<tenant-id>
   #   AzureAd.ClientId          - <your-app-registration-client-id>
   #   AzureDevOps.OrgUrl        - https://dev.azure.com/<your-org>
-- group: azdoboards-config
+  - group: azdoboards-config
+  - name: g_BuildConfiguration
+    value: Release
+  - name: g_PublishEnvironmentBaseName
+    value: AzDoBoards
+  - name: a_SwaSkuName
+    value: Standard # default value unless overridden in variable group
+  - name: v_IsReleaseBranch
+    value: $[startsWith(variables['Build.SourceBranch'], 'refs/heads/release/')]
+  - name: v_IsFeatureBuildBranch
+    value: $[and(startsWith(variables['Build.SourceBranch'], 'refs/heads/feature/'), contains(variables['Build.SourceBranch'], '/build/'))]
 
 stages:
   - stage: Build
