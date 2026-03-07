@@ -9,13 +9,12 @@ parameters:
     type: string
 
 stages:
-  - stage: ${{ parameters.p_publishEnvironment }}
-    displayName: Deploy ${{ parameters.p_publishEnvironment }}
+  - stage: Release ${{ parameters.p_publishEnvironment }}
+    displayName: 🚀 Release ${{ parameters.p_publishEnvironment }}
     dependsOn: ${{ parameters.p_dependsOn }}
     condition: ${{ parameters.p_hasMetCondition }}
     variables:
-      - group: ${{ variables.g_variableGroupBase }}
-      - group: ${{ variables.g_variableGroupBase }}-${{ lower(parameters.p_publishEnvironment) }}
+      - group: azdoboards-config-${{ lower(parameters.p_publishEnvironment) }}
     jobs:
       - deployment: Infrastructure
         displayName: Deploy Infrastructure

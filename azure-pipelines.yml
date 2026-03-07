@@ -34,8 +34,6 @@ variables:
     value: Release
   - name: g_AppBaseName
     value: AzDoBoards
-  - name: g_variableGroupBase
-    value: azdoboards-config
   - name: a_SwaSkuName
     value: Standard # default value unless overridden in variable group
   - name: v_IsReleaseBranch
