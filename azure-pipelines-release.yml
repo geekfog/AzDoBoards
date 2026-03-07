@@ -9,7 +9,7 @@ parameters:
     type: string
 
 stages:
-  - stage: Release ${{ parameters.p_publishEnvironment }}
+  - stage: Release_${{ parameters.p_publishEnvironment }}
     displayName: 🚀 Release ${{ parameters.p_publishEnvironment }}
     dependsOn: ${{ parameters.p_dependsOn }}
     condition: ${{ parameters.p_hasMetCondition }}
@@ -18,7 +18,7 @@ stages:
     jobs:
       - deployment: Infrastructure
         displayName: Deploy Infrastructure
-        environment: ${{ variables.g_AppBaseName }} ${{ parameters.p_publishEnvironment }}
+        environment: AzDoBoards ${{ parameters.p_publishEnvironment }}
         strategy:
           runOnce:
             deploy:
@@ -44,7 +44,7 @@ stages:
       - deployment: App
         displayName: Deploy Application
         dependsOn: Infrastructure
-        environment: ${{ variables.g_AppBaseName }} ${{ parameters.p_publishEnvironment }}
+        environment: AzDoBoards ${{ parameters.p_publishEnvironment }}
         strategy:
           runOnce:
             deploy:

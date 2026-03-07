@@ -84,13 +84,13 @@ stages:
   - template: azure-pipelines-release.yml
     parameters:
       p_publishEnvironment: UAT
-      p_dependsOn: DEV
+      p_dependsOn: Release_DEV
       p_hasMetCondition: and(succeeded(), eq(variables.v_IsReleaseBranch, true))
 
   - template: azure-pipelines-release.yml
     parameters:
       p_publishEnvironment: PRD
-      p_dependsOn: UAT
+      p_dependsOn: Release_UAT
       p_hasMetCondition: and(succeeded(), eq(variables.v_IsReleaseBranch, true))
 
 # ~END~
