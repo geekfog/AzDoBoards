@@ -112,9 +112,9 @@ Create the following variable groups in **Pipelines → Library**:
 
 | Variable | Example Value |
 |---|---|
-| `a_ResourceGroup` | `rg-azdoboards-dev` |
-| `a_ResourceGroupLocation` | `eastus` |
-| `a_SwaName` | `azdoboards-dev` |
+| `a_ResourceGroup` | `azdoboardsdevrg` |
+| `a_AzureLocationPrimary` | `eastus` |
+| `a_SwaName` | `azdoboardsdevswa` |
 | `a_SwaSkuName` | `Standard` (optional override) |
 | `AzureAd.Authority` | `https://login.microsoftonline.com/<tenant-id>` |
 | `AzureAd.ClientId` | `<client-id>` |

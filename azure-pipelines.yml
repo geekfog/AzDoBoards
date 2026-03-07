@@ -26,7 +26,7 @@ variables:
   #   a_SubscriptionId          - Azure subscription ID
   # Per-environment variable groups ('azdoboards-config-dev', 'azdoboards-config-uat', 'azdoboards-config-prd') each containing:
   #   a_ResourceGroup           - Resource group to deploy into
-  #   a_ResourceGroupLocation   - Azure region of the resource group (e.g. eastus)
+  #   a_AzureLocationPrimary    - Azure region of the resource group (e.g. eastus)
   #   a_SwaName                 - Name for the Static Web App resource
   #   a_SwaSkuName              - (optional) Override SKU; defaults to Standard
   # These are transform variables used by FileTransform to substitute values into appsettings.json;
@@ -97,7 +97,7 @@ stages:
                     azureResourceManagerConnection: $(a_AzureServiceConnection)
                     subscriptionId: $(a_SubscriptionId)
                     resourceGroupName: $(a_ResourceGroup)
-                    location: $(a_ResourceGroupLocation)
+                    location: $(a_AzureLocationPrimary)
                     templateLocation: Linked artifact
                     csmFile: $(Pipeline.Workspace)/bicep/azure-resources.bicep
                     overrideParameters: -name $(a_SwaName) -sku $(a_SwaSkuName)
@@ -171,7 +171,7 @@ stages:
                     azureResourceManagerConnection: $(a_AzureServiceConnection)
                     subscriptionId: $(a_SubscriptionId)
                     resourceGroupName: $(a_ResourceGroup)
-                    location: $(a_ResourceGroupLocation)
+                    location: $(a_AzureLocationPrimary)
                     templateLocation: Linked artifact
                     csmFile: $(Pipeline.Workspace)/bicep/azure-resources.bicep
                     overrideParameters: -name $(a_SwaName) -sku $(a_SwaSkuName)
@@ -245,7 +245,7 @@ stages:
                     azureResourceManagerConnection: $(a_AzureServiceConnection)
                     subscriptionId: $(a_SubscriptionId)
                     resourceGroupName: $(a_ResourceGroup)
-                    location: $(a_ResourceGroupLocation)
+                    location: $(a_AzureLocationPrimary)
                     templateLocation: Linked artifact
                     csmFile: $(Pipeline.Workspace)/bicep/azure-resources.bicep
                     overrideParameters: -name $(a_SwaName) -sku $(a_SwaSkuName)
