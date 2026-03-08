@@ -94,10 +94,10 @@ Create the following variable groups in **Pipelines → Library**:
 
 | Variable | Purpose | Example Value |
 |---|---|---|
-| `a_ResourceGroup` | Resource group to deploy into | `azdoboardsdevrg` |
-| `a_AzureLocationPrimary` | Azure region of the resource group | `eastus` |
 | `a_AzureDevOpsOrgUrl` | Substituted into `appsettings.json` by the `FileTransform` task | `https://dev.azure.com/<your-org>` |
+| `a_AzureLocationPrimary` | Azure region of the resource group | `eastus` |
 | `a_IsStrDoRelease` | Set to `false` to skip deployment for that environment | `true` |
+| `a_ResourceGroup` | Resource group to deploy into | `azdoboardsdevrg` |
 | `a_SwaName` | Name for the Static Web App resource | `azdoboardsdevswa` |
 | `a_SwaSkuName` | Optional; overrides the pipeline default | `Standard` |
 | `AzureAd.Authority` | Substituted into `appsettings.json` by the `FileTransform` task | `https://login.microsoftonline.com/<tenant-id>` |
