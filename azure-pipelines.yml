@@ -16,19 +16,7 @@ pool:
   vmImage: ubuntu-latest
 
 variables:
-  # Shared variable group 'azdoboards-config' containing:
-  #   a_AzureServiceConnection  - Name of your Azure service connection
-  #   a_SubscriptionId          - Azure subscription ID
-  # Per-environment variable groups ('azdoboards-config-dev', 'azdoboards-config-uat', 'azdoboards-config-prd') each containing:
-  #   a_ResourceGroup           - Resource group to deploy into
-  #   a_AzureLocationPrimary    - Azure region of the resource group (e.g. eastus)
-  #   a_SwaName                 - Name for the Static Web App resource
-  #   a_SwaSkuName              - (optional) Override SKU; defaults to Standard
-  # These are transform variables used by FileTransform to substitute values into appsettings.json;
-  # variable names must exactly match the JSON key path (dot-notation) and cannot carry a prefix
-  #   AzureAd.Authority         - https://login.microsoftonline.com/<tenant-id>
-  #   AzureAd.ClientId          - <your-app-registration-client-id>
-  #   AzureDevOps.OrgUrl        - https://dev.azure.com/<your-org>
+  # Required variable groups and their variables are documented in README.md under Installation.
   - group: azdoboards-config
   - name: g_BuildConfiguration
     value: Release

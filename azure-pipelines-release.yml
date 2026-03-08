@@ -18,6 +18,7 @@ stages:
     jobs:
       - deployment: Infrastructure
         displayName: Deploy Infrastructure
+        condition: and(succeeded(), eq(variables['a_IsStrDoRelease'], 'true'))
         environment: AzDoBoards ${{ parameters.p_publishEnvironment }}
         strategy:
           runOnce:
@@ -34,16 +35,21 @@ stages:
                   inputs:
                     azureResourceManagerConnection: $(a_AzureServiceConnection)
                     subscriptionId: $(a_SubscriptionId)
+                    deploymentScope: Resource Group
+                    action: Create Or Update Resource Group
                     resourceGroupName: $(a_ResourceGroup)
                     location: $(a_AzureLocationPrimary)
                     templateLocation: Linked artifact
                     csmFile: $(Pipeline.Workspace)/bicep/azure-resources.bicep
-                    overrideParameters: -name $(a_SwaName) -sku $(a_SwaSkuName)
-                    deploymentMode: Incremental
+                    overrideParameters: >
+                      -name $(a_SwaName)
+                      -sku $(a_SwaSkuName)
+                    deploymentMode: Incremental # Incremental, Complete, Validation
 
       - deployment: App
         displayName: Deploy Application
         dependsOn: Infrastructure
+        condition: and(succeeded(), eq(variables['a_IsStrDoRelease'], 'true'))
         environment: AzDoBoards ${{ parameters.p_publishEnvironment }}
         strategy:
           runOnce:

@@ -1,12 +1,22 @@
-# AzDo Boards Project Management Tool
+# About
 
-***NOTE**: This is under heavy development. In short, it is very incomplete. This is an idea that has been noodled for a while. Now this is being attempted for future project efficiency, to give back, to see if there is interest within the open source community, and to explore potential business opportunities. The goal is to try different items to see what looks and feels right. The goal is to make a usable product and remove this banner. Perhaps this could be commercially viable as a subscription, with enterprise-scale multi-tenant support based on the open-source version.*
+<img src="Images/favicon-0512.png" alt="AzDo Boards Icon" style="zoom:25%; float:right;" />AzDo Boards (pronounced "As Doe Boards") is intended to be a tool to assist with project management by leveraging work item data in Azure DevOps Boards. Running externally allows freedom to leverage external technologies for project management-focused capabilities, including reporting, and to quickly add or update information. There is an eye to incorporate AI to help build out projects.
 
-## Overview
+This supports a custom-defined work item hierarchy based on work item types (e.g., Initiative > Epic > Feature > User Story / Bug / Research > Tasks). This helps with reporting, tracking, and querying within Azure DevOps and externally.
 
-<img src="Images/favicon-0512.png" alt="AzDo Boards Icon" style="zoom:25%; float:right;" />AzDo Boards (pronounced "As Doe Boards") is to be a tool to assist with project management within Azure DevOps Boards. The UI in Azure DevOps Boards is clunky for project management and for quickly adding or updating information. 
+***NOTE**: This is under heavy development. In short, it is very incomplete. This is an idea that has been noodled for a while. Now this is being attempted for future project efficiency, to give back, to gauge interest within the open source community, and to explore potential business opportunities. The goal is to try different items to see what looks and feels right. The goal is to make a usable product and remove this banner. Perhaps this could be commercially viable as a subscription, with enterprise-scale multi-tenant support based on the open-source version.*
 
-This supports a custom-defined work item hierarchy based on work item types (e.g., Initiative > Epic > Feature > User Story / Bug / Research > Tasks). This helps with reporting, tracking, and querying.
+# Table of Contents
+
+- [Architecture](#architecture)
+  - [Authentication](#authentication)
+  - [Projects](#projects)
+  - [Prerequisites](#prerequisites)
+- [Installation](#installation)
+  - [1. Entra ID App Registration](#1-entra-id-app-registration)
+  - [2. Infrastructure](#2-infrastructure)
+  - [3. Azure DevOps Pipeline](#3-azure-devops-pipeline)
+- [Local Development](#local-development)
 
 # Architecture
 
@@ -43,7 +53,9 @@ Configuration values (tenant ID, client ID, org URL) are substituted into `appse
 - An Azure DevOps organization
 - An Entra ID (Azure AD) tenant
 
-## Entra ID App Registration
+# Installation
+
+## 1. Entra ID App Registration
 
 1. Go to **Azure Portal → Entra ID → App registrations → New registration**
 2. Name: `AzDoBoards` (or your preference)
@@ -57,7 +69,68 @@ Configuration values (tenant ID, client ID, org URL) are substituted into `appse
    - Click **Grant admin consent**
 6. Note your **Tenant ID** and **Client ID** from the Overview page
 
-## Local Development
+## 2. Infrastructure
+
+The pipeline deploys infrastructure automatically on each release via `azure-resources.bicep`, including creating the resource group if it does not already exist. No manual infrastructure steps are required.
+
+After the first release, add the SWA hostname to your Entra ID app registration redirect URIs.
+
+## 3. Azure DevOps Pipeline
+
+The pipeline is defined in `azure-pipelines.yml` at the repository root.
+
+### Variable groups
+
+Create the following variable groups in **Pipelines → Library**:
+
+**`azdoboards-config`** (shared across all environments):
+
+| Variable | Value |
+|---|---|
+| `a_AzureServiceConnection` | Name of your Azure service connection |
+| `a_SubscriptionId` | Your Azure subscription ID |
+
+**`azdoboards-config-dev`**, **`azdoboards-config-uat`**, **`azdoboards-config-prd`** (one per environment):
+
+| Variable | Example Value | Notes |
+|---|---|---|
+| `a_ResourceGroup` | `azdoboardsdevrg` | Resource group to deploy into |
+| `a_AzureLocationPrimary` | `eastus` | Azure region of the resource group |
+| `a_SwaName` | `azdoboardsdevswa` | Name for the Static Web App resource |
+| `a_SwaSkuName` | `Standard` | Optional; overrides the pipeline default |
+| `a_IsStrDoRelease` | `true` | Set to `false` to skip deployment for that environment |
+| `AzureAd.Authority` | `https://login.microsoftonline.com/<tenant-id>` | Injected into `appsettings.json` at deploy time |
+| `AzureAd.ClientId` | `<client-id>` | Injected into `appsettings.json` at deploy time |
+| `AzureDevOps.OrgUrl` | `https://dev.azure.com/<your-org>` | Injected into `appsettings.json` at deploy time |
+
+> `AzureAd.*` and `AzureDevOps.*` are transform variables consumed by the `FileTransform` task. Their dot-notation names must exactly match the key paths in `appsettings.json` and cannot carry a variable prefix.
+
+### Environments
+
+Create the following environments in **Pipelines → Environments**, then configure approval gates and branch controls on each:
+
+| Environment | Approval | Branch Control |
+|---|---|---|
+| `AzDoBoards DEV` | Optional | `release/*`, `feature/*/build/*` |
+| `AzDoBoards UAT` | Required | `release/*` |
+| `AzDoBoards PRD` | Required | `release/*` |
+
+### Create the pipeline
+
+In **Pipelines → New pipeline**, point to this repository and select `azure-pipelines.yml` at the root. The pipeline triggers automatically on `release/*` and `feature/*` branches.
+
+#### Pipeline stages
+
+| Stage | Triggers on | Condition |
+|---|---|---|
+| **Build** | `release/*`, `feature/*` | Always |
+| **Release DEV** | `release/*`, `feature/*/build/*` | Build succeeded |
+| **Release UAT** | `release/*` | Release DEV stage succeeded |
+| **Release PRD** | `release/*` | Release UAT stage succeeded |
+
+Each release stage deploys infrastructure first, then the application. Both steps are skipped when `a_IsStrDoRelease` is `false` for that environment — independently per environment.
+
+# Local Development
 
 1. Fill in your real values in `AzDoBoards.Ui/wwwroot/appsettings.Secrets.json`:
 
@@ -74,69 +147,8 @@ Configuration values (tenant ID, client ID, org URL) are substituted into `appse
 }
 ```
 
-2. This file is gitignored and will never be committed.
+2. This file is [.gitignore](./.gitignore) and will never be committed.
 
 3. Launch via VS Code: press `F5` → **Launch AzDoBoards.Ui**
-
-## Infrastructure Deployment
-
-Infrastructure is defined in `azure-resources.bicep` at the repository root.
-
-```bash
-az login
-az group create --name <resource-group> --location eastus
-az deployment group create \
-  --resource-group <resource-group> \
-  --template-file azure-resources.bicep \
-  --parameters name=<swa-name> sku=Standard
-```
-
-After deployment, add the SWA callback URI to your Entra ID app registration.
-
-## CI/CD Pipeline (Azure Pipelines)
-
-The pipeline is defined in `azure-pipelines.yml` at the repository root.
-
-### Variable groups
-
-Create the following variable groups in **Pipelines → Library**:
-
-**`azdoboards-config`** (shared across all environments):
-
-| Variable | Example Value |
-|---|---|
-| `a_AzureServiceConnection` | Name of your Azure service connection |
-| `a_SubscriptionId` | Your Azure subscription ID |
-
-**`azdoboards-config-dev`**, **`azdoboards-config-uat`**, **`azdoboards-config-prd`** (one per environment):
-
-| Variable | Example Value |
-|---|---|
-| `a_ResourceGroup` | `azdoboardsdevrg` |
-| `a_AzureLocationPrimary` | `eastus` |
-| `a_SwaName` | `azdoboardsdevswa` |
-| `a_SwaSkuName` | `Standard` (optional override) |
-| `AzureAd.Authority` | `https://login.microsoftonline.com/<tenant-id>` |
-| `AzureAd.ClientId` | `<client-id>` |
-| `AzureDevOps.OrgUrl` | `https://dev.azure.com/<your-org>` |
-
-The `AzureAd.*` and `AzureDevOps.*` variables are transform variables — their dot-notation names must exactly match the key paths in `appsettings.json` for the `FileTransform` task and cannot carry a prefix.
-
-### Pipeline stages
-
-1. **Build** — Triggered automatically on `release/*` and `feature/*` branches
-2. **DEV** — Runs on `release/*` and `feature/*/build/*` branches; infrastructure then app
-3. **UAT** — Runs on `release/*` branches only; depends on DEV succeeding
-4. **PRD** — Runs on `release/*` branches only; depends on UAT succeeding
-
-### Environment approval gates
-
-Configure approval gates and branch controls under **Pipelines → Environments** in Azure DevOps:
-
-| Environment | Approval | Branch Control |
-|---|---|---|
-| `AzDoBoards DEV` | Optional | `release/*`, `feature/*/build/*` |
-| `AzDoBoards UAT` | Required | `release/*` |
-| `AzDoBoards PRD` | Required | `release/*` |
 
 \~END~
