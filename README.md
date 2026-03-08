@@ -92,18 +92,19 @@ Create the following variable groups in **Pipelines → Library**:
 
 **`azdoboards-config-dev`**, **`azdoboards-config-uat`**, **`azdoboards-config-prd`** (one per environment):
 
-| Variable | Example Value | Notes |
+| Variable | Purpose | Example Value |
 |---|---|---|
-| `a_ResourceGroup` | `azdoboardsdevrg` | Resource group to deploy into |
-| `a_AzureLocationPrimary` | `eastus` | Azure region of the resource group |
-| `a_SwaName` | `azdoboardsdevswa` | Name for the Static Web App resource |
-| `a_SwaSkuName` | `Standard` | Optional; overrides the pipeline default |
-| `a_IsStrDoRelease` | `true` | Set to `false` to skip deployment for that environment |
-| `AzureAd.Authority` | `https://login.microsoftonline.com/<tenant-id>` | Injected into `appsettings.json` at deploy time |
-| `AzureAd.ClientId` | `<client-id>` | Injected into `appsettings.json` at deploy time |
-| `AzureDevOps.OrgUrl` | `https://dev.azure.com/<your-org>` | Injected into `appsettings.json` at deploy time |
+| `a_ResourceGroup` | Resource group to deploy into | `azdoboardsdevrg` |
+| `a_AzureLocationPrimary` | Azure region of the resource group | `eastus` |
+| `a_AzureDevOpsOrgUrl` | Substituted into `appsettings.json` by the `FileTransform` task | `https://dev.azure.com/<your-org>` |
+| `a_IsStrDoRelease` | Set to `false` to skip deployment for that environment | `true` |
+| `a_SwaName` | Name for the Static Web App resource | `azdoboardsdevswa` |
+| `a_SwaSkuName` | Optional; overrides the pipeline default | `Standard` |
+| `AzureAd.Authority` | Substituted into `appsettings.json` by the `FileTransform` task | `https://login.microsoftonline.com/<tenant-id>` |
+| `AzureAd.ClientId` | Substituted into `appsettings.json` by the `FileTransform` task | `<client-id>` |
 
-> `AzureAd.*` and `AzureDevOps.*` are transform variables consumed by the `FileTransform` task. Their dot-notation names must exactly match the key paths in `appsettings.json` and cannot carry a variable prefix.
+> **Why `AzureAd.*` variables cannot use the `a_` prefix:**
+> Microsoft documentation and tooling expects the MSAL configuration section to be named `AzureAd`. `a_AzureDevOpsOrgUrl` is project-defined and follows the convention — its flat structure means no nesting in `appsettings.json`.
 
 ### Environments
 
@@ -141,9 +142,7 @@ Each release stage deploys infrastructure first, then the application. Both step
     "ClientId": "<your-client-id>",
     "ValidateAuthority": true
   },
-  "AzureDevOps": {
-    "OrgUrl": "https://dev.azure.com/<your-org>"
-  }
+  "a_AzureDevOpsOrgUrl": "https://dev.azure.com/<your-org>"
 }
 ```
 
