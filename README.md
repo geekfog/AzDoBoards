@@ -52,6 +52,7 @@ Configuration values (tenant ID, client ID, org URL) are substituted into `appse
 - An Azure subscription
 - An Azure DevOps organization
 - An Entra ID (Azure AD) tenant
+- (Recommended) Visual Studio Code or Visual Studio 2026 IDEs
 
 # Installation
 
@@ -61,13 +62,16 @@ Configuration values (tenant ID, client ID, org URL) are substituted into `appse
 2. Name: `AzDoBoards` (or your preference)
 3. Supported account types: choose based on your audience
 4. Redirect URI: **Single-page application (SPA)**
-   - Local dev: `http://localhost:5039/authentication/login-callback`
+   - Local dev: `https://localhost:7060/authentication/login-callback`
    - Production: `https://<your-swa-hostname>/authentication/login-callback`
-5. After creation, go to **API permissions → Add a permission → APIs my organization uses**
+5. After creation, go to **API permissions → Add a permission → Microsoft APIs → Microsoft Graph**
+   - Select **Delegated permissions**
+   - Add: `email`, `openid`, `profile`, `User.Read`
+6. Still on **API permissions → Add a permission → APIs my organization uses**
    - Search for **Azure DevOps**
    - Select **Delegated** → `user_impersonation`
-   - Click **Grant admin consent**
-6. Note your **Tenant ID** and **Client ID** from the Overview page
+   - Click **Grant admin consent** for all permissions
+7. Note your **Tenant ID** and **Client ID** from the Overview page
 
 ## 2. Infrastructure
 
@@ -87,7 +91,9 @@ Create the following variable groups in **Pipelines → Library**:
 
 | Variable | Value |
 |---|---|
-| `a_AzureServiceConnection` | Name of your Azure service connection |
+| `a_AzureServiceConnection` | Name of your Azure service connection. |
+| `a_IsDebug` | Whether to include debug information in the pipeline (must be set to `true` to show). |
+| `a_ReleaseEnvPipeList` | Pipe-delimited list of environments to release to (e.g., `DEV|UAT|PRD`, `DEV|PRD`, `PRD`) — must be uppercase. This is deliberately centralized to avoid approvals for an unreleased environment. |
 | `a_SubscriptionId` | Your Azure subscription ID |
 
 **`azdoboards-config-dev`**, **`azdoboards-config-uat`**, **`azdoboards-config-prd`** (one per environment):
@@ -96,7 +102,6 @@ Create the following variable groups in **Pipelines → Library**:
 |---|---|---|
 | `a_AzureDevOpsOrgUrl` | Substituted into `appsettings.json` by the `FileTransform` task | `https://dev.azure.com/<your-org>` |
 | `a_AzureLocationPrimary` | Azure region of the resource group | `eastus` |
-| `a_IsStrDoRelease` | Set to `false` to skip deployment for that environment | `true` |
 | `a_ResourceGroup` | Resource group to deploy into | `azdoboardsdevrg` |
 | `a_SwaName` | Name for the Static Web App resource | `azdoboardsdevswa` |
 | `a_SwaSkuName` | Optional; overrides the pipeline default | `Standard` |
@@ -129,7 +134,26 @@ In **Pipelines → New pipeline**, point to this repository and select `azure-pi
 | **Release UAT** | `release/*` | Release DEV stage succeeded |
 | **Release PRD** | `release/*` | Release UAT stage succeeded |
 
-Each release stage deploys infrastructure first, then the application. Both steps are skipped when `a_IsStrDoRelease` is `false` for that environment — independently per environment.
+Each release stage deploys infrastructure first, then the application. Only environments listed in `a_ReleaseEnvPipeList` will run — the stage is skipped entirely before any approval gate fires.
+
+## 4. Custom Domain
+
+Azure Static Web Apps supports free, automatically managed SSL/TLS certificates for custom domains. To configure one after the initial deployment:
+
+1. Run the pipeline at least once to create the SWA resource and obtain its auto-generated hostname (e.g. `lively-ocean-abc123.4.azurestaticapps.net`). You can find it in the Azure Portal under the SWA resource → **Overview**.
+
+2. At your DNS provider, create a **CNAME record** pointing your desired subdomain to the SWA hostname:
+
+   | Type | Name | Value (Example) |
+   |---|---|---|
+   | CNAME | `app` _(or your subdomain)_ | `lively-ocean-abc123.4.azurestaticapps.net` |
+
+   > **Apex/root domains** (e.g. `yourdomain.com` without a subdomain) require an ALIAS or ANAME record instead of CNAME. Not all DNS providers support this — check your provider's documentation.
+
+3. In the **Azure Portal**, navigate to the SWA resource → **Custom domains → Add** and enter your domain. Azure will validate the CNAME and automatically provision and renew the SSL certificate.
+
+4. Update your **Entra ID App Registration** redirect URIs to include the new domain:
+   - `https://app.yourdomain.com/authentication/login-callback`
 
 # Local Development
 

@@ -6,7 +6,7 @@
       "type": "blazorwasm",
       "request": "launch",
       "cwd": "${workspaceFolder}/AzDoBoards.Ui",
-      "url": "http://localhost:5039"
+      "url": "https://localhost:7060"
     }
   ]
 }

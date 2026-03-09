@@ -1,0 +1,29 @@
+<Project>
+ <PropertyGroup>
+   <Deterministic>true</Deterministic>
+	 <ApplicationIcon>$(MSBuildThisFileDirectory)Images\favicon.ico</ApplicationIcon>
+	 <Authors>Hans Dickel</Authors>
+	 <Company>Aeriden LLC</Company>
+	 <Copyright>Copyright © 2025-2026, All Rights Reserved</Copyright>
+	 <Description>Project Management Tool for Azure DevOps Boards</Description>
+	 <PackageLicenseExpression>GPL-3.0-only</PackageLicenseExpression>
+	 <PackageProjectURL>https://github.com/geekfog/AzDoBoards</PackageProjectURL>
+	 <PackageIcon>favicon-0512.png</PackageIcon>
+	 <Product>Beacon</Product>
+	 <RepositoryType>Git</RepositoryType>
+	 <RepositoryUrl>https://github.com/geekfog/AzDoBoards.git</RepositoryUrl>
+	 <VersionPrefix>0.0.1.0</VersionPrefix>
+ </PropertyGroup>
+
+  <ItemGroup>
+	  <Content Include="$(MSBuildThisFileDirectory)Images\favicon.ico">
+		  <Link>Images\favicon.ico</Link>
+	  </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+	  <None Include="$(MSBuildThisFileDirectory)Images\favicon-0512.png" Pack="True" PackagePath="">
+		  <Link>Images\favicon-0512.png</Link>
+	  </None>
+  </ItemGroup>
+</Project>

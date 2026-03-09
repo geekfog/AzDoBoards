@@ -67,18 +67,18 @@ stages:
     parameters:
       p_publishEnvironment: DEV
       p_dependsOn: Build
-      p_hasMetCondition: and(succeeded(), or(eq(variables.v_IsReleaseBranch, true), eq(variables.v_IsFeatureBuildBranch, true)))
+      p_hasMetCondition: and(succeeded(), or(eq(variables.v_IsReleaseBranch, true), eq(variables.v_IsFeatureBuildBranch, true)), contains(variables['a_ReleaseEnvPipeList'], 'DEV'))
 
   - template: azure-pipelines-release.yml
     parameters:
       p_publishEnvironment: UAT
       p_dependsOn: Release_DEV
-      p_hasMetCondition: and(succeeded(), eq(variables.v_IsReleaseBranch, true))
+      p_hasMetCondition: and(not(failed()), eq(variables.v_IsReleaseBranch, true), contains(variables['a_ReleaseEnvPipeList'], 'UAT'))
 
   - template: azure-pipelines-release.yml
     parameters:
       p_publishEnvironment: PRD
       p_dependsOn: Release_UAT
-      p_hasMetCondition: and(succeeded(), eq(variables.v_IsReleaseBranch, true))
+      p_hasMetCondition: and(not(failed()), eq(variables.v_IsReleaseBranch, true), contains(variables['a_ReleaseEnvPipeList'], 'PRD'))
 
 # ~END~

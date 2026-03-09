@@ -18,7 +18,6 @@ stages:
     jobs:
       - deployment: Infrastructure
         displayName: Deploy Infrastructure
-        condition: and(succeeded(), eq(variables['a_IsStrDoRelease'], 'true'))
         environment: AzDoBoards ${{ parameters.p_publishEnvironment }}
         strategy:
           runOnce:
@@ -31,7 +30,7 @@ stages:
                     downloadPath: $(Pipeline.Workspace)
 
                 - task: AzureResourceManagerTemplateDeployment@3
-                  displayName: Deploy Static Web App Infrastructure
+                  displayName: Implement Infrastructure with Bicep
                   inputs:
                     azureResourceManagerConnection: $(a_AzureServiceConnection)
                     subscriptionId: $(a_SubscriptionId)
@@ -49,41 +48,58 @@ stages:
       - deployment: App
         displayName: Deploy Application
         dependsOn: Infrastructure
-        condition: and(succeeded(), eq(variables['a_IsStrDoRelease'], 'true'))
         environment: AzDoBoards ${{ parameters.p_publishEnvironment }}
         strategy:
           runOnce:
             deploy:
               steps:
+                # AzureStaticWebApp@0 runs inside a Docker container that mounts $(System.DefaultWorkingDirectory) as /working_dir (hardcoded in the task).
+                # app_location paths are resolved relative to that mount, so artifactsmust be downloaded here rather than $(Pipeline.Workspace).
                 - task: DownloadBuildArtifacts@1
                   displayName: Download App Artifact
                   inputs:
                     artifactName: wwwroot
-                    downloadPath: $(Pipeline.Workspace)
+                    downloadPath: $(System.DefaultWorkingDirectory)
+
+                - pwsh: |
+                    Get-ChildItem "$(System.DefaultWorkingDirectory)/wwwroot" -Recurse -Depth 3 | Select-Object -ExpandProperty FullName | Sort-Object
+                  displayName: "🐞 List Downloaded Artifact Folder"
+                  condition: and(succeeded(), eq(variables['a_IsDebug'], 'true'))
 
                 - task: FileTransform@2
                   displayName: Transform appsettings.json Values
                   inputs:
-                    folderPath: $(Pipeline.Workspace)/wwwroot
+                    folderPath: $(System.DefaultWorkingDirectory)/wwwroot/AzDoBoards.Ui/wwwroot
                     jsonTargetFiles: appsettings.json
 
                 - task: AzureCLI@2
                   displayName: Retrieve SWA Deployment Token
                   inputs:
                     azureSubscription: $(a_AzureServiceConnection)
-                    scriptType: bash
+                    scriptType: pscore
                     scriptLocation: inlineScript
+                    failOnStandardError: true
                     inlineScript: |
-                      token=$(az staticwebapp secrets list \
-                        --name $(a_SwaName) \
-                        --resource-group $(a_ResourceGroup) \
-                        --query "properties.apiKey" -o tsv)
-                      echo "##vso[task.setvariable variable=o_SwaDeployToken;isSecret=true]$token"
+                      $token = az staticwebapp secrets list `
+                        --name $(a_SwaName) `
+                        --resource-group $(a_ResourceGroup) `
+                        --query "properties.apiKey" -o tsv
+                      if ([string]::IsNullOrWhiteSpace($token)) {
+                        Write-Host "##[error]Failed to retrieve SWA deployment token — check that $(a_SwaName) exists in $(a_ResourceGroup) and the service connection has read access."
+                        exit 1
+                      }
+                      Write-Host "##vso[task.setvariable variable=o_SwaDeployToken;isSecret=true]$token"
+
+                - pwsh: |
+                    Write-Host "Token length: $($env:TOKEN.Length)"
+                  displayName: Verify SWA Token Retrieved
+                  condition: and(succeeded(), eq(variables['a_IsDebug'], 'true'))
+                  env:
+                    TOKEN: $(o_SwaDeployToken)
 
                 - task: AzureStaticWebApp@0
                   displayName: Deploy App to Static Web App
                   inputs:
-                    app_location: $(Pipeline.Workspace)/wwwroot
+                    app_location: wwwroot/AzDoBoards.Ui/wwwroot # Artifact folder > Source of the SWA deployment
                     skip_app_build: true
-                  env:
-                    AZURE_STATIC_WEB_APPS_API_TOKEN: $(o_SwaDeployToken)
+                    azure_static_web_apps_api_token: $(o_SwaDeployToken)
