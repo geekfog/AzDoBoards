@@ -40,3 +40,6 @@ local.settings.json
 # JetBrains Rider
 .idea/
 *.sln.iml
+
+# Claude
+.claude/
