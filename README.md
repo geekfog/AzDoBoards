@@ -17,6 +17,8 @@ This supports a custom-defined work item hierarchy based on work item types (e.g
   - [2. Infrastructure](#2-infrastructure)
   - [3. Azure DevOps Pipeline](#3-azure-devops-pipeline)
 - [Local Development](#local-development)
+- [Running](#running)
+  - [Visual Studio Code](#visual-studio-code)
 
 # Architecture
 
@@ -49,10 +51,21 @@ Configuration values (tenant ID, client ID, org URL) are substituted into `appse
 ## Prerequisites
 
 - [.NET 10 SDK](https://dotnet.microsoft.com/download)
-- An Azure subscription
 - An Azure DevOps organization
 - An Entra ID (Azure AD) tenant
-- (Recommended) Visual Studio Code or Visual Studio 2026 IDEs
+- (Recommended) One of the following development IDEs:
+  - Visual Studio Code (macOS, Linux, or Windows) 
+    - C# Dev Kit extension
+    - (Optional) C# extension
+
+  - Visual Studio 2026 IDEs (Windows only)
+
+- (Supported) An Azure subscription for hosting the application via [azure-pipelines.yml](./azure-pipelines.yml)
+
+Future Expected Design:
+
+- SQL Server (local, Azure, or in a Docker container) for application-specific settings storage
+- (Optional) Azure Data Studio (macOS, Linux, or Windows) or SSMS (Windows)
 
 # Installation
 
@@ -172,6 +185,14 @@ Azure Static Web Apps supports free, automatically managed SSL/TLS certificates 
 
 2. This file is [.gitignore](./.gitignore) and will never be committed.
 
-3. Launch via VS Code: press `F5` → **Launch AzDoBoards.Ui**
+# Running
+
+## Visual Studio Code
+
+1. Open the **Run and Debug** panel (`Cmd+Shift+D` on macOS, `Ctrl+Shift+D` on Windows/Linux) or press `F5`.
+2. When prompted to select a debugger, choose **C#**.
+3. Select **AzDoBoards.Ui (HTTPS)** as the launch configuration.
+
+The C# Dev Kit extension manages launch configurations internally — no `launch.json` is required.
 
 \~END~

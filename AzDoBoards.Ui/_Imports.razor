@@ -8,5 +8,9 @@
 @using Microsoft.JSInterop
 @using AzDoBoards.Ui
 @using AzDoBoards.Ui.Layout
+@using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+
+@* Centralized authorization for all pages *@
+@attribute [Authorize]

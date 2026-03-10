@@ -63,7 +63,7 @@ stages:
 
                 - pwsh: |
                     Get-ChildItem "$(System.DefaultWorkingDirectory)/wwwroot" -Recurse -Depth 3 | Select-Object -ExpandProperty FullName | Sort-Object
-                  displayName: "🐞 List Downloaded Artifact Folder"
+                  displayName: 🐞 List Downloaded Artifact Folder
                   condition: and(succeeded(), eq(variables['a_IsDebug'], 'true'))
 
                 - task: FileTransform@2
@@ -71,6 +71,16 @@ stages:
                   inputs:
                     folderPath: $(System.DefaultWorkingDirectory)/wwwroot/AzDoBoards.Ui/wwwroot
                     jsonTargetFiles: appsettings.json
+
+                - pwsh: |
+                    $folder = "$(System.DefaultWorkingDirectory)/wwwroot/AzDoBoards.Ui/wwwroot"
+                    Write-Host "=== All appsettings* files in artifact ==="
+                    Get-ChildItem $folder -Filter "appsettings*" -Recurse | Select-Object -ExpandProperty FullName
+                    Write-Host ""
+                    Write-Host "=== Content of appsettings.json after transform ==="
+                    Get-Content "$folder/appsettings.json"
+                  displayName: 🐞 Verify appsettings.json Transform
+                  condition: and(succeeded(), eq(variables['a_IsDebug'], 'true'))
 
                 - task: AzureCLI@2
                   displayName: Retrieve SWA Deployment Token
@@ -103,3 +113,5 @@ stages:
                     app_location: wwwroot/AzDoBoards.Ui/wwwroot # Artifact folder > Source of the SWA deployment
                     skip_app_build: true
                     azure_static_web_apps_api_token: $(o_SwaDeployToken)
+
+# ~END~

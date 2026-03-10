@@ -51,6 +51,18 @@ stages:
               arguments: -c $(g_BuildConfiguration) -o $(Build.ArtifactStagingDirectory)/publish
               zipAfterPublish: false
 
+          - pwsh: |
+              # Remove dotnet publish pre-compresses static assets (e.g., appsettings.json.br, appsettings.json.gz) since not useful with followup FileTransform. Azure Static Web Apps CDN applies dynamic compression at serve time.
+              $wwwroot = "$(Build.ArtifactStagingDirectory)/publish/AzDoBoards.Ui/wwwroot"
+              $files = Get-ChildItem $wwwroot | Where-Object { $_.Name -like "appsettings.json.*" }
+              if ($files) {
+                $files | ForEach-Object { Write-Host "Removing: $($_.FullName)" }
+                $files | Remove-Item -Force
+              } else {
+                Write-Host "No pre-compressed appsettings.json files found."
+              }
+            displayName: Remove Pre-Compressed appsettings.json
+
           - task: PublishBuildArtifacts@1
             displayName: Upload App Artifact
             inputs:
