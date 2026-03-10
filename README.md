@@ -53,13 +53,13 @@ Configuration values (tenant ID, client ID, org URL) are substituted into `appse
 - [.NET 10 SDK](https://dotnet.microsoft.com/download)
 - An Azure DevOps organization
 - An Entra ID (Azure AD) tenant
+- (Included) [MudBlazor Library](https://www.mudblazor.com/)
 - (Recommended) One of the following development IDEs:
   - Visual Studio Code (macOS, Linux, or Windows) 
     - C# Dev Kit extension
     - (Optional) C# extension
 
   - Visual Studio 2026 IDEs (Windows only)
-
 - (Supported) An Azure subscription for hosting the application via [azure-pipelines.yml](./azure-pipelines.yml)
 
 Future Expected Design:
