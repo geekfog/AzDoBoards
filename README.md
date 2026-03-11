@@ -1,10 +1,62 @@
-# About
+# About AzDo Boards
 
-<img src="Images/favicon-0512.png" alt="AzDo Boards Icon" style="zoom:25%; float:right;" />AzDo Boards (pronounced "As Doe Boards") is intended to be a tool to assist with project management by leveraging work item data in Azure DevOps Boards. Running externally allows freedom to leverage external technologies for project management-focused capabilities, including reporting, and to quickly add or update information. There is an eye to incorporate AI to help build out projects.
+## Overview
 
-This supports a custom-defined work item hierarchy based on work item types (e.g., Initiative > Epic > Feature > User Story / Bug / Research > Tasks). This helps with reporting, tracking, and querying within Azure DevOps and externally.
+<img src="Images/favicon-0512.png" alt="AzDo Boards Icon" style="zoom:25%; float:right;" />AzDo Boards (pronounced "As Doe Boards") is intended to assist with project management by leveraging work item data in Azure DevOps Boards. Running externally allows freedom to leverage external technologies for project management-focused capabilities, including reporting, and to quickly add or update information. There is an eye to incorporate AI to help build out projects.
 
-***NOTE**: This is under heavy development. In short, it is very incomplete. This is an idea that has been noodled for a while. Now this is being attempted for future project efficiency, to give back, to gauge interest within the open source community, and to explore potential business opportunities. The goal is to try different items to see what looks and feels right. The goal is to make a usable product and remove this banner. Perhaps this could be commercially viable as a subscription, with enterprise-scale multi-tenant support based on the open-source version.*
+## ⚠️ Warning
+
+***NOTE**: This is under heavy development. In short, it is very incomplete. This is an idea that has been noodled for a while. Now this is being attempted to improve future project efficiency, give back, gauge interest within the open-source community, and explore potential business opportunities. The goal is to try different items to see what looks and feels right. The goal is to make a usable product and remove this banner. Perhaps this could be commercially viable as a subscription, with enterprise-scale multi-tenant support based on the open-source version.* 
+
+## Purpose
+
+The purpose of the application is to integrate with Azure DevOps, especially Boards, and to be extremely performant, working with data in real time. It will use Azure for Authentication, as that is used with Azure DevOps and Entra ID integration. It will assist with project management to successful completion, extending what isn't available in Azure DevOps. This includes:
+
+- High-level planning of an initiative to senior leaders that may cross multiple teams, creating one or more projects within each team
+- Provide high-level timelines and resource requirements
+- Assist with labor budgeting of the initiative, allowing aggregation by resource type (e.g., contractors vs employees, or different types of contractors, or department of team members, etc.)
+- Assist with determining if the project is on track at various work item levels, including a % ranking of how on track (100% means completely on track, 0% means completely off-track)
+- Provide easier (quick!) manual project building from the initiative down to the detailed tasks, including or shimming out as needed, and returning to fill in the details. In Azure DevOps Boards, this is painful because it requires many clicks to build a hierarchy of work items, even for small projects.
+- Allow quick duplication of work items, easily moving items into different parent work items (with undo capabilities for the changing of mind or mistakes)
+- Assist SQA working with developers, based on risk assessment
+- Interaction by the user must be performant (UI-based interaction must be sub-second; UI response must be sub-3 seconds)
+
+This supports a custom-defined work item hierarchy based on work item types (e.g., Initiative → Epic → Feature → User Story / Bug / Research → Tasks). This helps with reporting, tracking, and querying within Azure DevOps and externally. The UI is focused on hierarchical and line-based data entry, with minimal clicks, allowing maximum keyboard interaction, while still supporting various devices (from mobile to desktop) with mouse and tap interactions.
+
+Possible roles (one person may do multiple roles or multiple people do a single role, etc.) that are expected:
+
+- Software Engineer Developer (DEV)
+- Software Quality Assurance (SQA)
+- End-User Tester (EUT)
+- Business Analyst (BA)
+- Product Owner (PO)
+- Project Manager (PM)
+- Internal Stakeholder (IS)
+
+| SDLC Stage ↓                        | Activity ↓ / Role →                         | PO ↓ | BA ↓ | PM ↓ | IS ↓ | DEV ↓ | SQA ↓ | EUT ↓ |
+| ----------------------------------- | ------------------------------------------- | :--: | :--: | :--: | :--: | :---: | :---: | :---: |
+| Discovery / Inception               | 1. Product vision & strategy                |  ✓   |      |      |  ✓   |       |       |       |
+|                                     | 2. Business discovery & stakeholder needs   |  ✓   |  ✓   |      |  ✓   |       |       |       |
+| Requirements & Analysis             | 3. Requirements elicitation & analysis      |      |  ✓   |      |  ✓   |       |       |       |
+|                                     | 4. Requirements validation & sign‑off       |  ✓   |  ✓   |      |  ✓   |       |       |       |
+| Planning                            | 5. Resource planning & allocation           |      |      |  ✓   |      |       |       |       |
+|                                     | 6. Scheduling, budgeting & risk planning    |      |      |  ✓   |      |       |       |       |
+|                                     | 7. Backlog prioritization                   |  ✓   |  ✓   |      |      |       |       |       |
+| Design                              | 8. Solution & system design                 |      |  ✓   |      |      |   ✓   |   ✓   |       |
+| Implementation                      | 9. Development (coding)                     |      |      |      |      |   ✓   |       |       |
+|                                     | 10. Unit & integration testing              |      |      |      |      |   ✓   |       |       |
+| Verification & Validation           | 11. System & regression testing             |      |      |      |      |       |   ✓   |       |
+|                                     | 12. Non‑functional testing (perf, security) |      |      |      |      |       |   ✓   |       |
+| Governance / Control                | 13. Progress tracking & status reporting    |      |      |  ✓   |      |       |       |       |
+|                                     | 14. Risk & impediment management            |      |      |  ✓   |      |       |       |       |
+|                                     | 15. UAT scenario & criteria design          |  ✓   |  ✓   |      |  ✓   |       |   ✓   |   ✓   |
+|                                     | 16. UAT execution                           |      |      |      |  ✓   |       |   ✓   |   ✓   |
+| Release & Deployment                | 17. Go/No‑Go decision                       |  ✓   |      |      |  ✓   |       |   ✓   |   ✓   |
+|                                     | 18. Release coordination & deployment       |      |      |  ✓   |      |   ✓   |       |       |
+| Operations & Continuous Improvement | 19. Post‑release validation                 |  ✓   |      |      |  ✓   |       |   ✓   |   ✓   |
+|                                     | 20. Operations, support & improvements      |  ✓   |  ✓   |      |  ✓   |   ✓   |   ✓   |   ✓   |
+
+
 
 # Table of Contents
 
@@ -170,7 +222,7 @@ Azure Static Web Apps supports free, automatically managed SSL/TLS certificates 
 
 # Local Development
 
-1. Fill in your real values in `AzDoBoards.Ui/wwwroot/appsettings.Secrets.json`:
+1. Fill in your real values in [appsettings.Secrets.json](AzDoBoards.UI/wwwroot/appsettings.Secrets.json):
 
 ```json
 {
